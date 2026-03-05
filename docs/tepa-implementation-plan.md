@@ -223,7 +223,9 @@ No special APIs, no plugin system. A tool is just an object that conforms to `To
 
 ## 2. Implementation Phases
 
-### Phase 1 — Foundation (Shared Types & Core Config)
+### Phase 1 — Foundation (Shared Types & Core Config) `DONE`
+
+> **Status:** Complete. All deliverables implemented, 44 tests passing. Both `@tepa/types` and `tepa` core packages build successfully (dual ESM/CJS).
 
 Establish the shared type system (`@tepa/types`) and the core configuration layer (`tepa`) that everything else builds on.
 
