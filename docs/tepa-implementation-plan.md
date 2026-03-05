@@ -33,6 +33,8 @@ tepa/
 │   │   │   │   ├── define-config.ts
 │   │   │   │   ├── defaults.ts
 │   │   │   │   └── loader.ts
+│   │   │   ├── events/
+│   │   │   │   └── event-bus.ts       # Event runner: registration, ordering, execution
 │   │   │   ├── prompt/
 │   │   │   │   ├── parser.ts
 │   │   │   │   └── validator.ts
@@ -59,6 +61,7 @@ tepa/
 │   │   │   ├── evaluation.ts
 │   │   │   ├── tool.ts
 │   │   │   ├── llm.ts
+│   │   │   ├── event.ts
 │   │   │   └── result.ts
 │   │   ├── package.json              # "@tepa/types"
 │   │   └── tsconfig.json
@@ -203,10 +206,18 @@ import { postgresQuery } from "tepa-tool-postgres";
 
 const agent = new Tepa({
   tools: [fileRead, shellExecute, postgresQuery],
+  events: {
+    postPlanner: [
+      async (plan, cycle) => {
+        console.log(`Cycle ${cycle.cycleNumber}: plan ready with ${plan.steps.length} steps`);
+        // return nothing — plan passes through unchanged
+      },
+    ],
+  },
 });
 ```
 
-No special APIs, no plugin system, no runtime hooks. A tool is just an object that conforms to `ToolDefinition`. This makes the ecosystem open by default.
+No special APIs, no plugin system. A tool is just an object that conforms to `ToolDefinition`. Events are just callbacks registered at initialization. This makes the ecosystem open by default.
 
 ---
 
@@ -218,7 +229,7 @@ Establish the shared type system (`@tepa/types`) and the core configuration laye
 
 **Deliverables:**
 
-- `@tepa/types` package containing all shared TypeScript interfaces: `TepaConfig`, `TepaPrompt`, `PlanStep`, `ExecutionResult`, `EvaluationResult`, `ToolDefinition`, `ToolRegistry`, `LLMProvider`, `LLMResponse`, `TepaResult`. This package has zero runtime dependencies — it's types only.
+- `@tepa/types` package containing all shared TypeScript interfaces: `TepaConfig`, `TepaPrompt`, `PlanStep`, `ExecutionResult`, `EvaluationResult`, `ToolDefinition`, `ToolRegistry`, `LLMProvider`, `LLMResponse`, `TepaResult`, `EventName`, `EventCallback`, `EventRegistration`, `EventMap`, `CycleMetadata`. This package has zero runtime dependencies — it's types only.
 - `tepa` core package scaffolding with `defineConfig` helper that accepts a partial config and merges with sensible defaults.
 - Config defaults: max 5 cycles, 10,000 token budget, 30s tool timeout, standard logging.
 - Config file loader supporting both YAML and JSON formats.
@@ -357,35 +368,79 @@ The Evaluator inspects results and decides whether the pipeline should terminate
 - Evaluator returns `fail` when expected outputs are missing.
 - Feedback is actionable and references specific steps.
 
-### Phase 5 — Pipeline Orchestrator
+### Phase 5 — Event System & Pipeline Orchestrator
 
-Wire everything together into the main `Tepa` class that runs the autonomous loop.
+Implement the event bus and wire everything together into the main `Tepa` class that runs the pipeline loop with event hooks at each stage.
+
+**5a. Event Bus**
+
+The event bus is the internal engine that manages event registration and execution. It lives in `packages/tepa/src/events/event-bus.ts`.
 
 **Deliverables:**
 
-- `Tepa` class constructor accepts: config (or uses defaults), tools (array of tool definitions or built-in names), and optional LLM provider override.
-- `run(prompt) → TepaResult` method that orchestrates the full cycle:
+- `EventBus` class that accepts an `EventMap` at construction time.
+- `run(eventName, data, cycleMetadata) → data` method that executes all callbacks registered for a given event name, in registration order:
+  1. For each callback, invoke it with the current data and cycle metadata.
+  2. If the callback returns a value, that value replaces the current data for the next callback.
+  3. If the callback returns `undefined`/`null`/`void`, the data passes through unchanged.
+  4. If the callback returns a `Promise`, `await` it before proceeding.
+  5. If the callback throws (or the Promise rejects):
+     - If `continueOnError` is set on the registration, log the error and skip to the next callback, using the data as it was before this callback ran.
+     - Otherwise, re-throw the error to abort the pipeline.
+  6. Return the final (potentially transformed) data after all callbacks have run.
+- Support both shorthand registration (bare function) and full registration (`{ handler, continueOnError }`). When a bare function is provided, treat it as `{ handler: fn, continueOnError: false }`.
+- If no callbacks are registered for an event, `run()` returns the data unchanged (no-op passthrough).
+
+**Tests:**
+
+- Single callback transforms data and the transformed data is returned.
+- Multiple callbacks execute in registration order, each receiving the output of the previous.
+- Callback returning `undefined` passes data through unchanged.
+- Async callbacks (returning Promises) are awaited correctly.
+- Throwing callback aborts by default (error propagates).
+- Throwing callback with `continueOnError: true` is skipped, data rolls back to pre-callback state.
+- No registered callbacks returns data unchanged.
+- Bare function and `{ handler, continueOnError }` forms both work.
+
+**5b. Pipeline Orchestrator**
+
+**Deliverables:**
+
+- `Tepa` class constructor accepts: config (or uses defaults), tools (array of tool definitions or built-in names), events (optional `EventMap`), and optional LLM provider override.
+- `run(prompt) → TepaResult` method that orchestrates the full cycle with event hooks:
   1. Validate prompt and config.
-  2. Initialize the tool registry, scratchpad, token tracker, and logger.
+  2. Initialize the tool registry, scratchpad, token tracker, logger, and event bus.
   3. Enter the loop:
-     - Call `Planner.plan()` (with feedback on cycles > 1).
+     - Fire `prePlanner` events with Planner input → receive (potentially transformed) input.
+     - Call `Planner.plan()` with the input (with feedback on cycles > 1).
+     - Fire `postPlanner` events with the generated plan → receive (potentially transformed) plan.
+     - Fire `preExecutor` events with Executor input → receive (potentially transformed) input.
      - Call `Executor.execute()` with the plan.
+     - Fire `postExecutor` events with Executor output → receive (potentially transformed) output.
+     - Fire `preEvaluator` events with Evaluator input → receive (potentially transformed) input.
      - Call `Evaluator.evaluate()` with the results.
+     - Fire `postEvaluator` events with Evaluator output → receive (potentially transformed) output.
      - If verdict is `pass`, break and return success.
      - If verdict is `fail`, check termination conditions (max cycles, token budget).
      - If within limits, feed evaluator feedback back to the Planner and continue.
      - If limits exceeded, break and return failure with partial results.
+     - If any event callback throws (without `continueOnError`), the pipeline aborts with an error report.
   4. Assemble and return `TepaResult`.
 - `TepaResult` contains: status (`pass` | `fail` | `terminated`), cycles used, tokens consumed, outputs (list of files or artifacts produced), execution logs, and evaluator's final feedback/summary.
-- Event hooks: `onCycleStart`, `onCycleEnd`, `onPlanComplete`, `onStepComplete`, `onEvaluationComplete`. These are optional callbacks that allow the caller to observe pipeline progress without modifying behavior.
+- `CycleMetadata` is constructed at the start of each cycle and passed to every event callback within that cycle, containing the current cycle number, total cycles used so far, and tokens consumed so far.
 
 **Tests:**
 
-- Full pipeline runs to completion with mocked LLM and tools (happy path).
+- Full pipeline runs to completion with mocked LLM and tools (happy path, no events).
 - Pipeline self-corrects: cycle 1 fails, cycle 2 succeeds.
 - Pipeline terminates on max cycles with partial results.
 - Pipeline terminates on token budget exhaustion.
-- Event hooks fire at the correct moments with correct data.
+- Pre-events can transform component inputs (e.g., `prePlanner` modifies the prompt, and the Planner receives the modified version).
+- Post-events can transform component outputs (e.g., `postPlanner` modifies the plan, and the Executor receives the modified version).
+- Async event callbacks pause the pipeline until resolved.
+- Event callback rejection aborts the pipeline with an error report.
+- Event callbacks with `continueOnError: true` are skipped on failure without aborting.
+- All events receive correct `CycleMetadata` on each cycle.
 - Token usage is accurately accumulated across all components and cycles.
 
 ### Phase 6 — Demos, Integration Testing & Documentation
@@ -512,6 +567,35 @@ interface ParameterDef {
   required?: boolean;
   default?: unknown;
 }
+
+// --- Events ---
+type EventName =
+  | "prePlanner"
+  | "postPlanner"
+  | "preExecutor"
+  | "postExecutor"
+  | "preEvaluator"
+  | "postEvaluator";
+
+interface CycleMetadata {
+  cycleNumber: number;         // current cycle (1-based)
+  totalCyclesUsed: number;     // total cycles completed so far
+  tokensUsed: number;          // tokens consumed so far
+}
+
+type EventCallback<TData = unknown> = (
+  data: TData,
+  cycle: CycleMetadata
+) => TData | void | Promise<TData | void>;
+
+interface EventRegistration<TData = unknown> {
+  handler: EventCallback<TData>;
+  continueOnError?: boolean;   // default: false (abort on throw)
+}
+
+type EventMap = {
+  [K in EventName]?: Array<EventCallback | EventRegistration>;
+};
 ```
 
 ---
@@ -522,11 +606,11 @@ The MVP is considered complete when all of the following are satisfied:
 
 ### Functional Requirements
 
-1. **Pipeline completes autonomously.** Given a well-formed prompt with a goal, context, and expected output, Tepa runs the full Planner → Executor → Evaluator cycle without human intervention and returns a `TepaResult`.
+1. **Pipeline completes autonomously by default.** Given a well-formed prompt with a goal, context, and expected output, Tepa runs the full Planner → Executor → Evaluator cycle and returns a `TepaResult`. With no events registered, the pipeline operates without human intervention.
 
 2. **Self-correction works.** When the Evaluator issues a `fail` verdict, the pipeline feeds the feedback back to the Planner, which produces a revised plan. The Executor re-executes and the Evaluator re-evaluates. This loop continues until `pass` or termination.
 
-3. **Termination conditions are enforced.** The pipeline stops when: (a) the Evaluator passes, (b) the max cycle count is reached, or (c) the token budget is exhausted. In cases (b) and (c), partial results and a failure report are returned.
+3. **Termination conditions are enforced.** The pipeline stops when: (a) the Evaluator passes, (b) the max cycle count is reached, (c) the token budget is exhausted, or (d) an event callback aborts the pipeline. In cases (b), (c), and (d), partial results and a failure report are returned.
 
 4. **All 10 built-in tools function correctly.** Each tool (file_read, file_write, directory_list, file_search, shell_execute, http_request, web_search, data_parse, scratchpad, log_observe) executes successfully with valid inputs and returns structured output.
 
@@ -538,31 +622,33 @@ The MVP is considered complete when all of the following are satisfied:
 
 8. **Prompt files are supported.** Prompts can be passed programmatically as objects or loaded from YAML/JSON files.
 
+9. **Event system works.** Callers can register event callbacks (`prePlanner`, `postPlanner`, `preExecutor`, `postExecutor`, `preEvaluator`, `postEvaluator`) at initialization time. Pre-event callbacks can transform component inputs, post-event callbacks can transform component outputs. Async callbacks pause the pipeline until resolved. Throwing callbacks abort the pipeline unless `continueOnError` is set. Multiple callbacks on the same event execute in registration order, each receiving the output of the previous.
+
 ### Non-Functional Requirements
 
-9. **Type safety.** All public APIs are fully typed. No `any` types in the public surface. Internal types may use `unknown` where appropriate. The `@tepa/types` package is the single source of truth for all shared interfaces.
+10. **Type safety.** All public APIs are fully typed. No `any` types in the public surface. Internal types may use `unknown` where appropriate. The `@tepa/types` package is the single source of truth for all shared interfaces.
 
-10. **Test coverage.** Unit tests cover all core components (Planner, Executor, Evaluator, ToolRegistry, TokenTracker). Integration tests verify the full pipeline cycle. Minimum 80% code coverage across all packages.
+11. **Test coverage.** Unit tests cover all core components (Planner, Executor, Evaluator, EventBus, ToolRegistry, TokenTracker). Integration tests verify the full pipeline cycle. Minimum 80% code coverage across all packages.
 
-11. **Error handling.** All failure modes produce meaningful error messages. Tool failures don't crash the pipeline. LLM parsing failures are retried once before failing. Budget exhaustion is reported with partial results.
+12. **Error handling.** All failure modes produce meaningful error messages. Tool failures don't crash the pipeline. LLM parsing failures are retried once before failing. Budget exhaustion is reported with partial results. Event callback errors abort by default or are skipped with `continueOnError`.
 
-12. **Package quality.** Each npm package ships with: TypeScript declarations, dual ESM/CJS output, clean export map, no unnecessary dependencies, and a per-package README. The core `tepa` package has no dependency on `@anthropic-ai/sdk` or any specific tool implementation.
+13. **Package quality.** Each npm package ships with: TypeScript declarations, dual ESM/CJS output, clean export map, no unnecessary dependencies, and a per-package README. The core `tepa` package has no dependency on `@anthropic-ai/sdk` or any specific tool implementation.
 
-13. **Execution logs are available.** Every pipeline run produces a structured log containing: each cycle's plan, step-by-step execution details (tool, input summary, output summary, duration), evaluator verdicts, and cumulative token usage.
+14. **Execution logs are available.** Every pipeline run produces a structured log containing: each cycle's plan, step-by-step execution details (tool, input summary, output summary, duration), evaluator verdicts, event execution records, and cumulative token usage.
 
 ### Architectural Requirements
 
-14. **Package separation is real.** `tepa` (core) and `@tepa/tools` do not depend on each other. Both depend only on `@tepa/types`. Removing `@tepa/tools` from node_modules does not break `tepa` core. This is verified by a build test.
+15. **Package separation is real.** `tepa` (core) and `@tepa/tools` do not depend on each other. Both depend only on `@tepa/types`. Removing `@tepa/tools` from node_modules does not break `tepa` core. This is verified by a build test.
 
-15. **Third-party tool contract works.** A tool defined outside the monorepo (or in a standalone test file) using only `@tepa/types` can be registered with Tepa and executed by the pipeline without any changes to core.
+16. **Third-party tool contract works.** A tool defined outside the monorepo (or in a standalone test file) using only `@tepa/types` can be registered with Tepa and executed by the pipeline without any changes to core.
 
-16. **Monorepo is functional.** `npm install` at the root resolves all workspace dependencies. `npm run build` builds all packages in the correct order. `npm run test` runs tests across all workspaces. The demos run successfully as workspace consumers.
+17. **Monorepo is functional.** `npm install` at the root resolves all workspace dependencies. `npm run build` builds all packages in the correct order. `npm run test` runs tests across all workspaces. The demos run successfully as workspace consumers.
 
 ### Validation Scenarios
 
-17. **Demo A passes.** The `demos/api-client-gen` workspace runs to completion — the agent explores a project, generates typed code, runs tests, self-corrects if tests fail, and finishes with all tests passing. The demo can be executed with a single command from the repo root.
+18. **Demo A passes.** The `demos/api-client-gen` workspace runs to completion — the agent explores a project, generates typed code, runs tests, self-corrects if tests fail, and finishes with all tests passing. The demo can be executed with a single command from the repo root.
 
-18. **Demo B passes.** The `demos/student-progress` workspace runs to completion — the agent reads CSV data, computes metrics, generates a report, and produces flagged results. The demo can be executed with a single command from the repo root.
+19. **Demo B passes.** The `demos/student-progress` workspace runs to completion — the agent reads CSV data, computes metrics, generates a report, and produces flagged results. The demo can be executed with a single command from the repo root.
 
 ---
 
@@ -612,7 +698,7 @@ The current MVP executes plan steps sequentially. Future versions could allow th
 
 ### Streaming and Real-Time Output
 
-Support streaming LLM responses and real-time progress reporting. The event hooks in the MVP lay the groundwork for this, but a full streaming API would allow UIs to show the pipeline working in real time, step by step.
+Support streaming LLM responses and real-time progress reporting. The Event System in the MVP already enables callers to observe pipeline progress (e.g., registering `postPlanner` or `postExecutor` callbacks to emit updates), but a full streaming API would allow UIs to show the pipeline working in real time, step by step — including token-level LLM output streaming.
 
 ### Persistent Memory Across Runs
 
@@ -636,4 +722,8 @@ Before running a pipeline, estimate the likely cost based on the model pricing, 
 
 ### Conversation Mode
 
-An interactive mode where Tepa pauses after each cycle and asks the developer for feedback before continuing. Useful for sensitive tasks where full autonomy isn't desired, or for teaching the pipeline about domain-specific constraints.
+An interactive mode where Tepa pauses after each cycle and asks the developer for feedback before continuing. Useful for sensitive tasks where full autonomy isn't desired, or for teaching the pipeline about domain-specific constraints. The MVP's Event System already makes basic human-in-the-loop workflows possible (e.g., a `postPlanner` callback that awaits human approval before execution proceeds). A future Conversation Mode would build on this with a higher-level API: a pre-built set of event callbacks, a standardized prompt/response interface, and integration with CLI or web-based input channels — so developers get interactive mode out of the box without wiring up custom callbacks.
+
+### Advanced Event Features
+
+The MVP Event System is intentionally minimal. Future iterations could introduce: conditional event execution (fire only on certain cycles or verdicts without caller-side branching), event priority/weighting (beyond simple registration order), event timeouts (auto-abort if an async callback doesn't resolve within a limit), and an event replay/audit log (record all transformations applied by events for debugging and reproducibility).

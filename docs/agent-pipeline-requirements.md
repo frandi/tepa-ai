@@ -4,9 +4,11 @@
 
 ## 1. Overview
 
-**Tepa** is a reusable library/framework that enables fully autonomous task execution through a cyclic loop of three core components: **Planner**, **Executor**, and **Evaluator**. Once an initial prompt is submitted, the pipeline operates without human intervention — planning how to approach the task, executing the plan using available tools, evaluating the results, and self-correcting until the desired output is achieved or operational limits are reached.
+**Tepa** is a reusable library/framework that enables task execution through a cyclic loop of three core components: **Planner**, **Executor**, and **Evaluator**. By default, the pipeline operates as a fully autonomous system — once an initial prompt is submitted, it plans how to approach the task, executes the plan using available tools, evaluates the results, and self-corrects until the desired output is achieved or operational limits are reached.
 
-The framework is designed to be technology-agnostic, extensible, and configurable. Developers integrate it into their own projects by providing a prompt, registering tools, and setting configuration parameters. Tepa handles the rest.
+However, Tepa is not limited to full autonomy. Through its **Event System**, callers can hook into the pipeline at each stage — observing, transforming, or pausing the flow as needed. This enables a wide range of operational modes, from fully autonomous execution to human-in-the-loop workflows where approval or input is required between stages. The degree of autonomy is entirely up to the caller.
+
+The framework is designed to be technology-agnostic, extensible, and configurable. Developers integrate it into their own projects by providing a prompt, registering tools, configuring events, and setting configuration parameters. Tepa handles the rest.
 
 ---
 
@@ -97,6 +99,11 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                     └──────────────────┬───────────────────────┘
                                        │
                                        ▼
+                              ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                                 prePlanner
+                              └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+                                       │
+                                       ▼
                               ┌─────────────────┐
                  ┌───────────►│    PLANNER       │
                  │            │                  │
@@ -104,6 +111,16 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                  │            │  step-by-step    │
                  │            │  plan            │
                  │            └────────┬─────────┘
+                 │                     │
+                 │                     ▼
+                 │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                 │               postPlanner
+                 │            └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+                 │                     │
+                 │                     ▼
+                 │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                 │               preExecutor
+                 │            └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
                  │                     │
                  │                     ▼
                  │            ┌─────────────────┐
@@ -114,12 +131,27 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                  │            └────────┬─────────┘
                  │                     │
                  │                     ▼
+                 │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                 │               postExecutor
+                 │            └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+                 │                     │
+                 │                     ▼
+                 │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                 │               preEvaluator
+                 │            └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+                 │                     │
+                 │                     ▼
                  │            ┌─────────────────┐
                  │            │   EVALUATOR      │
                  │            │                  │
                  │            │  Checks results  │
                  │            │  against goal    │
                  │            └────────┬─────────┘
+                 │                     │
+                 │                     ▼
+                 │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                 │               postEvaluator
+                 │            └ ─ ─ ─ ─ ─ ─ ─ ─ ┘
                  │                     │
                  │              ┌──────┴──────┐
                  │              │             │
@@ -134,19 +166,111 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
 **Step-by-step flow:**
 
 1. The caller submits an **initial prompt** containing the goal, supporting context, and a description of the expected output.
-2. The **Planner** analyzes the prompt and the available tools, then produces an ordered plan.
-3. The **Executor** carries out each step in the plan, invoking tools and recording results.
-4. The **Evaluator** inspects the results against the expected output criteria.
-5. If the Evaluator issues a **PASS**, the pipeline terminates and returns the final output to the caller.
-6. If the Evaluator issues a **FAIL**, it generates structured feedback. The pipeline checks termination conditions (max cycles, token budget). If limits are not exceeded, the feedback is sent back to the Planner for a new cycle. If limits are exceeded, the pipeline terminates with a partial result and failure report.
+2. **prePlanner** events fire (if registered), receiving and optionally transforming the Planner input.
+3. The **Planner** analyzes the (potentially transformed) input and produces an ordered plan.
+4. **postPlanner** events fire, receiving and optionally transforming the generated plan.
+5. **preExecutor** events fire, receiving and optionally transforming the Executor input.
+6. The **Executor** carries out each step in the plan, invoking tools and recording results.
+7. **postExecutor** events fire, receiving and optionally transforming the Executor output.
+8. **preEvaluator** events fire, receiving and optionally transforming the Evaluator input.
+9. The **Evaluator** inspects the results against the expected output criteria.
+10. **postEvaluator** events fire, receiving and optionally transforming the Evaluator output.
+11. If the Evaluator issues a **PASS**, the pipeline terminates and returns the final output to the caller.
+12. If the Evaluator issues a **FAIL**, it generates structured feedback. The pipeline checks termination conditions (max cycles, token budget). If limits are not exceeded, the feedback is sent back to the Planner for a new cycle (starting from step 2). If limits are exceeded, the pipeline terminates with a partial result and failure report.
+
+> **Note:** At any event point, if a callback returns a Promise, the pipeline pauses until the Promise resolves. If a callback throws or a Promise rejects, the pipeline aborts (unless `continueOnError` is set for that callback). See **Section 4** for full event system details.
 
 ---
 
-## 4. Tool System
+## 4. Event System
+
+The Event System introduces lifecycle hooks around each core component, giving callers the ability to inject custom behavior at defined points in the pipeline without modifying the core framework. By default, Tepa operates as a fully autonomous system. Events make it extensible — callers can observe, transform, pause, or enrich the pipeline flow as needed.
+
+### 4.1 Event Points
+
+There are six event points — a **pre** and **post** event for each core component:
+
+| Event | Fires | Receives | Can Modify |
+|---|---|---|---|
+| `prePlanner` | Before the Planner runs | Planner input (prompt or feedback, tool registry, config, scratchpad) | Planner input |
+| `postPlanner` | After the Planner completes | Planner output (the generated plan) | Planner output |
+| `preExecutor` | Before the Executor runs | Executor input (plan, tool registry, scratchpad) | Executor input |
+| `postExecutor` | After the Executor completes | Executor output (step results, updated scratchpad, resource metrics) | Executor output |
+| `preEvaluator` | Before the Evaluator runs | Evaluator input (executor results, original prompt, scratchpad, resource metrics) | Evaluator input |
+| `postEvaluator` | After the Evaluator completes | Evaluator output (verdict, feedback or final output) | Evaluator output |
+
+The pipeline flow with events:
+
+```
+prePlanner → [PLANNER] → postPlanner → preExecutor → [EXECUTOR] → postExecutor → preEvaluator → [EVALUATOR] → postEvaluator
+```
+
+All events fire on every cycle. The pipeline provides cycle metadata (cycle number, total cycles used so far) to every event callback. If a caller needs an event to execute only on specific cycles, they handle that logic within their own callback implementation.
+
+### 4.2 Event Registration
+
+Event callbacks are registered at Tepa initialization time as part of the configuration. Callers provide a mapping of event names to one or more callback functions.
+
+Example structure:
+
+```
+Tepa({
+  config: { ... },
+  tools: [ ... ],
+  events: {
+    prePlanner: [callbackA, callbackB],
+    postExecutor: [callbackC],
+    preEvaluator: [callbackD]
+  }
+})
+```
+
+### 4.3 Event Contract
+
+Events are **transformation hooks**. Each callback receives the component's input (for pre-events) or output (for post-events) along with cycle metadata, and may return a modified version.
+
+**Rules:**
+
+- A callback receives the data and cycle metadata as arguments.
+- If the callback returns a modified value, that value replaces the original and is passed to the next callback or to the core component.
+- If the callback returns nothing (undefined/null), the original data passes through unchanged.
+- If the callback returns a `Promise`, the pipeline awaits its resolution before proceeding. This naturally enables pausing — for example, a callback that waits for human input simply returns a Promise that does not resolve until the input is provided.
+- If the Promise rejects (or the callback throws synchronously), the pipeline aborts — see Error Handling below.
+
+### 4.4 Execution Order
+
+When multiple callbacks are registered for the same event, they execute in **registration order** (top to bottom), similar to middleware:
+
+1. Callback A runs, optionally transforms the data.
+2. Callback B receives the (potentially transformed) data from A, optionally transforms it further.
+3. The final output is passed to the core component (for pre-events) or to the next stage in the pipeline (for post-events).
+
+### 4.5 Error Handling
+
+- By default, if any event callback throws an exception (or returns a rejected Promise), the **pipeline aborts** with an error report — the same as an unrecoverable error.
+- Callers can set `continueOnError: true` on individual event registrations to override this behavior. When enabled, the pipeline logs the error, skips the failed callback, and continues with the data as it was before that callback ran.
+
+### 4.6 Usage Scenarios
+
+The event system is intentionally general-purpose. Example use cases:
+
+| Scenario | Event(s) | Approach |
+|---|---|---|
+| **Human-in-the-loop approval** | `postPlanner` | Callback presents the generated plan to a human, returns a Promise that resolves when the human approves (or rejects to abort). |
+| **Plan safety filter** | `postPlanner` | Callback inspects the plan and removes or modifies steps that invoke restricted tools. |
+| **Input enrichment** | `prePlanner` | Callback fetches additional context from an external system and appends it to the prompt. |
+| **Data cleanup** | `postExecutor` | Callback sanitizes or normalizes executor results before evaluation. |
+| **External logging / alerting** | `postEvaluator` | Callback sends the evaluation verdict to a monitoring system or notifies a Slack channel on failure. |
+| **Custom termination logic** | `postEvaluator` | Callback inspects the verdict and forces an abort based on custom business rules (e.g., "stop after 2 failures on the same step"). |
+| **Progress reporting** | Any pre/post event | Callback emits progress updates to a UI or dashboard at each stage of the pipeline. |
+
+---
+
+## 5. Tool System
 
 Tools are the mechanism by which the Executor interacts with the outside world. The pipeline itself is tool-agnostic — it relies on a **tool registry** where developers register the tools available for a given task.
 
-### 4.1 Tool Registry
+### 5.1 Tool Registry
 
 Every tool is registered with a schema that includes:
 
@@ -157,7 +281,7 @@ Every tool is registered with a schema that includes:
 
 The registry is extensible. Developers can register custom tools alongside the built-in set.
 
-### 4.2 Initial Tool Set
+### 5.2 Initial Tool Set
 
 The following tools are included as the default set for the initial implementation:
 
@@ -187,17 +311,17 @@ The following tools are included as the default set for the initial implementati
 - `scratchpad_write` — Write a value to the scratchpad under a given key. Used to carry intermediate state between steps without consuming conversation context.
 - `log_observe` — Record an observation or reasoning note to the pipeline's execution log. Used for debugging and auditability.
 
-### 4.3 Custom Tool Registration
+### 5.3 Custom Tool Registration
 
 Developers can extend the tool set by registering custom tools that conform to the tool schema interface. This allows the pipeline to be adapted to domain-specific use cases (e.g., database query tools, email senders, domain-specific API clients) without modifying the core framework.
 
 ---
 
-## 5. Configuration
+## 6. Configuration
 
 The configuration layer governs operational boundaries and behavioral parameters for the pipeline. Configuration is provided at initialization time and remains constant for the duration of a pipeline run.
 
-### 5.1 Configuration Parameters
+### 6.1 Configuration Parameters
 
 - **LLM Models**: Which language model(s) to use. Supports assigning different models to different components (e.g., a high-capability model for the Planner, a faster/cheaper model for the Evaluator).
 - **Max Token Budget**: The total token allowance for the entire pipeline run across all cycles. Once exceeded, the pipeline terminates regardless of completion status.
@@ -206,7 +330,7 @@ The configuration layer governs operational boundaries and behavioral parameters
 - **Retry Policy**: How many times a failed tool invocation should be retried before surfacing as a step failure.
 - **Logging Level**: Verbosity of the execution log (e.g., minimal, standard, verbose).
 
-### 5.2 Termination Conditions
+### 6.2 Termination Conditions
 
 The pipeline terminates when any of the following conditions are met:
 
@@ -219,7 +343,7 @@ On non-success termination, the pipeline returns whatever partial results have b
 
 ---
 
-## 6. Prompt Structure
+## 7. Prompt Structure
 
 The initial prompt is the sole input from the caller. It must contain enough information for the Planner to produce a meaningful plan. The prompt consists of three sections:
 
@@ -245,11 +369,11 @@ Expected Output:
 
 ---
 
-## 7. Scenario Simulations
+## 8. Scenario Simulations
 
 The following simulations demonstrate how the pipeline handles two fundamentally different types of tasks using the same components and tool set.
 
-### 7.1 Scenario A — Automated API Client Generation
+### 8.1 Scenario A — Automated API Client Generation
 
 **Domain:** Software development
 **Task type:** Code generation, testing, and self-correction
@@ -354,7 +478,7 @@ Auto-corrected in Cycle 2 by following existing pattern in src/utils/http.ts.
 
 ---
 
-### 7.2 Scenario B — Student Learning Progress Insights
+### 8.2 Scenario B — Student Learning Progress Insights
 
 **Domain:** Education / data analysis
 **Task type:** Data processing, statistical analysis, and report generation
@@ -472,7 +596,7 @@ Ready for parent-teacher conferences.
 
 ---
 
-## 8. Cross-Scenario Validation Summary
+## 9. Cross-Scenario Validation Summary
 
 These two simulations validate that the pipeline architecture is domain-agnostic and behaviorally adaptive:
 
