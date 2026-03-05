@@ -248,7 +248,7 @@ Establish the shared type system (`@tepa/types`) and the core configuration laye
 - Prompt parsing and validation (valid prompts pass, malformed prompts throw).
 - Token tracker accumulation and budget enforcement.
 
-### Phase 2 — Tool System (`@tepa/tools`)
+### Phase 2 — Tool System (`@tepa/tools`) `DONE`
 
 Build the tool package as a separate workspace. This is implemented before the core components because the Planner and Executor depend on knowing what tools are available. Importantly, `@tepa/tools` depends only on `@tepa/types` — not on `tepa` core. This proves the separation works and validates that third-party tool packages can follow the exact same pattern.
 

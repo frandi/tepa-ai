@@ -1,3 +1,3 @@
 import { defineWorkspace } from "vitest/config";
 
-export default defineWorkspace(["packages/tepa"]);
+export default defineWorkspace(["packages/tepa", "packages/tools"]);
