@@ -4,7 +4,10 @@
       "Bash(npm run build -w packages/types)",
       "Bash(npm run build -w packages/tepa)",
       "Bash(npm install -D @types/node -w packages/tepa)",
-      "Bash(npx vitest run --reporter=verbose)"
+      "Bash(npx vitest run --reporter=verbose)",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(npx vitest run)"
     ]
   }
 }
