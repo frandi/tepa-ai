@@ -11,6 +11,12 @@ export { parsePromptFile } from "./prompt/parser.js";
 export { TokenTracker } from "./utils/token-tracker.js";
 export { Logger } from "./utils/logger.js";
 
+// Core Components
+export { Planner } from "./core/planner.js";
+export { Executor, type ExecutionContext, type ExecutorOutput } from "./core/executor.js";
+export { Scratchpad } from "./core/scratchpad.js";
+export { Evaluator } from "./core/evaluator.js";
+
 // Errors
 export {
   TepaError,

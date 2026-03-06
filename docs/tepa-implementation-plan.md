@@ -286,7 +286,7 @@ Build the tool package as a separate workspace. This is implemented before the c
 - Each built-in tool has unit tests with mocked I/O (file system, network, process).
 - Parameter validation catches type mismatches and missing required fields.
 
-### Phase 3 — LLM Provider Layer (`@tepa/provider-anthropic`)
+### Phase 3 — LLM Provider Layer (`@tepa/provider-anthropic`) `DONE`
 
 Abstract the LLM interaction into a separate provider package. The `tepa` core defines the `LLMProvider` interface (from `@tepa/types`), and `@tepa/provider-anthropic` implements it. This separation means future providers (OpenAI, Gemini, Ollama) are just new packages — no changes to core.
 
@@ -305,7 +305,7 @@ Abstract the LLM interaction into a separate provider package. The `tepa` core d
 - Token usage correctly extracted and returned.
 - Error handling for API failures, timeouts, and rate limits.
 
-### Phase 4 — Core Components
+### Phase 4 — Core Components `DONE`
 
 Implement the three pipeline components. This is the heart of Tepa.
 
