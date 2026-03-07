@@ -1,3 +1,9 @@
+// Main
+export { Tepa, type TepaOptions, type PlannerInput, type ExecutorInput, type EvaluatorInput } from "./tepa.js";
+
+// Events
+export { EventBus } from "./events/event-bus.js";
+
 // Config
 export { defineConfig } from "./config/define-config.js";
 export { loadConfig } from "./config/loader.js";

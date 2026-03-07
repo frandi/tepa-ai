@@ -7,7 +7,8 @@
       "Bash(npx vitest run --reporter=verbose)",
       "Bash(npm install)",
       "Bash(npm run build)",
-      "Bash(npx vitest run)"
+      "Bash(npx vitest run)",
+      "Bash(wc:*)"
     ]
   }
 }
