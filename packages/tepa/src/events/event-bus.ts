@@ -23,6 +23,10 @@ function normalize(
   };
 }
 
+/**
+ * Manages event callback registration and execution.
+ * Callbacks run in registration order; each can transform the data for the next.
+ */
 export class EventBus {
   private readonly callbacks: Map<EventName, NormalizedRegistration[]>;
 
@@ -40,6 +44,10 @@ export class EventBus {
     }
   }
 
+  /**
+   * Execute all callbacks registered for the given event.
+   * Returns the (potentially transformed) data after all callbacks have run.
+   */
   async run<T>(eventName: EventName, data: T, cycle: CycleMetadata): Promise<T> {
     const registrations = this.callbacks.get(eventName);
     if (!registrations || registrations.length === 0) {

@@ -17,6 +17,7 @@ const tepaPromptSchema = z.object({
   ]),
 });
 
+/** Validate that the given data conforms to the TepaPrompt structure. Throws TepaPromptError on failure. */
 export function validatePrompt(data: unknown): TepaPrompt {
   if (typeof data !== "object" || data === null || Array.isArray(data)) {
     throw new TepaPromptError("Prompt must be an object");

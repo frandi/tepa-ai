@@ -370,7 +370,9 @@ The Evaluator inspects results and decides whether the pipeline should terminate
 - Evaluator returns `fail` when expected outputs are missing.
 - Feedback is actionable and references specific steps.
 
-### Phase 5 — Event System & Pipeline Orchestrator
+### Phase 5 — Event System & Pipeline Orchestrator `DONE`
+
+> **Status:** Complete. EventBus and Tepa orchestrator implemented, 30 new tests (14 EventBus + 16 Tepa). Total 220 tests passing across 27 test files. All packages build successfully (dual ESM/CJS).
 
 Implement the event bus and wire everything together into the main `Tepa` class that runs the pipeline loop with event hooks at each stage.
 
@@ -445,7 +447,9 @@ The event bus is the internal engine that manages event registration and executi
 - All events receive correct `CycleMetadata` on each cycle.
 - Token usage is accurately accumulated across all components and cycles.
 
-### Phase 6 — Demos, Integration Testing & Documentation
+### Phase 6 — Demos, Integration Testing & Documentation `DONE`
+
+> **Status:** Complete. Both demos implemented with mock data and YAML prompts. 10 integration tests added. READMEs for root and all 4 packages. JSDoc on all public APIs. Total 230 tests passing across 28 test files.
 
 **Deliverables:**
 

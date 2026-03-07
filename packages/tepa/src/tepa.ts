@@ -25,10 +25,15 @@ import { Logger } from "./utils/logger.js";
 import { TepaTokenBudgetExceeded, TepaError } from "./utils/errors.js";
 import { EventBus } from "./events/event-bus.js";
 
+/** Options for constructing a Tepa pipeline instance. */
 export interface TepaOptions {
+  /** Partial configuration merged with defaults. */
   config?: DeepPartial<TepaConfig>;
+  /** Tools available to the pipeline's Planner and Executor. */
   tools: ToolDefinition[];
+  /** LLM provider used by all pipeline components. */
   provider: LLMProvider;
+  /** Optional event hook callbacks for pipeline lifecycle. */
   events?: EventMap;
 }
 
@@ -63,11 +68,13 @@ class InlineToolRegistry implements ToolRegistry {
   }
 }
 
+/** Data passed to prePlanner event callbacks. */
 export interface PlannerInput {
   prompt: TepaPrompt;
   feedback?: string;
 }
 
+/** Data passed to preExecutor event callbacks. */
 export interface ExecutorInput {
   plan: Plan;
   prompt: TepaPrompt;
@@ -76,12 +83,19 @@ export interface ExecutorInput {
   previousResults?: ExecutionResult[];
 }
 
+/** Data passed to preEvaluator event callbacks. */
 export interface EvaluatorInput {
   prompt: TepaPrompt;
   results: ExecutionResult[];
   scratchpad: Scratchpad;
 }
 
+/**
+ * Main Tepa pipeline orchestrator.
+ *
+ * Runs the Planner → Executor → Evaluator cycle with event hooks,
+ * self-correction on failure, and configurable termination limits.
+ */
 export class Tepa {
   private readonly config: TepaConfig;
   private readonly provider: LLMProvider;
@@ -95,6 +109,10 @@ export class Tepa {
     this.eventMap = options.events;
   }
 
+  /**
+   * Run the pipeline to completion.
+   * Returns when the evaluator passes, max cycles are reached, or token budget is exhausted.
+   */
   async run(promptInput: TepaPrompt): Promise<TepaResult> {
     const prompt = validatePrompt(promptInput);
 

@@ -15,6 +15,7 @@ const toolDefinitionSchema = z.object({
   execute: z.function(),
 });
 
+/** Create a validated ToolDefinition. Throws if the schema is malformed. */
 export function defineTool(definition: {
   name: string;
   description: string;

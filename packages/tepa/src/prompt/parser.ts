@@ -5,6 +5,7 @@ import type { TepaPrompt } from "@tepa/types";
 import { validatePrompt } from "./validator.js";
 import { TepaPromptError } from "../utils/errors.js";
 
+/** Load and validate a prompt from a YAML or JSON file. */
 export async function parsePromptFile(filePath: string): Promise<TepaPrompt> {
   let content: string;
   try {

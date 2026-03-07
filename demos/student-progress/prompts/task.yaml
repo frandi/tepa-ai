@@ -1,0 +1,33 @@
+goal: >
+  Analyze student learning progress for Class 5B (Fall 2025 semester)
+  and produce an insight report with actionable recommendations.
+
+context:
+  classDir: ./class-5b
+  gradeFile: grades.csv
+  attendanceFile: attendance.csv
+  gradeFileColumns: student_name, subject, assignment_name, score, max_score, date
+  attendanceFileColumns: student_name, date, status
+  studentCount: 28
+  subjectCount: 6
+  gradingPolicy:
+    failing: 60
+    intervention: 70
+  notes:
+    - Parent-teacher conferences are scheduled for next week
+    - Below 60% is failing, below 70% needs intervention
+
+expectedOutput:
+  - path: ./class-5b/progress-report.md
+    description: A comprehensive progress report
+    criteria:
+      - Class-wide performance overview with averages and pass rates
+      - Per-subject trend analysis identifying improving and declining subjects
+      - Individual student flags for at-risk students
+      - Correlation between attendance and performance
+      - Actionable recommendations for each flagged student
+  - path: ./class-5b/flagged-students.csv
+    description: Summary CSV of at-risk students for quick reference
+    criteria:
+      - Columns include student name, overall percentage, urgency level, attendance rate, primary concern
+      - Students below 70% overall or showing significant decline are included

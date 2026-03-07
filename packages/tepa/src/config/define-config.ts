@@ -56,6 +56,7 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return result;
 }
 
+/** Merge a partial configuration with sensible defaults and validate the result. */
 export function defineConfig(partial: DeepPartial<TepaConfig> = {}): TepaConfig {
   const merged = deepMerge(
     DEFAULT_CONFIG as unknown as Record<string, unknown>,

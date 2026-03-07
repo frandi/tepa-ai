@@ -1,0 +1,31 @@
+goal: >
+  Create a TypeScript API client module for the JSONPlaceholder API
+  (https://jsonplaceholder.typicode.com).
+
+context:
+  projectRoot: ./my-project
+  language: TypeScript
+  runtime: Node.js
+  httpClient: axios
+  testFramework: vitest
+  notes:
+    - Follow existing code style in the project
+    - Check src/utils/http.ts for the HTTP utility pattern
+
+expectedOutput:
+  - path: src/api/jsonplaceholder.ts
+    description: A typed API client class with methods for posts, users, and comments
+    criteria:
+      - Uses axios.create() with baseURL following existing project patterns
+      - Methods are fully typed with return types
+      - Exports a default client instance
+  - path: src/api/types.ts
+    description: TypeScript type definitions for API response shapes
+    criteria:
+      - Post, User, and Comment interfaces
+      - All fields typed based on actual API response shapes
+  - path: src/api/__tests__/jsonplaceholder.test.ts
+    description: Test file using vitest
+    criteria:
+      - Tests for each client method
+      - All tests passing when run with npx vitest run

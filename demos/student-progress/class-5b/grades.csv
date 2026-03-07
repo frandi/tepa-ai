@@ -1,0 +1,1345 @@
+student_name,subject,assignment_name,score,max_score,date
+Liam Chen,Math,Quiz 1,43,100,2025-09-11
+Liam Chen,Math,Homework 1,42,100,2025-09-20
+Liam Chen,Math,Quiz 2,47,100,2025-09-30
+Liam Chen,Math,Midterm,44,100,2025-10-09
+Liam Chen,Math,Homework 2,43,100,2025-10-19
+Liam Chen,Math,Quiz 3,42,100,2025-10-29
+Liam Chen,Math,Project,41,100,2025-11-07
+Liam Chen,Math,Final,36,100,2025-11-17
+Liam Chen,English,Essay 1,46,100,2025-09-11
+Liam Chen,English,Reading Quiz 1,48,100,2025-09-20
+Liam Chen,English,Vocabulary Test,51,100,2025-09-30
+Liam Chen,English,Midterm,59,100,2025-10-09
+Liam Chen,English,Essay 2,55,100,2025-10-19
+Liam Chen,English,Book Report,55,100,2025-10-29
+Liam Chen,English,Reading Quiz 2,52,100,2025-11-07
+Liam Chen,English,Final,50,100,2025-11-17
+Liam Chen,Science,Lab Report 1,42,100,2025-09-11
+Liam Chen,Science,Quiz 1,51,100,2025-09-20
+Liam Chen,Science,Lab Report 2,51,100,2025-09-30
+Liam Chen,Science,Midterm,51,100,2025-10-09
+Liam Chen,Science,Experiment Project,46,100,2025-10-19
+Liam Chen,Science,Quiz 2,44,100,2025-10-29
+Liam Chen,Science,Lab Report 3,51,100,2025-11-07
+Liam Chen,Science,Final,41,100,2025-11-17
+Liam Chen,History,Essay 1,58,100,2025-09-11
+Liam Chen,History,Quiz 1,60,100,2025-09-20
+Liam Chen,History,Research Paper,58,100,2025-09-30
+Liam Chen,History,Midterm,50,100,2025-10-09
+Liam Chen,History,Quiz 2,53,100,2025-10-19
+Liam Chen,History,Presentation,56,100,2025-10-29
+Liam Chen,History,Essay 2,49,100,2025-11-07
+Liam Chen,History,Final,52,100,2025-11-17
+Liam Chen,Art,Sketch Portfolio,64,100,2025-09-11
+Liam Chen,Art,Color Theory,67,100,2025-09-20
+Liam Chen,Art,Painting 1,61,100,2025-09-30
+Liam Chen,Art,Midterm Project,64,100,2025-10-09
+Liam Chen,Art,Sculpture,60,100,2025-10-19
+Liam Chen,Art,Digital Art,67,100,2025-10-29
+Liam Chen,Art,Painting 2,66,100,2025-11-07
+Liam Chen,Art,Final Portfolio,67,100,2025-11-17
+Liam Chen,PE,Fitness Test 1,62,100,2025-09-11
+Liam Chen,PE,Team Sport 1,64,100,2025-09-20
+Liam Chen,PE,Individual Sport,63,100,2025-09-30
+Liam Chen,PE,Midterm Assessment,56,100,2025-10-09
+Liam Chen,PE,Team Sport 2,64,100,2025-10-19
+Liam Chen,PE,Fitness Test 2,59,100,2025-10-29
+Liam Chen,PE,Endurance Test,65,100,2025-11-07
+Liam Chen,PE,Final Assessment,55,100,2025-11-17
+Sofia Rodriguez,Math,Quiz 1,47,100,2025-09-11
+Sofia Rodriguez,Math,Homework 1,40,100,2025-09-20
+Sofia Rodriguez,Math,Quiz 2,37,100,2025-09-30
+Sofia Rodriguez,Math,Midterm,42,100,2025-10-09
+Sofia Rodriguez,Math,Homework 2,35,100,2025-10-19
+Sofia Rodriguez,Math,Quiz 3,36,100,2025-10-29
+Sofia Rodriguez,Math,Project,47,100,2025-11-07
+Sofia Rodriguez,Math,Final,38,100,2025-11-17
+Sofia Rodriguez,English,Essay 1,59,100,2025-09-11
+Sofia Rodriguez,English,Reading Quiz 1,62,100,2025-09-20
+Sofia Rodriguez,English,Vocabulary Test,65,100,2025-09-30
+Sofia Rodriguez,English,Midterm,63,100,2025-10-09
+Sofia Rodriguez,English,Essay 2,65,100,2025-10-19
+Sofia Rodriguez,English,Book Report,63,100,2025-10-29
+Sofia Rodriguez,English,Reading Quiz 2,64,100,2025-11-07
+Sofia Rodriguez,English,Final,57,100,2025-11-17
+Sofia Rodriguez,Science,Lab Report 1,45,100,2025-09-11
+Sofia Rodriguez,Science,Quiz 1,43,100,2025-09-20
+Sofia Rodriguez,Science,Lab Report 2,52,100,2025-09-30
+Sofia Rodriguez,Science,Midterm,53,100,2025-10-09
+Sofia Rodriguez,Science,Experiment Project,44,100,2025-10-19
+Sofia Rodriguez,Science,Quiz 2,51,100,2025-10-29
+Sofia Rodriguez,Science,Lab Report 3,44,100,2025-11-07
+Sofia Rodriguez,Science,Final,47,100,2025-11-17
+Sofia Rodriguez,History,Essay 1,53,100,2025-09-11
+Sofia Rodriguez,History,Quiz 1,53,100,2025-09-20
+Sofia Rodriguez,History,Research Paper,54,100,2025-09-30
+Sofia Rodriguez,History,Midterm,57,100,2025-10-09
+Sofia Rodriguez,History,Quiz 2,59,100,2025-10-19
+Sofia Rodriguez,History,Presentation,65,100,2025-10-29
+Sofia Rodriguez,History,Essay 2,58,100,2025-11-07
+Sofia Rodriguez,History,Final,57,100,2025-11-17
+Sofia Rodriguez,Art,Sketch Portfolio,66,100,2025-09-11
+Sofia Rodriguez,Art,Color Theory,69,100,2025-09-20
+Sofia Rodriguez,Art,Painting 1,67,100,2025-09-30
+Sofia Rodriguez,Art,Midterm Project,62,100,2025-10-09
+Sofia Rodriguez,Art,Sculpture,73,100,2025-10-19
+Sofia Rodriguez,Art,Digital Art,69,100,2025-10-29
+Sofia Rodriguez,Art,Painting 2,73,100,2025-11-07
+Sofia Rodriguez,Art,Final Portfolio,65,100,2025-11-17
+Sofia Rodriguez,PE,Fitness Test 1,66,100,2025-09-11
+Sofia Rodriguez,PE,Team Sport 1,64,100,2025-09-20
+Sofia Rodriguez,PE,Individual Sport,67,100,2025-09-30
+Sofia Rodriguez,PE,Midterm Assessment,65,100,2025-10-09
+Sofia Rodriguez,PE,Team Sport 2,63,100,2025-10-19
+Sofia Rodriguez,PE,Fitness Test 2,63,100,2025-10-29
+Sofia Rodriguez,PE,Endurance Test,60,100,2025-11-07
+Sofia Rodriguez,PE,Final Assessment,58,100,2025-11-17
+Jake Thompson,Math,Quiz 1,48,100,2025-09-11
+Jake Thompson,Math,Homework 1,50,100,2025-09-20
+Jake Thompson,Math,Quiz 2,47,100,2025-09-30
+Jake Thompson,Math,Midterm,56,100,2025-10-09
+Jake Thompson,Math,Homework 2,52,100,2025-10-19
+Jake Thompson,Math,Quiz 3,49,100,2025-10-29
+Jake Thompson,Math,Project,44,100,2025-11-07
+Jake Thompson,Math,Final,54,100,2025-11-17
+Jake Thompson,English,Essay 1,71,100,2025-09-11
+Jake Thompson,English,Reading Quiz 1,71,100,2025-09-20
+Jake Thompson,English,Vocabulary Test,67,100,2025-09-30
+Jake Thompson,English,Midterm,67,100,2025-10-09
+Jake Thompson,English,Essay 2,75,100,2025-10-19
+Jake Thompson,English,Book Report,73,100,2025-10-29
+Jake Thompson,English,Reading Quiz 2,71,100,2025-11-07
+Jake Thompson,English,Final,75,100,2025-11-17
+Jake Thompson,Science,Lab Report 1,67,100,2025-09-11
+Jake Thompson,Science,Quiz 1,70,100,2025-09-20
+Jake Thompson,Science,Lab Report 2,63,100,2025-09-30
+Jake Thompson,Science,Midterm,61,100,2025-10-09
+Jake Thompson,Science,Experiment Project,65,100,2025-10-19
+Jake Thompson,Science,Quiz 2,60,100,2025-10-29
+Jake Thompson,Science,Lab Report 3,70,100,2025-11-07
+Jake Thompson,Science,Final,63,100,2025-11-17
+Jake Thompson,History,Essay 1,71,100,2025-09-11
+Jake Thompson,History,Quiz 1,68,100,2025-09-20
+Jake Thompson,History,Research Paper,63,100,2025-09-30
+Jake Thompson,History,Midterm,63,100,2025-10-09
+Jake Thompson,History,Quiz 2,69,100,2025-10-19
+Jake Thompson,History,Presentation,68,100,2025-10-29
+Jake Thompson,History,Essay 2,74,100,2025-11-07
+Jake Thompson,History,Final,63,100,2025-11-17
+Jake Thompson,Art,Sketch Portfolio,82,100,2025-09-11
+Jake Thompson,Art,Color Theory,82,100,2025-09-20
+Jake Thompson,Art,Painting 1,79,100,2025-09-30
+Jake Thompson,Art,Midterm Project,79,100,2025-10-09
+Jake Thompson,Art,Sculpture,80,100,2025-10-19
+Jake Thompson,Art,Digital Art,79,100,2025-10-29
+Jake Thompson,Art,Painting 2,79,100,2025-11-07
+Jake Thompson,Art,Final Portfolio,75,100,2025-11-17
+Jake Thompson,PE,Fitness Test 1,70,100,2025-09-11
+Jake Thompson,PE,Team Sport 1,68,100,2025-09-20
+Jake Thompson,PE,Individual Sport,71,100,2025-09-30
+Jake Thompson,PE,Midterm Assessment,79,100,2025-10-09
+Jake Thompson,PE,Team Sport 2,75,100,2025-10-19
+Jake Thompson,PE,Fitness Test 2,70,100,2025-10-29
+Jake Thompson,PE,Endurance Test,76,100,2025-11-07
+Jake Thompson,PE,Final Assessment,71,100,2025-11-17
+Aisha Patel,Math,Quiz 1,74,100,2025-09-11
+Aisha Patel,Math,Homework 1,74,100,2025-09-20
+Aisha Patel,Math,Quiz 2,65,100,2025-09-30
+Aisha Patel,Math,Midterm,61,100,2025-10-09
+Aisha Patel,Math,Homework 2,66,100,2025-10-19
+Aisha Patel,Math,Quiz 3,67,100,2025-10-29
+Aisha Patel,Math,Project,64,100,2025-11-07
+Aisha Patel,Math,Final,57,100,2025-11-17
+Aisha Patel,English,Essay 1,83,100,2025-09-11
+Aisha Patel,English,Reading Quiz 1,84,100,2025-09-20
+Aisha Patel,English,Vocabulary Test,73,100,2025-09-30
+Aisha Patel,English,Midterm,70,100,2025-10-09
+Aisha Patel,English,Essay 2,71,100,2025-10-19
+Aisha Patel,English,Book Report,68,100,2025-10-29
+Aisha Patel,English,Reading Quiz 2,70,100,2025-11-07
+Aisha Patel,English,Final,66,100,2025-11-17
+Aisha Patel,Science,Lab Report 1,79,100,2025-09-11
+Aisha Patel,Science,Quiz 1,71,100,2025-09-20
+Aisha Patel,Science,Lab Report 2,67,100,2025-09-30
+Aisha Patel,Science,Midterm,67,100,2025-10-09
+Aisha Patel,Science,Experiment Project,67,100,2025-10-19
+Aisha Patel,Science,Quiz 2,62,100,2025-10-29
+Aisha Patel,Science,Lab Report 3,70,100,2025-11-07
+Aisha Patel,Science,Final,59,100,2025-11-17
+Aisha Patel,History,Essay 1,83,100,2025-09-11
+Aisha Patel,History,Quiz 1,72,100,2025-09-20
+Aisha Patel,History,Research Paper,78,100,2025-09-30
+Aisha Patel,History,Midterm,70,100,2025-10-09
+Aisha Patel,History,Quiz 2,76,100,2025-10-19
+Aisha Patel,History,Presentation,68,100,2025-10-29
+Aisha Patel,History,Essay 2,68,100,2025-11-07
+Aisha Patel,History,Final,68,100,2025-11-17
+Aisha Patel,Art,Sketch Portfolio,86,100,2025-09-11
+Aisha Patel,Art,Color Theory,88,100,2025-09-20
+Aisha Patel,Art,Painting 1,86,100,2025-09-30
+Aisha Patel,Art,Midterm Project,84,100,2025-10-09
+Aisha Patel,Art,Sculpture,79,100,2025-10-19
+Aisha Patel,Art,Digital Art,77,100,2025-10-29
+Aisha Patel,Art,Painting 2,79,100,2025-11-07
+Aisha Patel,Art,Final Portfolio,79,100,2025-11-17
+Aisha Patel,PE,Fitness Test 1,88,100,2025-09-11
+Aisha Patel,PE,Team Sport 1,81,100,2025-09-20
+Aisha Patel,PE,Individual Sport,75,100,2025-09-30
+Aisha Patel,PE,Midterm Assessment,74,100,2025-10-09
+Aisha Patel,PE,Team Sport 2,82,100,2025-10-19
+Aisha Patel,PE,Fitness Test 2,76,100,2025-10-29
+Aisha Patel,PE,Endurance Test,75,100,2025-11-07
+Aisha Patel,PE,Final Assessment,77,100,2025-11-17
+Marcus Williams,Math,Quiz 1,61,100,2025-09-11
+Marcus Williams,Math,Homework 1,61,100,2025-09-20
+Marcus Williams,Math,Quiz 2,61,100,2025-09-30
+Marcus Williams,Math,Midterm,52,100,2025-10-09
+Marcus Williams,Math,Homework 2,54,100,2025-10-19
+Marcus Williams,Math,Quiz 3,54,100,2025-10-29
+Marcus Williams,Math,Project,50,100,2025-11-07
+Marcus Williams,Math,Final,56,100,2025-11-17
+Marcus Williams,English,Essay 1,74,100,2025-09-11
+Marcus Williams,English,Reading Quiz 1,73,100,2025-09-20
+Marcus Williams,English,Vocabulary Test,77,100,2025-09-30
+Marcus Williams,English,Midterm,75,100,2025-10-09
+Marcus Williams,English,Essay 2,75,100,2025-10-19
+Marcus Williams,English,Book Report,67,100,2025-10-29
+Marcus Williams,English,Reading Quiz 2,77,100,2025-11-07
+Marcus Williams,English,Final,74,100,2025-11-17
+Marcus Williams,Science,Lab Report 1,64,100,2025-09-11
+Marcus Williams,Science,Quiz 1,63,100,2025-09-20
+Marcus Williams,Science,Lab Report 2,63,100,2025-09-30
+Marcus Williams,Science,Midterm,61,100,2025-10-09
+Marcus Williams,Science,Experiment Project,63,100,2025-10-19
+Marcus Williams,Science,Quiz 2,69,100,2025-10-29
+Marcus Williams,Science,Lab Report 3,62,100,2025-11-07
+Marcus Williams,Science,Final,63,100,2025-11-17
+Marcus Williams,History,Essay 1,72,100,2025-09-11
+Marcus Williams,History,Quiz 1,65,100,2025-09-20
+Marcus Williams,History,Research Paper,66,100,2025-09-30
+Marcus Williams,History,Midterm,64,100,2025-10-09
+Marcus Williams,History,Quiz 2,65,100,2025-10-19
+Marcus Williams,History,Presentation,74,100,2025-10-29
+Marcus Williams,History,Essay 2,73,100,2025-11-07
+Marcus Williams,History,Final,68,100,2025-11-17
+Marcus Williams,Art,Sketch Portfolio,77,100,2025-09-11
+Marcus Williams,Art,Color Theory,81,100,2025-09-20
+Marcus Williams,Art,Painting 1,77,100,2025-09-30
+Marcus Williams,Art,Midterm Project,80,100,2025-10-09
+Marcus Williams,Art,Sculpture,85,100,2025-10-19
+Marcus Williams,Art,Digital Art,83,100,2025-10-29
+Marcus Williams,Art,Painting 2,79,100,2025-11-07
+Marcus Williams,Art,Final Portfolio,74,100,2025-11-17
+Marcus Williams,PE,Fitness Test 1,69,100,2025-09-11
+Marcus Williams,PE,Team Sport 1,69,100,2025-09-20
+Marcus Williams,PE,Individual Sport,73,100,2025-09-30
+Marcus Williams,PE,Midterm Assessment,75,100,2025-10-09
+Marcus Williams,PE,Team Sport 2,71,100,2025-10-19
+Marcus Williams,PE,Fitness Test 2,78,100,2025-10-29
+Marcus Williams,PE,Endurance Test,77,100,2025-11-07
+Marcus Williams,PE,Final Assessment,73,100,2025-11-17
+Noah Kim,Math,Quiz 1,50,100,2025-09-11
+Noah Kim,Math,Homework 1,54,100,2025-09-20
+Noah Kim,Math,Quiz 2,57,100,2025-09-30
+Noah Kim,Math,Midterm,62,100,2025-10-09
+Noah Kim,Math,Homework 2,57,100,2025-10-19
+Noah Kim,Math,Quiz 3,65,100,2025-10-29
+Noah Kim,Math,Project,69,100,2025-11-07
+Noah Kim,Math,Final,66,100,2025-11-17
+Noah Kim,English,Essay 1,68,100,2025-09-11
+Noah Kim,English,Reading Quiz 1,60,100,2025-09-20
+Noah Kim,English,Vocabulary Test,69,100,2025-09-30
+Noah Kim,English,Midterm,64,100,2025-10-09
+Noah Kim,English,Essay 2,76,100,2025-10-19
+Noah Kim,English,Book Report,72,100,2025-10-29
+Noah Kim,English,Reading Quiz 2,77,100,2025-11-07
+Noah Kim,English,Final,73,100,2025-11-17
+Noah Kim,Science,Lab Report 1,59,100,2025-09-11
+Noah Kim,Science,Quiz 1,63,100,2025-09-20
+Noah Kim,Science,Lab Report 2,68,100,2025-09-30
+Noah Kim,Science,Midterm,59,100,2025-10-09
+Noah Kim,Science,Experiment Project,60,100,2025-10-19
+Noah Kim,Science,Quiz 2,68,100,2025-10-29
+Noah Kim,Science,Lab Report 3,67,100,2025-11-07
+Noah Kim,Science,Final,69,100,2025-11-17
+Noah Kim,History,Essay 1,58,100,2025-09-11
+Noah Kim,History,Quiz 1,65,100,2025-09-20
+Noah Kim,History,Research Paper,61,100,2025-09-30
+Noah Kim,History,Midterm,64,100,2025-10-09
+Noah Kim,History,Quiz 2,70,100,2025-10-19
+Noah Kim,History,Presentation,70,100,2025-10-29
+Noah Kim,History,Essay 2,69,100,2025-11-07
+Noah Kim,History,Final,74,100,2025-11-17
+Noah Kim,Art,Sketch Portfolio,69,100,2025-09-11
+Noah Kim,Art,Color Theory,67,100,2025-09-20
+Noah Kim,Art,Painting 1,75,100,2025-09-30
+Noah Kim,Art,Midterm Project,78,100,2025-10-09
+Noah Kim,Art,Sculpture,81,100,2025-10-19
+Noah Kim,Art,Digital Art,73,100,2025-10-29
+Noah Kim,Art,Painting 2,85,100,2025-11-07
+Noah Kim,Art,Final Portfolio,87,100,2025-11-17
+Noah Kim,PE,Fitness Test 1,69,100,2025-09-11
+Noah Kim,PE,Team Sport 1,70,100,2025-09-20
+Noah Kim,PE,Individual Sport,69,100,2025-09-30
+Noah Kim,PE,Midterm Assessment,67,100,2025-10-09
+Noah Kim,PE,Team Sport 2,79,100,2025-10-19
+Noah Kim,PE,Fitness Test 2,77,100,2025-10-29
+Noah Kim,PE,Endurance Test,83,100,2025-11-07
+Noah Kim,PE,Final Assessment,76,100,2025-11-17
+Emma Davis,Math,Quiz 1,73,100,2025-09-11
+Emma Davis,Math,Homework 1,70,100,2025-09-20
+Emma Davis,Math,Quiz 2,76,100,2025-09-30
+Emma Davis,Math,Midterm,75,100,2025-10-09
+Emma Davis,Math,Homework 2,70,100,2025-10-19
+Emma Davis,Math,Quiz 3,64,100,2025-10-29
+Emma Davis,Math,Project,72,100,2025-11-07
+Emma Davis,Math,Final,76,100,2025-11-17
+Emma Davis,English,Essay 1,75,100,2025-09-11
+Emma Davis,English,Reading Quiz 1,77,100,2025-09-20
+Emma Davis,English,Vocabulary Test,84,100,2025-09-30
+Emma Davis,English,Midterm,78,100,2025-10-09
+Emma Davis,English,Essay 2,87,100,2025-10-19
+Emma Davis,English,Book Report,79,100,2025-10-29
+Emma Davis,English,Reading Quiz 2,84,100,2025-11-07
+Emma Davis,English,Final,83,100,2025-11-17
+Emma Davis,Science,Lab Report 1,78,100,2025-09-11
+Emma Davis,Science,Quiz 1,77,100,2025-09-20
+Emma Davis,Science,Lab Report 2,72,100,2025-09-30
+Emma Davis,Science,Midterm,72,100,2025-10-09
+Emma Davis,Science,Experiment Project,78,100,2025-10-19
+Emma Davis,Science,Quiz 2,77,100,2025-10-29
+Emma Davis,Science,Lab Report 3,77,100,2025-11-07
+Emma Davis,Science,Final,79,100,2025-11-17
+Emma Davis,History,Essay 1,82,100,2025-09-11
+Emma Davis,History,Quiz 1,84,100,2025-09-20
+Emma Davis,History,Research Paper,84,100,2025-09-30
+Emma Davis,History,Midterm,75,100,2025-10-09
+Emma Davis,History,Quiz 2,84,100,2025-10-19
+Emma Davis,History,Presentation,75,100,2025-10-29
+Emma Davis,History,Essay 2,85,100,2025-11-07
+Emma Davis,History,Final,75,100,2025-11-17
+Emma Davis,Art,Sketch Portfolio,92,100,2025-09-11
+Emma Davis,Art,Color Theory,87,100,2025-09-20
+Emma Davis,Art,Painting 1,85,100,2025-09-30
+Emma Davis,Art,Midterm Project,83,100,2025-10-09
+Emma Davis,Art,Sculpture,88,100,2025-10-19
+Emma Davis,Art,Digital Art,91,100,2025-10-29
+Emma Davis,Art,Painting 2,94,100,2025-11-07
+Emma Davis,Art,Final Portfolio,87,100,2025-11-17
+Emma Davis,PE,Fitness Test 1,82,100,2025-09-11
+Emma Davis,PE,Team Sport 1,82,100,2025-09-20
+Emma Davis,PE,Individual Sport,83,100,2025-09-30
+Emma Davis,PE,Midterm Assessment,82,100,2025-10-09
+Emma Davis,PE,Team Sport 2,79,100,2025-10-19
+Emma Davis,PE,Fitness Test 2,83,100,2025-10-29
+Emma Davis,PE,Endurance Test,81,100,2025-11-07
+Emma Davis,PE,Final Assessment,87,100,2025-11-17
+Oliver Brown,Math,Quiz 1,77,100,2025-09-11
+Oliver Brown,Math,Homework 1,78,100,2025-09-20
+Oliver Brown,Math,Quiz 2,70,100,2025-09-30
+Oliver Brown,Math,Midterm,71,100,2025-10-09
+Oliver Brown,Math,Homework 2,69,100,2025-10-19
+Oliver Brown,Math,Quiz 3,69,100,2025-10-29
+Oliver Brown,Math,Project,77,100,2025-11-07
+Oliver Brown,Math,Final,69,100,2025-11-17
+Oliver Brown,English,Essay 1,81,100,2025-09-11
+Oliver Brown,English,Reading Quiz 1,89,100,2025-09-20
+Oliver Brown,English,Vocabulary Test,82,100,2025-09-30
+Oliver Brown,English,Midterm,84,100,2025-10-09
+Oliver Brown,English,Essay 2,89,100,2025-10-19
+Oliver Brown,English,Book Report,86,100,2025-10-29
+Oliver Brown,English,Reading Quiz 2,84,100,2025-11-07
+Oliver Brown,English,Final,86,100,2025-11-17
+Oliver Brown,Science,Lab Report 1,84,100,2025-09-11
+Oliver Brown,Science,Quiz 1,76,100,2025-09-20
+Oliver Brown,Science,Lab Report 2,81,100,2025-09-30
+Oliver Brown,Science,Midterm,74,100,2025-10-09
+Oliver Brown,Science,Experiment Project,82,100,2025-10-19
+Oliver Brown,Science,Quiz 2,80,100,2025-10-29
+Oliver Brown,Science,Lab Report 3,73,100,2025-11-07
+Oliver Brown,Science,Final,82,100,2025-11-17
+Oliver Brown,History,Essay 1,77,100,2025-09-11
+Oliver Brown,History,Quiz 1,78,100,2025-09-20
+Oliver Brown,History,Research Paper,86,100,2025-09-30
+Oliver Brown,History,Midterm,86,100,2025-10-09
+Oliver Brown,History,Quiz 2,77,100,2025-10-19
+Oliver Brown,History,Presentation,87,100,2025-10-29
+Oliver Brown,History,Essay 2,80,100,2025-11-07
+Oliver Brown,History,Final,83,100,2025-11-17
+Oliver Brown,Art,Sketch Portfolio,92,100,2025-09-11
+Oliver Brown,Art,Color Theory,89,100,2025-09-20
+Oliver Brown,Art,Painting 1,89,100,2025-09-30
+Oliver Brown,Art,Midterm Project,90,100,2025-10-09
+Oliver Brown,Art,Sculpture,89,100,2025-10-19
+Oliver Brown,Art,Digital Art,98,100,2025-10-29
+Oliver Brown,Art,Painting 2,96,100,2025-11-07
+Oliver Brown,Art,Final Portfolio,86,100,2025-11-17
+Oliver Brown,PE,Fitness Test 1,88,100,2025-09-11
+Oliver Brown,PE,Team Sport 1,85,100,2025-09-20
+Oliver Brown,PE,Individual Sport,83,100,2025-09-30
+Oliver Brown,PE,Midterm Assessment,90,100,2025-10-09
+Oliver Brown,PE,Team Sport 2,85,100,2025-10-19
+Oliver Brown,PE,Fitness Test 2,88,100,2025-10-29
+Oliver Brown,PE,Endurance Test,90,100,2025-11-07
+Oliver Brown,PE,Final Assessment,91,100,2025-11-17
+Ava Wilson,Math,Quiz 1,70,100,2025-09-11
+Ava Wilson,Math,Homework 1,74,100,2025-09-20
+Ava Wilson,Math,Quiz 2,74,100,2025-09-30
+Ava Wilson,Math,Midterm,69,100,2025-10-09
+Ava Wilson,Math,Homework 2,71,100,2025-10-19
+Ava Wilson,Math,Quiz 3,63,100,2025-10-29
+Ava Wilson,Math,Project,62,100,2025-11-07
+Ava Wilson,Math,Final,65,100,2025-11-17
+Ava Wilson,English,Essay 1,77,100,2025-09-11
+Ava Wilson,English,Reading Quiz 1,77,100,2025-09-20
+Ava Wilson,English,Vocabulary Test,75,100,2025-09-30
+Ava Wilson,English,Midterm,84,100,2025-10-09
+Ava Wilson,English,Essay 2,79,100,2025-10-19
+Ava Wilson,English,Book Report,84,100,2025-10-29
+Ava Wilson,English,Reading Quiz 2,85,100,2025-11-07
+Ava Wilson,English,Final,84,100,2025-11-17
+Ava Wilson,Science,Lab Report 1,78,100,2025-09-11
+Ava Wilson,Science,Quiz 1,68,100,2025-09-20
+Ava Wilson,Science,Lab Report 2,72,100,2025-09-30
+Ava Wilson,Science,Midterm,79,100,2025-10-09
+Ava Wilson,Science,Experiment Project,77,100,2025-10-19
+Ava Wilson,Science,Quiz 2,71,100,2025-10-29
+Ava Wilson,Science,Lab Report 3,78,100,2025-11-07
+Ava Wilson,Science,Final,73,100,2025-11-17
+Ava Wilson,History,Essay 1,76,100,2025-09-11
+Ava Wilson,History,Quiz 1,76,100,2025-09-20
+Ava Wilson,History,Research Paper,71,100,2025-09-30
+Ava Wilson,History,Midterm,79,100,2025-10-09
+Ava Wilson,History,Quiz 2,79,100,2025-10-19
+Ava Wilson,History,Presentation,76,100,2025-10-29
+Ava Wilson,History,Essay 2,79,100,2025-11-07
+Ava Wilson,History,Final,80,100,2025-11-17
+Ava Wilson,Art,Sketch Portfolio,90,100,2025-09-11
+Ava Wilson,Art,Color Theory,81,100,2025-09-20
+Ava Wilson,Art,Painting 1,85,100,2025-09-30
+Ava Wilson,Art,Midterm Project,87,100,2025-10-09
+Ava Wilson,Art,Sculpture,93,100,2025-10-19
+Ava Wilson,Art,Digital Art,86,100,2025-10-29
+Ava Wilson,Art,Painting 2,82,100,2025-11-07
+Ava Wilson,Art,Final Portfolio,92,100,2025-11-17
+Ava Wilson,PE,Fitness Test 1,87,100,2025-09-11
+Ava Wilson,PE,Team Sport 1,86,100,2025-09-20
+Ava Wilson,PE,Individual Sport,84,100,2025-09-30
+Ava Wilson,PE,Midterm Assessment,77,100,2025-10-09
+Ava Wilson,PE,Team Sport 2,80,100,2025-10-19
+Ava Wilson,PE,Fitness Test 2,80,100,2025-10-29
+Ava Wilson,PE,Endurance Test,87,100,2025-11-07
+Ava Wilson,PE,Final Assessment,87,100,2025-11-17
+Ethan Martinez,Math,Quiz 1,73,100,2025-09-11
+Ethan Martinez,Math,Homework 1,69,100,2025-09-20
+Ethan Martinez,Math,Quiz 2,65,100,2025-09-30
+Ethan Martinez,Math,Midterm,64,100,2025-10-09
+Ethan Martinez,Math,Homework 2,63,100,2025-10-19
+Ethan Martinez,Math,Quiz 3,60,100,2025-10-29
+Ethan Martinez,Math,Project,67,100,2025-11-07
+Ethan Martinez,Math,Final,69,100,2025-11-17
+Ethan Martinez,English,Essay 1,83,100,2025-09-11
+Ethan Martinez,English,Reading Quiz 1,76,100,2025-09-20
+Ethan Martinez,English,Vocabulary Test,73,100,2025-09-30
+Ethan Martinez,English,Midterm,84,100,2025-10-09
+Ethan Martinez,English,Essay 2,82,100,2025-10-19
+Ethan Martinez,English,Book Report,76,100,2025-10-29
+Ethan Martinez,English,Reading Quiz 2,85,100,2025-11-07
+Ethan Martinez,English,Final,83,100,2025-11-17
+Ethan Martinez,Science,Lab Report 1,73,100,2025-09-11
+Ethan Martinez,Science,Quiz 1,71,100,2025-09-20
+Ethan Martinez,Science,Lab Report 2,72,100,2025-09-30
+Ethan Martinez,Science,Midterm,68,100,2025-10-09
+Ethan Martinez,Science,Experiment Project,68,100,2025-10-19
+Ethan Martinez,Science,Quiz 2,78,100,2025-10-29
+Ethan Martinez,Science,Lab Report 3,70,100,2025-11-07
+Ethan Martinez,Science,Final,71,100,2025-11-17
+Ethan Martinez,History,Essay 1,73,100,2025-09-11
+Ethan Martinez,History,Quiz 1,81,100,2025-09-20
+Ethan Martinez,History,Research Paper,81,100,2025-09-30
+Ethan Martinez,History,Midterm,78,100,2025-10-09
+Ethan Martinez,History,Quiz 2,77,100,2025-10-19
+Ethan Martinez,History,Presentation,74,100,2025-10-29
+Ethan Martinez,History,Essay 2,76,100,2025-11-07
+Ethan Martinez,History,Final,79,100,2025-11-17
+Ethan Martinez,Art,Sketch Portfolio,82,100,2025-09-11
+Ethan Martinez,Art,Color Theory,81,100,2025-09-20
+Ethan Martinez,Art,Painting 1,84,100,2025-09-30
+Ethan Martinez,Art,Midterm Project,79,100,2025-10-09
+Ethan Martinez,Art,Sculpture,86,100,2025-10-19
+Ethan Martinez,Art,Digital Art,86,100,2025-10-29
+Ethan Martinez,Art,Painting 2,81,100,2025-11-07
+Ethan Martinez,Art,Final Portfolio,82,100,2025-11-17
+Ethan Martinez,PE,Fitness Test 1,79,100,2025-09-11
+Ethan Martinez,PE,Team Sport 1,78,100,2025-09-20
+Ethan Martinez,PE,Individual Sport,77,100,2025-09-30
+Ethan Martinez,PE,Midterm Assessment,75,100,2025-10-09
+Ethan Martinez,PE,Team Sport 2,77,100,2025-10-19
+Ethan Martinez,PE,Fitness Test 2,84,100,2025-10-29
+Ethan Martinez,PE,Endurance Test,74,100,2025-11-07
+Ethan Martinez,PE,Final Assessment,77,100,2025-11-17
+Isabella Johnson,Math,Quiz 1,81,100,2025-09-11
+Isabella Johnson,Math,Homework 1,75,100,2025-09-20
+Isabella Johnson,Math,Quiz 2,80,100,2025-09-30
+Isabella Johnson,Math,Midterm,75,100,2025-10-09
+Isabella Johnson,Math,Homework 2,77,100,2025-10-19
+Isabella Johnson,Math,Quiz 3,77,100,2025-10-29
+Isabella Johnson,Math,Project,72,100,2025-11-07
+Isabella Johnson,Math,Final,79,100,2025-11-17
+Isabella Johnson,English,Essay 1,90,100,2025-09-11
+Isabella Johnson,English,Reading Quiz 1,89,100,2025-09-20
+Isabella Johnson,English,Vocabulary Test,88,100,2025-09-30
+Isabella Johnson,English,Midterm,89,100,2025-10-09
+Isabella Johnson,English,Essay 2,87,100,2025-10-19
+Isabella Johnson,English,Book Report,91,100,2025-10-29
+Isabella Johnson,English,Reading Quiz 2,90,100,2025-11-07
+Isabella Johnson,English,Final,91,100,2025-11-17
+Isabella Johnson,Science,Lab Report 1,84,100,2025-09-11
+Isabella Johnson,Science,Quiz 1,78,100,2025-09-20
+Isabella Johnson,Science,Lab Report 2,77,100,2025-09-30
+Isabella Johnson,Science,Midterm,78,100,2025-10-09
+Isabella Johnson,Science,Experiment Project,77,100,2025-10-19
+Isabella Johnson,Science,Quiz 2,86,100,2025-10-29
+Isabella Johnson,Science,Lab Report 3,86,100,2025-11-07
+Isabella Johnson,Science,Final,77,100,2025-11-17
+Isabella Johnson,History,Essay 1,84,100,2025-09-11
+Isabella Johnson,History,Quiz 1,78,100,2025-09-20
+Isabella Johnson,History,Research Paper,83,100,2025-09-30
+Isabella Johnson,History,Midterm,80,100,2025-10-09
+Isabella Johnson,History,Quiz 2,86,100,2025-10-19
+Isabella Johnson,History,Presentation,88,100,2025-10-29
+Isabella Johnson,History,Essay 2,87,100,2025-11-07
+Isabella Johnson,History,Final,86,100,2025-11-17
+Isabella Johnson,Art,Sketch Portfolio,87,100,2025-09-11
+Isabella Johnson,Art,Color Theory,88,100,2025-09-20
+Isabella Johnson,Art,Painting 1,88,100,2025-09-30
+Isabella Johnson,Art,Midterm Project,98,100,2025-10-09
+Isabella Johnson,Art,Sculpture,98,100,2025-10-19
+Isabella Johnson,Art,Digital Art,93,100,2025-10-29
+Isabella Johnson,Art,Painting 2,99,100,2025-11-07
+Isabella Johnson,Art,Final Portfolio,98,100,2025-11-17
+Isabella Johnson,PE,Fitness Test 1,89,100,2025-09-11
+Isabella Johnson,PE,Team Sport 1,87,100,2025-09-20
+Isabella Johnson,PE,Individual Sport,93,100,2025-09-30
+Isabella Johnson,PE,Midterm Assessment,83,100,2025-10-09
+Isabella Johnson,PE,Team Sport 2,93,100,2025-10-19
+Isabella Johnson,PE,Fitness Test 2,92,100,2025-10-29
+Isabella Johnson,PE,Endurance Test,92,100,2025-11-07
+Isabella Johnson,PE,Final Assessment,92,100,2025-11-17
+Lucas Garcia,Math,Quiz 1,64,100,2025-09-11
+Lucas Garcia,Math,Homework 1,64,100,2025-09-20
+Lucas Garcia,Math,Quiz 2,65,100,2025-09-30
+Lucas Garcia,Math,Midterm,66,100,2025-10-09
+Lucas Garcia,Math,Homework 2,64,100,2025-10-19
+Lucas Garcia,Math,Quiz 3,65,100,2025-10-29
+Lucas Garcia,Math,Project,68,100,2025-11-07
+Lucas Garcia,Math,Final,66,100,2025-11-17
+Lucas Garcia,English,Essay 1,78,100,2025-09-11
+Lucas Garcia,English,Reading Quiz 1,79,100,2025-09-20
+Lucas Garcia,English,Vocabulary Test,80,100,2025-09-30
+Lucas Garcia,English,Midterm,72,100,2025-10-09
+Lucas Garcia,English,Essay 2,77,100,2025-10-19
+Lucas Garcia,English,Book Report,73,100,2025-10-29
+Lucas Garcia,English,Reading Quiz 2,81,100,2025-11-07
+Lucas Garcia,English,Final,76,100,2025-11-17
+Lucas Garcia,Science,Lab Report 1,75,100,2025-09-11
+Lucas Garcia,Science,Quiz 1,64,100,2025-09-20
+Lucas Garcia,Science,Lab Report 2,67,100,2025-09-30
+Lucas Garcia,Science,Midterm,74,100,2025-10-09
+Lucas Garcia,Science,Experiment Project,67,100,2025-10-19
+Lucas Garcia,Science,Quiz 2,71,100,2025-10-29
+Lucas Garcia,Science,Lab Report 3,63,100,2025-11-07
+Lucas Garcia,Science,Final,65,100,2025-11-17
+Lucas Garcia,History,Essay 1,76,100,2025-09-11
+Lucas Garcia,History,Quiz 1,71,100,2025-09-20
+Lucas Garcia,History,Research Paper,78,100,2025-09-30
+Lucas Garcia,History,Midterm,73,100,2025-10-09
+Lucas Garcia,History,Quiz 2,69,100,2025-10-19
+Lucas Garcia,History,Presentation,71,100,2025-10-29
+Lucas Garcia,History,Essay 2,69,100,2025-11-07
+Lucas Garcia,History,Final,72,100,2025-11-17
+Lucas Garcia,Art,Sketch Portfolio,84,100,2025-09-11
+Lucas Garcia,Art,Color Theory,76,100,2025-09-20
+Lucas Garcia,Art,Painting 1,80,100,2025-09-30
+Lucas Garcia,Art,Midterm Project,78,100,2025-10-09
+Lucas Garcia,Art,Sculpture,79,100,2025-10-19
+Lucas Garcia,Art,Digital Art,87,100,2025-10-29
+Lucas Garcia,Art,Painting 2,84,100,2025-11-07
+Lucas Garcia,Art,Final Portfolio,84,100,2025-11-17
+Lucas Garcia,PE,Fitness Test 1,82,100,2025-09-11
+Lucas Garcia,PE,Team Sport 1,77,100,2025-09-20
+Lucas Garcia,PE,Individual Sport,82,100,2025-09-30
+Lucas Garcia,PE,Midterm Assessment,72,100,2025-10-09
+Lucas Garcia,PE,Team Sport 2,73,100,2025-10-19
+Lucas Garcia,PE,Fitness Test 2,79,100,2025-10-29
+Lucas Garcia,PE,Endurance Test,80,100,2025-11-07
+Lucas Garcia,PE,Final Assessment,80,100,2025-11-17
+Mia Anderson,Math,Quiz 1,73,100,2025-09-11
+Mia Anderson,Math,Homework 1,72,100,2025-09-20
+Mia Anderson,Math,Quiz 2,73,100,2025-09-30
+Mia Anderson,Math,Midterm,73,100,2025-10-09
+Mia Anderson,Math,Homework 2,74,100,2025-10-19
+Mia Anderson,Math,Quiz 3,68,100,2025-10-29
+Mia Anderson,Math,Project,73,100,2025-11-07
+Mia Anderson,Math,Final,74,100,2025-11-17
+Mia Anderson,English,Essay 1,82,100,2025-09-11
+Mia Anderson,English,Reading Quiz 1,81,100,2025-09-20
+Mia Anderson,English,Vocabulary Test,81,100,2025-09-30
+Mia Anderson,English,Midterm,87,100,2025-10-09
+Mia Anderson,English,Essay 2,83,100,2025-10-19
+Mia Anderson,English,Book Report,81,100,2025-10-29
+Mia Anderson,English,Reading Quiz 2,80,100,2025-11-07
+Mia Anderson,English,Final,83,100,2025-11-17
+Mia Anderson,Science,Lab Report 1,72,100,2025-09-11
+Mia Anderson,Science,Quiz 1,77,100,2025-09-20
+Mia Anderson,Science,Lab Report 2,72,100,2025-09-30
+Mia Anderson,Science,Midterm,73,100,2025-10-09
+Mia Anderson,Science,Experiment Project,80,100,2025-10-19
+Mia Anderson,Science,Quiz 2,82,100,2025-10-29
+Mia Anderson,Science,Lab Report 3,77,100,2025-11-07
+Mia Anderson,Science,Final,83,100,2025-11-17
+Mia Anderson,History,Essay 1,74,100,2025-09-11
+Mia Anderson,History,Quiz 1,84,100,2025-09-20
+Mia Anderson,History,Research Paper,81,100,2025-09-30
+Mia Anderson,History,Midterm,78,100,2025-10-09
+Mia Anderson,History,Quiz 2,79,100,2025-10-19
+Mia Anderson,History,Presentation,84,100,2025-10-29
+Mia Anderson,History,Essay 2,78,100,2025-11-07
+Mia Anderson,History,Final,80,100,2025-11-17
+Mia Anderson,Art,Sketch Portfolio,94,100,2025-09-11
+Mia Anderson,Art,Color Theory,88,100,2025-09-20
+Mia Anderson,Art,Painting 1,90,100,2025-09-30
+Mia Anderson,Art,Midterm Project,92,100,2025-10-09
+Mia Anderson,Art,Sculpture,93,100,2025-10-19
+Mia Anderson,Art,Digital Art,94,100,2025-10-29
+Mia Anderson,Art,Painting 2,91,100,2025-11-07
+Mia Anderson,Art,Final Portfolio,87,100,2025-11-17
+Mia Anderson,PE,Fitness Test 1,81,100,2025-09-11
+Mia Anderson,PE,Team Sport 1,91,100,2025-09-20
+Mia Anderson,PE,Individual Sport,81,100,2025-09-30
+Mia Anderson,PE,Midterm Assessment,88,100,2025-10-09
+Mia Anderson,PE,Team Sport 2,85,100,2025-10-19
+Mia Anderson,PE,Fitness Test 2,89,100,2025-10-29
+Mia Anderson,PE,Endurance Test,87,100,2025-11-07
+Mia Anderson,PE,Final Assessment,80,100,2025-11-17
+Mason Taylor,Math,Quiz 1,64,100,2025-09-11
+Mason Taylor,Math,Homework 1,61,100,2025-09-20
+Mason Taylor,Math,Quiz 2,66,100,2025-09-30
+Mason Taylor,Math,Midterm,66,100,2025-10-09
+Mason Taylor,Math,Homework 2,68,100,2025-10-19
+Mason Taylor,Math,Quiz 3,63,100,2025-10-29
+Mason Taylor,Math,Project,62,100,2025-11-07
+Mason Taylor,Math,Final,65,100,2025-11-17
+Mason Taylor,English,Essay 1,70,100,2025-09-11
+Mason Taylor,English,Reading Quiz 1,77,100,2025-09-20
+Mason Taylor,English,Vocabulary Test,81,100,2025-09-30
+Mason Taylor,English,Midterm,74,100,2025-10-09
+Mason Taylor,English,Essay 2,81,100,2025-10-19
+Mason Taylor,English,Book Report,73,100,2025-10-29
+Mason Taylor,English,Reading Quiz 2,81,100,2025-11-07
+Mason Taylor,English,Final,82,100,2025-11-17
+Mason Taylor,Science,Lab Report 1,68,100,2025-09-11
+Mason Taylor,Science,Quiz 1,68,100,2025-09-20
+Mason Taylor,Science,Lab Report 2,73,100,2025-09-30
+Mason Taylor,Science,Midterm,76,100,2025-10-09
+Mason Taylor,Science,Experiment Project,66,100,2025-10-19
+Mason Taylor,Science,Quiz 2,65,100,2025-10-29
+Mason Taylor,Science,Lab Report 3,73,100,2025-11-07
+Mason Taylor,Science,Final,65,100,2025-11-17
+Mason Taylor,History,Essay 1,68,100,2025-09-11
+Mason Taylor,History,Quiz 1,75,100,2025-09-20
+Mason Taylor,History,Research Paper,68,100,2025-09-30
+Mason Taylor,History,Midterm,68,100,2025-10-09
+Mason Taylor,History,Quiz 2,74,100,2025-10-19
+Mason Taylor,History,Presentation,71,100,2025-10-29
+Mason Taylor,History,Essay 2,69,100,2025-11-07
+Mason Taylor,History,Final,73,100,2025-11-17
+Mason Taylor,Art,Sketch Portfolio,88,100,2025-09-11
+Mason Taylor,Art,Color Theory,85,100,2025-09-20
+Mason Taylor,Art,Painting 1,83,100,2025-09-30
+Mason Taylor,Art,Midterm Project,87,100,2025-10-09
+Mason Taylor,Art,Sculpture,89,100,2025-10-19
+Mason Taylor,Art,Digital Art,85,100,2025-10-29
+Mason Taylor,Art,Painting 2,81,100,2025-11-07
+Mason Taylor,Art,Final Portfolio,87,100,2025-11-17
+Mason Taylor,PE,Fitness Test 1,79,100,2025-09-11
+Mason Taylor,PE,Team Sport 1,74,100,2025-09-20
+Mason Taylor,PE,Individual Sport,84,100,2025-09-30
+Mason Taylor,PE,Midterm Assessment,75,100,2025-10-09
+Mason Taylor,PE,Team Sport 2,74,100,2025-10-19
+Mason Taylor,PE,Fitness Test 2,74,100,2025-10-29
+Mason Taylor,PE,Endurance Test,80,100,2025-11-07
+Mason Taylor,PE,Final Assessment,78,100,2025-11-17
+Charlotte Thomas,Math,Quiz 1,75,100,2025-09-11
+Charlotte Thomas,Math,Homework 1,82,100,2025-09-20
+Charlotte Thomas,Math,Quiz 2,76,100,2025-09-30
+Charlotte Thomas,Math,Midterm,78,100,2025-10-09
+Charlotte Thomas,Math,Homework 2,80,100,2025-10-19
+Charlotte Thomas,Math,Quiz 3,81,100,2025-10-29
+Charlotte Thomas,Math,Project,82,100,2025-11-07
+Charlotte Thomas,Math,Final,72,100,2025-11-17
+Charlotte Thomas,English,Essay 1,90,100,2025-09-11
+Charlotte Thomas,English,Reading Quiz 1,85,100,2025-09-20
+Charlotte Thomas,English,Vocabulary Test,89,100,2025-09-30
+Charlotte Thomas,English,Midterm,84,100,2025-10-09
+Charlotte Thomas,English,Essay 2,91,100,2025-10-19
+Charlotte Thomas,English,Book Report,89,100,2025-10-29
+Charlotte Thomas,English,Reading Quiz 2,94,100,2025-11-07
+Charlotte Thomas,English,Final,93,100,2025-11-17
+Charlotte Thomas,Science,Lab Report 1,80,100,2025-09-11
+Charlotte Thomas,Science,Quiz 1,84,100,2025-09-20
+Charlotte Thomas,Science,Lab Report 2,82,100,2025-09-30
+Charlotte Thomas,Science,Midterm,88,100,2025-10-09
+Charlotte Thomas,Science,Experiment Project,82,100,2025-10-19
+Charlotte Thomas,Science,Quiz 2,78,100,2025-10-29
+Charlotte Thomas,Science,Lab Report 3,82,100,2025-11-07
+Charlotte Thomas,Science,Final,79,100,2025-11-17
+Charlotte Thomas,History,Essay 1,91,100,2025-09-11
+Charlotte Thomas,History,Quiz 1,92,100,2025-09-20
+Charlotte Thomas,History,Research Paper,84,100,2025-09-30
+Charlotte Thomas,History,Midterm,91,100,2025-10-09
+Charlotte Thomas,History,Quiz 2,86,100,2025-10-19
+Charlotte Thomas,History,Presentation,90,100,2025-10-29
+Charlotte Thomas,History,Essay 2,82,100,2025-11-07
+Charlotte Thomas,History,Final,84,100,2025-11-17
+Charlotte Thomas,Art,Sketch Portfolio,100,100,2025-09-11
+Charlotte Thomas,Art,Color Theory,91,100,2025-09-20
+Charlotte Thomas,Art,Painting 1,94,100,2025-09-30
+Charlotte Thomas,Art,Midterm Project,91,100,2025-10-09
+Charlotte Thomas,Art,Sculpture,100,100,2025-10-19
+Charlotte Thomas,Art,Digital Art,97,100,2025-10-29
+Charlotte Thomas,Art,Painting 2,98,100,2025-11-07
+Charlotte Thomas,Art,Final Portfolio,99,100,2025-11-17
+Charlotte Thomas,PE,Fitness Test 1,87,100,2025-09-11
+Charlotte Thomas,PE,Team Sport 1,94,100,2025-09-20
+Charlotte Thomas,PE,Individual Sport,95,100,2025-09-30
+Charlotte Thomas,PE,Midterm Assessment,87,100,2025-10-09
+Charlotte Thomas,PE,Team Sport 2,86,100,2025-10-19
+Charlotte Thomas,PE,Fitness Test 2,86,100,2025-10-29
+Charlotte Thomas,PE,Endurance Test,90,100,2025-11-07
+Charlotte Thomas,PE,Final Assessment,91,100,2025-11-17
+Logan Jackson,Math,Quiz 1,64,100,2025-09-11
+Logan Jackson,Math,Homework 1,66,100,2025-09-20
+Logan Jackson,Math,Quiz 2,61,100,2025-09-30
+Logan Jackson,Math,Midterm,68,100,2025-10-09
+Logan Jackson,Math,Homework 2,56,100,2025-10-19
+Logan Jackson,Math,Quiz 3,58,100,2025-10-29
+Logan Jackson,Math,Project,57,100,2025-11-07
+Logan Jackson,Math,Final,62,100,2025-11-17
+Logan Jackson,English,Essay 1,72,100,2025-09-11
+Logan Jackson,English,Reading Quiz 1,75,100,2025-09-20
+Logan Jackson,English,Vocabulary Test,69,100,2025-09-30
+Logan Jackson,English,Midterm,74,100,2025-10-09
+Logan Jackson,English,Essay 2,68,100,2025-10-19
+Logan Jackson,English,Book Report,72,100,2025-10-29
+Logan Jackson,English,Reading Quiz 2,73,100,2025-11-07
+Logan Jackson,English,Final,78,100,2025-11-17
+Logan Jackson,Science,Lab Report 1,66,100,2025-09-11
+Logan Jackson,Science,Quiz 1,73,100,2025-09-20
+Logan Jackson,Science,Lab Report 2,68,100,2025-09-30
+Logan Jackson,Science,Midterm,71,100,2025-10-09
+Logan Jackson,Science,Experiment Project,66,100,2025-10-19
+Logan Jackson,Science,Quiz 2,63,100,2025-10-29
+Logan Jackson,Science,Lab Report 3,72,100,2025-11-07
+Logan Jackson,Science,Final,65,100,2025-11-17
+Logan Jackson,History,Essay 1,70,100,2025-09-11
+Logan Jackson,History,Quiz 1,69,100,2025-09-20
+Logan Jackson,History,Research Paper,65,100,2025-09-30
+Logan Jackson,History,Midterm,66,100,2025-10-09
+Logan Jackson,History,Quiz 2,71,100,2025-10-19
+Logan Jackson,History,Presentation,77,100,2025-10-29
+Logan Jackson,History,Essay 2,66,100,2025-11-07
+Logan Jackson,History,Final,66,100,2025-11-17
+Logan Jackson,Art,Sketch Portfolio,75,100,2025-09-11
+Logan Jackson,Art,Color Theory,85,100,2025-09-20
+Logan Jackson,Art,Painting 1,84,100,2025-09-30
+Logan Jackson,Art,Midterm Project,83,100,2025-10-09
+Logan Jackson,Art,Sculpture,81,100,2025-10-19
+Logan Jackson,Art,Digital Art,85,100,2025-10-29
+Logan Jackson,Art,Painting 2,85,100,2025-11-07
+Logan Jackson,Art,Final Portfolio,77,100,2025-11-17
+Logan Jackson,PE,Fitness Test 1,79,100,2025-09-11
+Logan Jackson,PE,Team Sport 1,80,100,2025-09-20
+Logan Jackson,PE,Individual Sport,72,100,2025-09-30
+Logan Jackson,PE,Midterm Assessment,80,100,2025-10-09
+Logan Jackson,PE,Team Sport 2,71,100,2025-10-19
+Logan Jackson,PE,Fitness Test 2,78,100,2025-10-29
+Logan Jackson,PE,Endurance Test,80,100,2025-11-07
+Logan Jackson,PE,Final Assessment,81,100,2025-11-17
+Amelia White,Math,Quiz 1,68,100,2025-09-11
+Amelia White,Math,Homework 1,74,100,2025-09-20
+Amelia White,Math,Quiz 2,73,100,2025-09-30
+Amelia White,Math,Midterm,69,100,2025-10-09
+Amelia White,Math,Homework 2,74,100,2025-10-19
+Amelia White,Math,Quiz 3,73,100,2025-10-29
+Amelia White,Math,Project,71,100,2025-11-07
+Amelia White,Math,Final,69,100,2025-11-17
+Amelia White,English,Essay 1,81,100,2025-09-11
+Amelia White,English,Reading Quiz 1,79,100,2025-09-20
+Amelia White,English,Vocabulary Test,84,100,2025-09-30
+Amelia White,English,Midterm,83,100,2025-10-09
+Amelia White,English,Essay 2,85,100,2025-10-19
+Amelia White,English,Book Report,79,100,2025-10-29
+Amelia White,English,Reading Quiz 2,77,100,2025-11-07
+Amelia White,English,Final,86,100,2025-11-17
+Amelia White,Science,Lab Report 1,73,100,2025-09-11
+Amelia White,Science,Quiz 1,72,100,2025-09-20
+Amelia White,Science,Lab Report 2,72,100,2025-09-30
+Amelia White,Science,Midterm,76,100,2025-10-09
+Amelia White,Science,Experiment Project,80,100,2025-10-19
+Amelia White,Science,Quiz 2,78,100,2025-10-29
+Amelia White,Science,Lab Report 3,75,100,2025-11-07
+Amelia White,Science,Final,72,100,2025-11-17
+Amelia White,History,Essay 1,73,100,2025-09-11
+Amelia White,History,Quiz 1,78,100,2025-09-20
+Amelia White,History,Research Paper,82,100,2025-09-30
+Amelia White,History,Midterm,74,100,2025-10-09
+Amelia White,History,Quiz 2,83,100,2025-10-19
+Amelia White,History,Presentation,74,100,2025-10-29
+Amelia White,History,Essay 2,75,100,2025-11-07
+Amelia White,History,Final,80,100,2025-11-17
+Amelia White,Art,Sketch Portfolio,86,100,2025-09-11
+Amelia White,Art,Color Theory,81,100,2025-09-20
+Amelia White,Art,Painting 1,86,100,2025-09-30
+Amelia White,Art,Midterm Project,93,100,2025-10-09
+Amelia White,Art,Sculpture,84,100,2025-10-19
+Amelia White,Art,Digital Art,93,100,2025-10-29
+Amelia White,Art,Painting 2,84,100,2025-11-07
+Amelia White,Art,Final Portfolio,87,100,2025-11-17
+Amelia White,PE,Fitness Test 1,89,100,2025-09-11
+Amelia White,PE,Team Sport 1,87,100,2025-09-20
+Amelia White,PE,Individual Sport,84,100,2025-09-30
+Amelia White,PE,Midterm Assessment,88,100,2025-10-09
+Amelia White,PE,Team Sport 2,83,100,2025-10-19
+Amelia White,PE,Fitness Test 2,78,100,2025-10-29
+Amelia White,PE,Endurance Test,83,100,2025-11-07
+Amelia White,PE,Final Assessment,87,100,2025-11-17
+Alexander Harris,Math,Quiz 1,68,100,2025-09-11
+Alexander Harris,Math,Homework 1,70,100,2025-09-20
+Alexander Harris,Math,Quiz 2,66,100,2025-09-30
+Alexander Harris,Math,Midterm,70,100,2025-10-09
+Alexander Harris,Math,Homework 2,68,100,2025-10-19
+Alexander Harris,Math,Quiz 3,58,100,2025-10-29
+Alexander Harris,Math,Project,67,100,2025-11-07
+Alexander Harris,Math,Final,61,100,2025-11-17
+Alexander Harris,English,Essay 1,80,100,2025-09-11
+Alexander Harris,English,Reading Quiz 1,80,100,2025-09-20
+Alexander Harris,English,Vocabulary Test,75,100,2025-09-30
+Alexander Harris,English,Midterm,73,100,2025-10-09
+Alexander Harris,English,Essay 2,70,100,2025-10-19
+Alexander Harris,English,Book Report,79,100,2025-10-29
+Alexander Harris,English,Reading Quiz 2,77,100,2025-11-07
+Alexander Harris,English,Final,81,100,2025-11-17
+Alexander Harris,Science,Lab Report 1,64,100,2025-09-11
+Alexander Harris,Science,Quiz 1,69,100,2025-09-20
+Alexander Harris,Science,Lab Report 2,66,100,2025-09-30
+Alexander Harris,Science,Midterm,70,100,2025-10-09
+Alexander Harris,Science,Experiment Project,74,100,2025-10-19
+Alexander Harris,Science,Quiz 2,75,100,2025-10-29
+Alexander Harris,Science,Lab Report 3,73,100,2025-11-07
+Alexander Harris,Science,Final,74,100,2025-11-17
+Alexander Harris,History,Essay 1,73,100,2025-09-11
+Alexander Harris,History,Quiz 1,74,100,2025-09-20
+Alexander Harris,History,Research Paper,69,100,2025-09-30
+Alexander Harris,History,Midterm,77,100,2025-10-09
+Alexander Harris,History,Quiz 2,78,100,2025-10-19
+Alexander Harris,History,Presentation,77,100,2025-10-29
+Alexander Harris,History,Essay 2,73,100,2025-11-07
+Alexander Harris,History,Final,78,100,2025-11-17
+Alexander Harris,Art,Sketch Portfolio,85,100,2025-09-11
+Alexander Harris,Art,Color Theory,83,100,2025-09-20
+Alexander Harris,Art,Painting 1,88,100,2025-09-30
+Alexander Harris,Art,Midterm Project,85,100,2025-10-09
+Alexander Harris,Art,Sculpture,79,100,2025-10-19
+Alexander Harris,Art,Digital Art,88,100,2025-10-29
+Alexander Harris,Art,Painting 2,83,100,2025-11-07
+Alexander Harris,Art,Final Portfolio,78,100,2025-11-17
+Alexander Harris,PE,Fitness Test 1,76,100,2025-09-11
+Alexander Harris,PE,Team Sport 1,82,100,2025-09-20
+Alexander Harris,PE,Individual Sport,80,100,2025-09-30
+Alexander Harris,PE,Midterm Assessment,80,100,2025-10-09
+Alexander Harris,PE,Team Sport 2,77,100,2025-10-19
+Alexander Harris,PE,Fitness Test 2,74,100,2025-10-29
+Alexander Harris,PE,Endurance Test,75,100,2025-11-07
+Alexander Harris,PE,Final Assessment,83,100,2025-11-17
+Harper Clark,Math,Quiz 1,74,100,2025-09-11
+Harper Clark,Math,Homework 1,69,100,2025-09-20
+Harper Clark,Math,Quiz 2,76,100,2025-09-30
+Harper Clark,Math,Midterm,69,100,2025-10-09
+Harper Clark,Math,Homework 2,65,100,2025-10-19
+Harper Clark,Math,Quiz 3,68,100,2025-10-29
+Harper Clark,Math,Project,68,100,2025-11-07
+Harper Clark,Math,Final,69,100,2025-11-17
+Harper Clark,English,Essay 1,81,100,2025-09-11
+Harper Clark,English,Reading Quiz 1,78,100,2025-09-20
+Harper Clark,English,Vocabulary Test,78,100,2025-09-30
+Harper Clark,English,Midterm,82,100,2025-10-09
+Harper Clark,English,Essay 2,84,100,2025-10-19
+Harper Clark,English,Book Report,88,100,2025-10-29
+Harper Clark,English,Reading Quiz 2,79,100,2025-11-07
+Harper Clark,English,Final,80,100,2025-11-17
+Harper Clark,Science,Lab Report 1,73,100,2025-09-11
+Harper Clark,Science,Quiz 1,73,100,2025-09-20
+Harper Clark,Science,Lab Report 2,78,100,2025-09-30
+Harper Clark,Science,Midterm,75,100,2025-10-09
+Harper Clark,Science,Experiment Project,77,100,2025-10-19
+Harper Clark,Science,Quiz 2,74,100,2025-10-29
+Harper Clark,Science,Lab Report 3,75,100,2025-11-07
+Harper Clark,Science,Final,83,100,2025-11-17
+Harper Clark,History,Essay 1,81,100,2025-09-11
+Harper Clark,History,Quiz 1,79,100,2025-09-20
+Harper Clark,History,Research Paper,76,100,2025-09-30
+Harper Clark,History,Midterm,76,100,2025-10-09
+Harper Clark,History,Quiz 2,77,100,2025-10-19
+Harper Clark,History,Presentation,77,100,2025-10-29
+Harper Clark,History,Essay 2,76,100,2025-11-07
+Harper Clark,History,Final,80,100,2025-11-17
+Harper Clark,Art,Sketch Portfolio,86,100,2025-09-11
+Harper Clark,Art,Color Theory,95,100,2025-09-20
+Harper Clark,Art,Painting 1,85,100,2025-09-30
+Harper Clark,Art,Midterm Project,91,100,2025-10-09
+Harper Clark,Art,Sculpture,87,100,2025-10-19
+Harper Clark,Art,Digital Art,90,100,2025-10-29
+Harper Clark,Art,Painting 2,88,100,2025-11-07
+Harper Clark,Art,Final Portfolio,89,100,2025-11-17
+Harper Clark,PE,Fitness Test 1,84,100,2025-09-11
+Harper Clark,PE,Team Sport 1,80,100,2025-09-20
+Harper Clark,PE,Individual Sport,88,100,2025-09-30
+Harper Clark,PE,Midterm Assessment,87,100,2025-10-09
+Harper Clark,PE,Team Sport 2,82,100,2025-10-19
+Harper Clark,PE,Fitness Test 2,84,100,2025-10-29
+Harper Clark,PE,Endurance Test,90,100,2025-11-07
+Harper Clark,PE,Final Assessment,86,100,2025-11-17
+James Lewis,Math,Quiz 1,63,100,2025-09-11
+James Lewis,Math,Homework 1,66,100,2025-09-20
+James Lewis,Math,Quiz 2,62,100,2025-09-30
+James Lewis,Math,Midterm,69,100,2025-10-09
+James Lewis,Math,Homework 2,60,100,2025-10-19
+James Lewis,Math,Quiz 3,70,100,2025-10-29
+James Lewis,Math,Project,72,100,2025-11-07
+James Lewis,Math,Final,64,100,2025-11-17
+James Lewis,English,Essay 1,80,100,2025-09-11
+James Lewis,English,Reading Quiz 1,73,100,2025-09-20
+James Lewis,English,Vocabulary Test,83,100,2025-09-30
+James Lewis,English,Midterm,83,100,2025-10-09
+James Lewis,English,Essay 2,74,100,2025-10-19
+James Lewis,English,Book Report,79,100,2025-10-29
+James Lewis,English,Reading Quiz 2,74,100,2025-11-07
+James Lewis,English,Final,79,100,2025-11-17
+James Lewis,Science,Lab Report 1,76,100,2025-09-11
+James Lewis,Science,Quiz 1,69,100,2025-09-20
+James Lewis,Science,Lab Report 2,67,100,2025-09-30
+James Lewis,Science,Midterm,76,100,2025-10-09
+James Lewis,Science,Experiment Project,77,100,2025-10-19
+James Lewis,Science,Quiz 2,77,100,2025-10-29
+James Lewis,Science,Lab Report 3,70,100,2025-11-07
+James Lewis,Science,Final,69,100,2025-11-17
+James Lewis,History,Essay 1,72,100,2025-09-11
+James Lewis,History,Quiz 1,72,100,2025-09-20
+James Lewis,History,Research Paper,72,100,2025-09-30
+James Lewis,History,Midterm,71,100,2025-10-09
+James Lewis,History,Quiz 2,79,100,2025-10-19
+James Lewis,History,Presentation,75,100,2025-10-29
+James Lewis,History,Essay 2,72,100,2025-11-07
+James Lewis,History,Final,78,100,2025-11-17
+James Lewis,Art,Sketch Portfolio,83,100,2025-09-11
+James Lewis,Art,Color Theory,90,100,2025-09-20
+James Lewis,Art,Painting 1,80,100,2025-09-30
+James Lewis,Art,Midterm Project,90,100,2025-10-09
+James Lewis,Art,Sculpture,88,100,2025-10-19
+James Lewis,Art,Digital Art,92,100,2025-10-29
+James Lewis,Art,Painting 2,83,100,2025-11-07
+James Lewis,Art,Final Portfolio,84,100,2025-11-17
+James Lewis,PE,Fitness Test 1,84,100,2025-09-11
+James Lewis,PE,Team Sport 1,77,100,2025-09-20
+James Lewis,PE,Individual Sport,85,100,2025-09-30
+James Lewis,PE,Midterm Assessment,84,100,2025-10-09
+James Lewis,PE,Team Sport 2,78,100,2025-10-19
+James Lewis,PE,Fitness Test 2,79,100,2025-10-29
+James Lewis,PE,Endurance Test,83,100,2025-11-07
+James Lewis,PE,Final Assessment,81,100,2025-11-17
+Evelyn Robinson,Math,Quiz 1,70,100,2025-09-11
+Evelyn Robinson,Math,Homework 1,81,100,2025-09-20
+Evelyn Robinson,Math,Quiz 2,78,100,2025-09-30
+Evelyn Robinson,Math,Midterm,70,100,2025-10-09
+Evelyn Robinson,Math,Homework 2,69,100,2025-10-19
+Evelyn Robinson,Math,Quiz 3,74,100,2025-10-29
+Evelyn Robinson,Math,Project,69,100,2025-11-07
+Evelyn Robinson,Math,Final,69,100,2025-11-17
+Evelyn Robinson,English,Essay 1,84,100,2025-09-11
+Evelyn Robinson,English,Reading Quiz 1,80,100,2025-09-20
+Evelyn Robinson,English,Vocabulary Test,84,100,2025-09-30
+Evelyn Robinson,English,Midterm,88,100,2025-10-09
+Evelyn Robinson,English,Essay 2,90,100,2025-10-19
+Evelyn Robinson,English,Book Report,86,100,2025-10-29
+Evelyn Robinson,English,Reading Quiz 2,88,100,2025-11-07
+Evelyn Robinson,English,Final,84,100,2025-11-17
+Evelyn Robinson,Science,Lab Report 1,81,100,2025-09-11
+Evelyn Robinson,Science,Quiz 1,78,100,2025-09-20
+Evelyn Robinson,Science,Lab Report 2,79,100,2025-09-30
+Evelyn Robinson,Science,Midterm,80,100,2025-10-09
+Evelyn Robinson,Science,Experiment Project,81,100,2025-10-19
+Evelyn Robinson,Science,Quiz 2,77,100,2025-10-29
+Evelyn Robinson,Science,Lab Report 3,77,100,2025-11-07
+Evelyn Robinson,Science,Final,80,100,2025-11-17
+Evelyn Robinson,History,Essay 1,89,100,2025-09-11
+Evelyn Robinson,History,Quiz 1,85,100,2025-09-20
+Evelyn Robinson,History,Research Paper,81,100,2025-09-30
+Evelyn Robinson,History,Midterm,84,100,2025-10-09
+Evelyn Robinson,History,Quiz 2,84,100,2025-10-19
+Evelyn Robinson,History,Presentation,79,100,2025-10-29
+Evelyn Robinson,History,Essay 2,78,100,2025-11-07
+Evelyn Robinson,History,Final,86,100,2025-11-17
+Evelyn Robinson,Art,Sketch Portfolio,88,100,2025-09-11
+Evelyn Robinson,Art,Color Theory,89,100,2025-09-20
+Evelyn Robinson,Art,Painting 1,93,100,2025-09-30
+Evelyn Robinson,Art,Midterm Project,87,100,2025-10-09
+Evelyn Robinson,Art,Sculpture,100,100,2025-10-19
+Evelyn Robinson,Art,Digital Art,91,100,2025-10-29
+Evelyn Robinson,Art,Painting 2,92,100,2025-11-07
+Evelyn Robinson,Art,Final Portfolio,95,100,2025-11-17
+Evelyn Robinson,PE,Fitness Test 1,94,100,2025-09-11
+Evelyn Robinson,PE,Team Sport 1,91,100,2025-09-20
+Evelyn Robinson,PE,Individual Sport,91,100,2025-09-30
+Evelyn Robinson,PE,Midterm Assessment,93,100,2025-10-09
+Evelyn Robinson,PE,Team Sport 2,82,100,2025-10-19
+Evelyn Robinson,PE,Fitness Test 2,84,100,2025-10-29
+Evelyn Robinson,PE,Endurance Test,83,100,2025-11-07
+Evelyn Robinson,PE,Final Assessment,90,100,2025-11-17
+Benjamin Walker,Math,Quiz 1,56,100,2025-09-11
+Benjamin Walker,Math,Homework 1,60,100,2025-09-20
+Benjamin Walker,Math,Quiz 2,57,100,2025-09-30
+Benjamin Walker,Math,Midterm,67,100,2025-10-09
+Benjamin Walker,Math,Homework 2,54,100,2025-10-19
+Benjamin Walker,Math,Quiz 3,62,100,2025-10-29
+Benjamin Walker,Math,Project,62,100,2025-11-07
+Benjamin Walker,Math,Final,61,100,2025-11-17
+Benjamin Walker,English,Essay 1,74,100,2025-09-11
+Benjamin Walker,English,Reading Quiz 1,74,100,2025-09-20
+Benjamin Walker,English,Vocabulary Test,74,100,2025-09-30
+Benjamin Walker,English,Midterm,71,100,2025-10-09
+Benjamin Walker,English,Essay 2,72,100,2025-10-19
+Benjamin Walker,English,Book Report,68,100,2025-10-29
+Benjamin Walker,English,Reading Quiz 2,73,100,2025-11-07
+Benjamin Walker,English,Final,67,100,2025-11-17
+Benjamin Walker,Science,Lab Report 1,65,100,2025-09-11
+Benjamin Walker,Science,Quiz 1,63,100,2025-09-20
+Benjamin Walker,Science,Lab Report 2,62,100,2025-09-30
+Benjamin Walker,Science,Midterm,67,100,2025-10-09
+Benjamin Walker,Science,Experiment Project,62,100,2025-10-19
+Benjamin Walker,Science,Quiz 2,71,100,2025-10-29
+Benjamin Walker,Science,Lab Report 3,71,100,2025-11-07
+Benjamin Walker,Science,Final,66,100,2025-11-17
+Benjamin Walker,History,Essay 1,75,100,2025-09-11
+Benjamin Walker,History,Quiz 1,69,100,2025-09-20
+Benjamin Walker,History,Research Paper,69,100,2025-09-30
+Benjamin Walker,History,Midterm,73,100,2025-10-09
+Benjamin Walker,History,Quiz 2,75,100,2025-10-19
+Benjamin Walker,History,Presentation,71,100,2025-10-29
+Benjamin Walker,History,Essay 2,73,100,2025-11-07
+Benjamin Walker,History,Final,66,100,2025-11-17
+Benjamin Walker,Art,Sketch Portfolio,76,100,2025-09-11
+Benjamin Walker,Art,Color Theory,77,100,2025-09-20
+Benjamin Walker,Art,Painting 1,74,100,2025-09-30
+Benjamin Walker,Art,Midterm Project,82,100,2025-10-09
+Benjamin Walker,Art,Sculpture,77,100,2025-10-19
+Benjamin Walker,Art,Digital Art,82,100,2025-10-29
+Benjamin Walker,Art,Painting 2,81,100,2025-11-07
+Benjamin Walker,Art,Final Portfolio,80,100,2025-11-17
+Benjamin Walker,PE,Fitness Test 1,73,100,2025-09-11
+Benjamin Walker,PE,Team Sport 1,78,100,2025-09-20
+Benjamin Walker,PE,Individual Sport,70,100,2025-09-30
+Benjamin Walker,PE,Midterm Assessment,78,100,2025-10-09
+Benjamin Walker,PE,Team Sport 2,74,100,2025-10-19
+Benjamin Walker,PE,Fitness Test 2,71,100,2025-10-29
+Benjamin Walker,PE,Endurance Test,72,100,2025-11-07
+Benjamin Walker,PE,Final Assessment,73,100,2025-11-17
+Abigail Hall,Math,Quiz 1,72,100,2025-09-11
+Abigail Hall,Math,Homework 1,68,100,2025-09-20
+Abigail Hall,Math,Quiz 2,68,100,2025-09-30
+Abigail Hall,Math,Midterm,70,100,2025-10-09
+Abigail Hall,Math,Homework 2,71,100,2025-10-19
+Abigail Hall,Math,Quiz 3,62,100,2025-10-29
+Abigail Hall,Math,Project,74,100,2025-11-07
+Abigail Hall,Math,Final,69,100,2025-11-17
+Abigail Hall,English,Essay 1,79,100,2025-09-11
+Abigail Hall,English,Reading Quiz 1,76,100,2025-09-20
+Abigail Hall,English,Vocabulary Test,86,100,2025-09-30
+Abigail Hall,English,Midterm,77,100,2025-10-09
+Abigail Hall,English,Essay 2,82,100,2025-10-19
+Abigail Hall,English,Book Report,84,100,2025-10-29
+Abigail Hall,English,Reading Quiz 2,77,100,2025-11-07
+Abigail Hall,English,Final,81,100,2025-11-17
+Abigail Hall,Science,Lab Report 1,76,100,2025-09-11
+Abigail Hall,Science,Quiz 1,76,100,2025-09-20
+Abigail Hall,Science,Lab Report 2,69,100,2025-09-30
+Abigail Hall,Science,Midterm,71,100,2025-10-09
+Abigail Hall,Science,Experiment Project,73,100,2025-10-19
+Abigail Hall,Science,Quiz 2,77,100,2025-10-29
+Abigail Hall,Science,Lab Report 3,70,100,2025-11-07
+Abigail Hall,Science,Final,78,100,2025-11-17
+Abigail Hall,History,Essay 1,81,100,2025-09-11
+Abigail Hall,History,Quiz 1,77,100,2025-09-20
+Abigail Hall,History,Research Paper,81,100,2025-09-30
+Abigail Hall,History,Midterm,77,100,2025-10-09
+Abigail Hall,History,Quiz 2,80,100,2025-10-19
+Abigail Hall,History,Presentation,76,100,2025-10-29
+Abigail Hall,History,Essay 2,72,100,2025-11-07
+Abigail Hall,History,Final,75,100,2025-11-17
+Abigail Hall,Art,Sketch Portfolio,91,100,2025-09-11
+Abigail Hall,Art,Color Theory,84,100,2025-09-20
+Abigail Hall,Art,Painting 1,90,100,2025-09-30
+Abigail Hall,Art,Midterm Project,90,100,2025-10-09
+Abigail Hall,Art,Sculpture,89,100,2025-10-19
+Abigail Hall,Art,Digital Art,83,100,2025-10-29
+Abigail Hall,Art,Painting 2,86,100,2025-11-07
+Abigail Hall,Art,Final Portfolio,89,100,2025-11-17
+Abigail Hall,PE,Fitness Test 1,78,100,2025-09-11
+Abigail Hall,PE,Team Sport 1,79,100,2025-09-20
+Abigail Hall,PE,Individual Sport,86,100,2025-09-30
+Abigail Hall,PE,Midterm Assessment,77,100,2025-10-09
+Abigail Hall,PE,Team Sport 2,82,100,2025-10-19
+Abigail Hall,PE,Fitness Test 2,84,100,2025-10-29
+Abigail Hall,PE,Endurance Test,79,100,2025-11-07
+Abigail Hall,PE,Final Assessment,85,100,2025-11-17
+Henry Allen,Math,Quiz 1,62,100,2025-09-11
+Henry Allen,Math,Homework 1,63,100,2025-09-20
+Henry Allen,Math,Quiz 2,67,100,2025-09-30
+Henry Allen,Math,Midterm,67,100,2025-10-09
+Henry Allen,Math,Homework 2,59,100,2025-10-19
+Henry Allen,Math,Quiz 3,69,100,2025-10-29
+Henry Allen,Math,Project,65,100,2025-11-07
+Henry Allen,Math,Final,68,100,2025-11-17
+Henry Allen,English,Essay 1,74,100,2025-09-11
+Henry Allen,English,Reading Quiz 1,80,100,2025-09-20
+Henry Allen,English,Vocabulary Test,75,100,2025-09-30
+Henry Allen,English,Midterm,76,100,2025-10-09
+Henry Allen,English,Essay 2,78,100,2025-10-19
+Henry Allen,English,Book Report,81,100,2025-10-29
+Henry Allen,English,Reading Quiz 2,76,100,2025-11-07
+Henry Allen,English,Final,83,100,2025-11-17
+Henry Allen,Science,Lab Report 1,68,100,2025-09-11
+Henry Allen,Science,Quiz 1,68,100,2025-09-20
+Henry Allen,Science,Lab Report 2,74,100,2025-09-30
+Henry Allen,Science,Midterm,66,100,2025-10-09
+Henry Allen,Science,Experiment Project,70,100,2025-10-19
+Henry Allen,Science,Quiz 2,69,100,2025-10-29
+Henry Allen,Science,Lab Report 3,70,100,2025-11-07
+Henry Allen,Science,Final,75,100,2025-11-17
+Henry Allen,History,Essay 1,77,100,2025-09-11
+Henry Allen,History,Quiz 1,69,100,2025-09-20
+Henry Allen,History,Research Paper,78,100,2025-09-30
+Henry Allen,History,Midterm,78,100,2025-10-09
+Henry Allen,History,Quiz 2,80,100,2025-10-19
+Henry Allen,History,Presentation,71,100,2025-10-29
+Henry Allen,History,Essay 2,74,100,2025-11-07
+Henry Allen,History,Final,78,100,2025-11-17
+Henry Allen,Art,Sketch Portfolio,89,100,2025-09-11
+Henry Allen,Art,Color Theory,85,100,2025-09-20
+Henry Allen,Art,Painting 1,88,100,2025-09-30
+Henry Allen,Art,Midterm Project,86,100,2025-10-09
+Henry Allen,Art,Sculpture,82,100,2025-10-19
+Henry Allen,Art,Digital Art,81,100,2025-10-29
+Henry Allen,Art,Painting 2,84,100,2025-11-07
+Henry Allen,Art,Final Portfolio,84,100,2025-11-17
+Henry Allen,PE,Fitness Test 1,74,100,2025-09-11
+Henry Allen,PE,Team Sport 1,75,100,2025-09-20
+Henry Allen,PE,Individual Sport,81,100,2025-09-30
+Henry Allen,PE,Midterm Assessment,78,100,2025-10-09
+Henry Allen,PE,Team Sport 2,74,100,2025-10-19
+Henry Allen,PE,Fitness Test 2,81,100,2025-10-29
+Henry Allen,PE,Endurance Test,77,100,2025-11-07
+Henry Allen,PE,Final Assessment,77,100,2025-11-17
+Emily Young,Math,Quiz 1,77,100,2025-09-11
+Emily Young,Math,Homework 1,68,100,2025-09-20
+Emily Young,Math,Quiz 2,67,100,2025-09-30
+Emily Young,Math,Midterm,71,100,2025-10-09
+Emily Young,Math,Homework 2,72,100,2025-10-19
+Emily Young,Math,Quiz 3,69,100,2025-10-29
+Emily Young,Math,Project,68,100,2025-11-07
+Emily Young,Math,Final,76,100,2025-11-17
+Emily Young,English,Essay 1,86,100,2025-09-11
+Emily Young,English,Reading Quiz 1,87,100,2025-09-20
+Emily Young,English,Vocabulary Test,88,100,2025-09-30
+Emily Young,English,Midterm,79,100,2025-10-09
+Emily Young,English,Essay 2,86,100,2025-10-19
+Emily Young,English,Book Report,77,100,2025-10-29
+Emily Young,English,Reading Quiz 2,80,100,2025-11-07
+Emily Young,English,Final,87,100,2025-11-17
+Emily Young,Science,Lab Report 1,81,100,2025-09-11
+Emily Young,Science,Quiz 1,79,100,2025-09-20
+Emily Young,Science,Lab Report 2,72,100,2025-09-30
+Emily Young,Science,Midterm,76,100,2025-10-09
+Emily Young,Science,Experiment Project,73,100,2025-10-19
+Emily Young,Science,Quiz 2,78,100,2025-10-29
+Emily Young,Science,Lab Report 3,73,100,2025-11-07
+Emily Young,Science,Final,82,100,2025-11-17
+Emily Young,History,Essay 1,81,100,2025-09-11
+Emily Young,History,Quiz 1,84,100,2025-09-20
+Emily Young,History,Research Paper,85,100,2025-09-30
+Emily Young,History,Midterm,81,100,2025-10-09
+Emily Young,History,Quiz 2,84,100,2025-10-19
+Emily Young,History,Presentation,75,100,2025-10-29
+Emily Young,History,Essay 2,84,100,2025-11-07
+Emily Young,History,Final,78,100,2025-11-17
+Emily Young,Art,Sketch Portfolio,85,100,2025-09-11
+Emily Young,Art,Color Theory,91,100,2025-09-20
+Emily Young,Art,Painting 1,94,100,2025-09-30
+Emily Young,Art,Midterm Project,83,100,2025-10-09
+Emily Young,Art,Sculpture,85,100,2025-10-19
+Emily Young,Art,Digital Art,90,100,2025-10-29
+Emily Young,Art,Painting 2,90,100,2025-11-07
+Emily Young,Art,Final Portfolio,90,100,2025-11-17
+Emily Young,PE,Fitness Test 1,83,100,2025-09-11
+Emily Young,PE,Team Sport 1,87,100,2025-09-20
+Emily Young,PE,Individual Sport,84,100,2025-09-30
+Emily Young,PE,Midterm Assessment,88,100,2025-10-09
+Emily Young,PE,Team Sport 2,81,100,2025-10-19
+Emily Young,PE,Fitness Test 2,79,100,2025-10-29
+Emily Young,PE,Endurance Test,88,100,2025-11-07
+Emily Young,PE,Final Assessment,88,100,2025-11-17
+Daniel King,Math,Quiz 1,68,100,2025-09-11
+Daniel King,Math,Homework 1,62,100,2025-09-20
+Daniel King,Math,Quiz 2,66,100,2025-09-30
+Daniel King,Math,Midterm,62,100,2025-10-09
+Daniel King,Math,Homework 2,57,100,2025-10-19
+Daniel King,Math,Quiz 3,58,100,2025-10-29
+Daniel King,Math,Project,61,100,2025-11-07
+Daniel King,Math,Final,63,100,2025-11-17
+Daniel King,English,Essay 1,73,100,2025-09-11
+Daniel King,English,Reading Quiz 1,70,100,2025-09-20
+Daniel King,English,Vocabulary Test,73,100,2025-09-30
+Daniel King,English,Midterm,75,100,2025-10-09
+Daniel King,English,Essay 2,81,100,2025-10-19
+Daniel King,English,Book Report,80,100,2025-10-29
+Daniel King,English,Reading Quiz 2,75,100,2025-11-07
+Daniel King,English,Final,79,100,2025-11-17
+Daniel King,Science,Lab Report 1,70,100,2025-09-11
+Daniel King,Science,Quiz 1,65,100,2025-09-20
+Daniel King,Science,Lab Report 2,70,100,2025-09-30
+Daniel King,Science,Midterm,65,100,2025-10-09
+Daniel King,Science,Experiment Project,71,100,2025-10-19
+Daniel King,Science,Quiz 2,72,100,2025-10-29
+Daniel King,Science,Lab Report 3,66,100,2025-11-07
+Daniel King,Science,Final,74,100,2025-11-17
+Daniel King,History,Essay 1,69,100,2025-09-11
+Daniel King,History,Quiz 1,69,100,2025-09-20
+Daniel King,History,Research Paper,67,100,2025-09-30
+Daniel King,History,Midterm,75,100,2025-10-09
+Daniel King,History,Quiz 2,67,100,2025-10-19
+Daniel King,History,Presentation,78,100,2025-10-29
+Daniel King,History,Essay 2,70,100,2025-11-07
+Daniel King,History,Final,69,100,2025-11-17
+Daniel King,Art,Sketch Portfolio,76,100,2025-09-11
+Daniel King,Art,Color Theory,80,100,2025-09-20
+Daniel King,Art,Painting 1,77,100,2025-09-30
+Daniel King,Art,Midterm Project,76,100,2025-10-09
+Daniel King,Art,Sculpture,85,100,2025-10-19
+Daniel King,Art,Digital Art,86,100,2025-10-29
+Daniel King,Art,Painting 2,86,100,2025-11-07
+Daniel King,Art,Final Portfolio,86,100,2025-11-17
+Daniel King,PE,Fitness Test 1,79,100,2025-09-11
+Daniel King,PE,Team Sport 1,74,100,2025-09-20
+Daniel King,PE,Individual Sport,72,100,2025-09-30
+Daniel King,PE,Midterm Assessment,72,100,2025-10-09
+Daniel King,PE,Team Sport 2,76,100,2025-10-19
+Daniel King,PE,Fitness Test 2,82,100,2025-10-29
+Daniel King,PE,Endurance Test,79,100,2025-11-07
+Daniel King,PE,Final Assessment,76,100,2025-11-17
+Scarlett Wright,Math,Quiz 1,74,100,2025-09-11
+Scarlett Wright,Math,Homework 1,75,100,2025-09-20
+Scarlett Wright,Math,Quiz 2,71,100,2025-09-30
+Scarlett Wright,Math,Midterm,77,100,2025-10-09
+Scarlett Wright,Math,Homework 2,69,100,2025-10-19
+Scarlett Wright,Math,Quiz 3,76,100,2025-10-29
+Scarlett Wright,Math,Project,77,100,2025-11-07
+Scarlett Wright,Math,Final,72,100,2025-11-17
+Scarlett Wright,English,Essay 1,92,100,2025-09-11
+Scarlett Wright,English,Reading Quiz 1,92,100,2025-09-20
+Scarlett Wright,English,Vocabulary Test,92,100,2025-09-30
+Scarlett Wright,English,Midterm,92,100,2025-10-09
+Scarlett Wright,English,Essay 2,91,100,2025-10-19
+Scarlett Wright,English,Book Report,84,100,2025-10-29
+Scarlett Wright,English,Reading Quiz 2,83,100,2025-11-07
+Scarlett Wright,English,Final,89,100,2025-11-17
+Scarlett Wright,Science,Lab Report 1,79,100,2025-09-11
+Scarlett Wright,Science,Quiz 1,83,100,2025-09-20
+Scarlett Wright,Science,Lab Report 2,83,100,2025-09-30
+Scarlett Wright,Science,Midterm,80,100,2025-10-09
+Scarlett Wright,Science,Experiment Project,86,100,2025-10-19
+Scarlett Wright,Science,Quiz 2,81,100,2025-10-29
+Scarlett Wright,Science,Lab Report 3,85,100,2025-11-07
+Scarlett Wright,Science,Final,86,100,2025-11-17
+Scarlett Wright,History,Essay 1,82,100,2025-09-11
+Scarlett Wright,History,Quiz 1,80,100,2025-09-20
+Scarlett Wright,History,Research Paper,87,100,2025-09-30
+Scarlett Wright,History,Midterm,82,100,2025-10-09
+Scarlett Wright,History,Quiz 2,83,100,2025-10-19
+Scarlett Wright,History,Presentation,80,100,2025-10-29
+Scarlett Wright,History,Essay 2,79,100,2025-11-07
+Scarlett Wright,History,Final,81,100,2025-11-17
+Scarlett Wright,Art,Sketch Portfolio,98,100,2025-09-11
+Scarlett Wright,Art,Color Theory,98,100,2025-09-20
+Scarlett Wright,Art,Painting 1,92,100,2025-09-30
+Scarlett Wright,Art,Midterm Project,91,100,2025-10-09
+Scarlett Wright,Art,Sculpture,94,100,2025-10-19
+Scarlett Wright,Art,Digital Art,91,100,2025-10-29
+Scarlett Wright,Art,Painting 2,94,100,2025-11-07
+Scarlett Wright,Art,Final Portfolio,94,100,2025-11-17
+Scarlett Wright,PE,Fitness Test 1,91,100,2025-09-11
+Scarlett Wright,PE,Team Sport 1,86,100,2025-09-20
+Scarlett Wright,PE,Individual Sport,89,100,2025-09-30
+Scarlett Wright,PE,Midterm Assessment,91,100,2025-10-09
+Scarlett Wright,PE,Team Sport 2,92,100,2025-10-19
+Scarlett Wright,PE,Fitness Test 2,86,100,2025-10-29
+Scarlett Wright,PE,Endurance Test,91,100,2025-11-07
+Scarlett Wright,PE,Final Assessment,87,100,2025-11-17
+Sebastian Scott,Math,Quiz 1,69,100,2025-09-11
+Sebastian Scott,Math,Homework 1,62,100,2025-09-20
+Sebastian Scott,Math,Quiz 2,63,100,2025-09-30
+Sebastian Scott,Math,Midterm,64,100,2025-10-09
+Sebastian Scott,Math,Homework 2,66,100,2025-10-19
+Sebastian Scott,Math,Quiz 3,60,100,2025-10-29
+Sebastian Scott,Math,Project,61,100,2025-11-07
+Sebastian Scott,Math,Final,61,100,2025-11-17
+Sebastian Scott,English,Essay 1,72,100,2025-09-11
+Sebastian Scott,English,Reading Quiz 1,71,100,2025-09-20
+Sebastian Scott,English,Vocabulary Test,81,100,2025-09-30
+Sebastian Scott,English,Midterm,80,100,2025-10-09
+Sebastian Scott,English,Essay 2,77,100,2025-10-19
+Sebastian Scott,English,Book Report,81,100,2025-10-29
+Sebastian Scott,English,Reading Quiz 2,82,100,2025-11-07
+Sebastian Scott,English,Final,72,100,2025-11-17
+Sebastian Scott,Science,Lab Report 1,67,100,2025-09-11
+Sebastian Scott,Science,Quiz 1,68,100,2025-09-20
+Sebastian Scott,Science,Lab Report 2,77,100,2025-09-30
+Sebastian Scott,Science,Midterm,75,100,2025-10-09
+Sebastian Scott,Science,Experiment Project,67,100,2025-10-19
+Sebastian Scott,Science,Quiz 2,72,100,2025-10-29
+Sebastian Scott,Science,Lab Report 3,70,100,2025-11-07
+Sebastian Scott,Science,Final,69,100,2025-11-17
+Sebastian Scott,History,Essay 1,76,100,2025-09-11
+Sebastian Scott,History,Quiz 1,72,100,2025-09-20
+Sebastian Scott,History,Research Paper,70,100,2025-09-30
+Sebastian Scott,History,Midterm,70,100,2025-10-09
+Sebastian Scott,History,Quiz 2,73,100,2025-10-19
+Sebastian Scott,History,Presentation,76,100,2025-10-29
+Sebastian Scott,History,Essay 2,74,100,2025-11-07
+Sebastian Scott,History,Final,71,100,2025-11-17
+Sebastian Scott,Art,Sketch Portfolio,81,100,2025-09-11
+Sebastian Scott,Art,Color Theory,81,100,2025-09-20
+Sebastian Scott,Art,Painting 1,89,100,2025-09-30
+Sebastian Scott,Art,Midterm Project,88,100,2025-10-09
+Sebastian Scott,Art,Sculpture,83,100,2025-10-19
+Sebastian Scott,Art,Digital Art,90,100,2025-10-29
+Sebastian Scott,Art,Painting 2,90,100,2025-11-07
+Sebastian Scott,Art,Final Portfolio,85,100,2025-11-17
+Sebastian Scott,PE,Fitness Test 1,76,100,2025-09-11
+Sebastian Scott,PE,Team Sport 1,82,100,2025-09-20
+Sebastian Scott,PE,Individual Sport,82,100,2025-09-30
+Sebastian Scott,PE,Midterm Assessment,81,100,2025-10-09
+Sebastian Scott,PE,Team Sport 2,84,100,2025-10-19
+Sebastian Scott,PE,Fitness Test 2,81,100,2025-10-29
+Sebastian Scott,PE,Endurance Test,82,100,2025-11-07
+Sebastian Scott,PE,Final Assessment,83,100,2025-11-17

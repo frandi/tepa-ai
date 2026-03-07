@@ -16,6 +16,7 @@ export interface AnthropicProviderOptions {
   retryBaseDelayMs?: number;
 }
 
+/** LLM provider implementation for Anthropic Claude models. */
 export class AnthropicProvider implements LLMProvider {
   private readonly client: Anthropic;
   private readonly maxRetries: number;
