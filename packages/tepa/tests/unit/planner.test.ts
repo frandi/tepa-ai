@@ -10,8 +10,15 @@ import type {
   TepaPrompt,
   Plan,
 } from "@tepa/types";
+import type { ModelConfig } from "@tepa/types";
 import { Planner, _extractJson, _validatePlanStructure } from "../../src/core/planner.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
+
+const defaultModelConfig: ModelConfig = {
+  planner: "claude-sonnet-4-20250514",
+  executor: "claude-haiku-4-5",
+  evaluator: "claude-sonnet-4-20250514",
+};
 
 // --- Helpers ---
 
@@ -218,7 +225,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
 
@@ -235,7 +242,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(samplePrompt);
 
@@ -250,7 +257,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(samplePrompt);
 
@@ -265,7 +272,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-haiku-3");
+      const planner = new Planner(provider, registry, "claude-haiku-3", defaultModelConfig);
 
       await planner.plan(samplePrompt);
 
@@ -285,7 +292,7 @@ describe("Planner", () => {
       };
       const planJson = makeValidPlanJson();
       const provider = createMockProvider([makeResponse(planJson)]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(promptWithArray);
 
@@ -318,7 +325,7 @@ describe("Planner", () => {
         ],
       });
       const provider = createMockProvider([makeResponse(revisedPlan)]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan } = await planner.plan(
         samplePrompt,
@@ -333,7 +340,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(samplePrompt, "Missing test execution step");
 
@@ -347,7 +354,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(samplePrompt, "Some feedback");
 
@@ -364,7 +371,7 @@ describe("Planner", () => {
         makeResponse("This is not JSON at all"),
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
 
@@ -379,7 +386,7 @@ describe("Planner", () => {
         makeResponse(badResponse),
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await planner.plan(samplePrompt);
 
@@ -399,7 +406,7 @@ describe("Planner", () => {
         makeResponse("not json"),
         makeResponse("still not json"),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await expect(planner.plan(samplePrompt)).rejects.toSatisfy((err: unknown) => {
         return err instanceof TepaCycleError && (err as Error).message.includes("Failed to parse plan");
@@ -409,7 +416,7 @@ describe("Planner", () => {
     it("handles JSON wrapped in markdown code fences", async () => {
       const wrappedJson = "```json\n" + makeValidPlanJson() + "\n```";
       const provider = createMockProvider([makeResponse(wrappedJson)]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan } = await planner.plan(samplePrompt);
 
@@ -420,7 +427,7 @@ describe("Planner", () => {
     it("handles JSON with surrounding text", async () => {
       const textWithJson = "Here is my plan:\n" + makeValidPlanJson() + "\nI hope this helps!";
       const provider = createMockProvider([makeResponse(textWithJson)]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan } = await planner.plan(samplePrompt);
 
@@ -433,7 +440,7 @@ describe("Planner", () => {
       const provider = createMockProvider([
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan } = await planner.plan(samplePrompt);
       expect(plan.steps[0]!.tools).toEqual(["file_write"]);
@@ -456,7 +463,7 @@ describe("Planner", () => {
         makeResponse(planWithBadTool),
         makeResponse(planWithBadTool),
       ]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       await expect(planner.plan(samplePrompt)).rejects.toThrow(TepaCycleError);
     });
@@ -481,7 +488,7 @@ describe("Planner", () => {
         ],
       });
       const provider = createMockProvider([makeResponse(planWithReasoningStep)]);
-      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514");
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
 
       const { plan } = await planner.plan(samplePrompt);
 

@@ -1,10 +1,26 @@
+import type { PlanStep } from "./plan.js";
+import type { ExecutionResult } from "./execution.js";
+
 export type EventName =
   | "prePlanner"
   | "postPlanner"
   | "preExecutor"
   | "postExecutor"
   | "preEvaluator"
-  | "postEvaluator";
+  | "postEvaluator"
+  | "preStep"
+  | "postStep";
+
+export interface PreStepPayload {
+  step: PlanStep;
+  cycle: number;
+}
+
+export interface PostStepPayload {
+  step: PlanStep;
+  result: ExecutionResult;
+  cycle: number;
+}
 
 export interface CycleMetadata {
   cycleNumber: number;

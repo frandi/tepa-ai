@@ -7,8 +7,11 @@ import type {
   ExecutionResult,
   LogEntry,
   TepaPrompt,
+  CycleMetadata,
 } from "@tepa/types";
 import { Scratchpad } from "./scratchpad.js";
+import { TepaCycleError } from "../utils/errors.js";
+import type { EventBus } from "../events/event-bus.js";
 
 export interface ExecutionContext {
   /** The original prompt driving this pipeline run. */
@@ -147,6 +150,76 @@ function summarize(value: unknown, maxLength = 200): string {
   return str.slice(0, maxLength) + "...";
 }
 
+/**
+ * Topological sort via Kahn's algorithm.
+ * Returns steps in dependency-safe execution order.
+ * Throws TepaCycleError if circular dependencies are detected.
+ */
+function topoSort(steps: PlanStep[]): PlanStep[] {
+  const stepMap = new Map<string, PlanStep>();
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+
+  for (const step of steps) {
+    stepMap.set(step.id, step);
+    inDegree.set(step.id, 0);
+    adjacency.set(step.id, []);
+  }
+
+  for (const step of steps) {
+    for (const dep of step.dependencies) {
+      if (adjacency.has(dep)) {
+        adjacency.get(dep)!.push(step.id);
+        inDegree.set(step.id, inDegree.get(step.id)! + 1);
+      }
+    }
+  }
+
+  // Seed queue with zero-in-degree steps in original array order
+  const queue: string[] = [];
+  for (const step of steps) {
+    if (inDegree.get(step.id) === 0) {
+      queue.push(step.id);
+    }
+  }
+
+  const sorted: PlanStep[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    sorted.push(stepMap.get(id)!);
+
+    for (const neighbor of adjacency.get(id)!) {
+      const newDegree = inDegree.get(neighbor)! - 1;
+      inDegree.set(neighbor, newDegree);
+      if (newDegree === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  if (sorted.length < steps.length) {
+    throw new TepaCycleError("Circular dependency detected in plan steps");
+  }
+
+  return sorted;
+}
+
+/**
+ * Returns a new Map containing only outputs for the step's declared dependencies.
+ */
+function filterOutputsByDependencies(
+  step: PlanStep,
+  allOutputs: Map<string, unknown>,
+): Map<string, unknown> {
+  const scoped = new Map<string, unknown>();
+  for (const dep of step.dependencies) {
+    if (allOutputs.has(dep)) {
+      scoped.set(dep, allOutputs.get(dep));
+    }
+  }
+  return scoped;
+}
+
 export class Executor {
   private readonly registry: ToolRegistry;
   private readonly provider: LLMProvider;
@@ -165,31 +238,67 @@ export class Executor {
   /**
    * Execute a plan step by step, returning results and logs.
    */
-  async execute(plan: Plan, context: ExecutionContext): Promise<ExecutorOutput> {
+  async execute(
+    plan: Plan,
+    context: ExecutionContext,
+    eventBus?: EventBus,
+    cycleMeta?: CycleMetadata,
+  ): Promise<ExecutorOutput> {
     const results: ExecutionResult[] = [];
     const logs: LogEntry[] = [];
     let totalTokens = 0;
     const stepOutputs = new Map<string, unknown>();
 
-    for (const step of plan.steps) {
+    const sortedSteps = topoSort(plan.steps);
+
+    for (const step of sortedSteps) {
+      // Emit preStep
+      if (eventBus && cycleMeta) {
+        await eventBus.run("preStep", { step, cycle: context.cycle }, cycleMeta);
+      }
+
       const startTime = Date.now();
       let result: ExecutionResult;
 
-      if (step.tools.length === 0) {
-        // LLM reasoning step — no tool
-        result = await this.executeReasoningStep(step, context, stepOutputs);
+      // Check for failed dependencies
+      const failedDep = step.dependencies.find((depId) =>
+        results.find((r) => r.stepId === depId)?.status === "failure",
+      );
+
+      if (failedDep) {
+        result = {
+          stepId: step.id,
+          status: "failure",
+          output: null,
+          error: `Skipped: dependency "${failedDep}" failed`,
+          tokensUsed: 0,
+          durationMs: 0,
+        };
       } else {
-        // Tool execution step — execute each tool in sequence
-        result = await this.executeToolStep(step, context, stepOutputs);
+        // Filter outputs to only declared dependencies
+        const scopedOutputs = filterOutputsByDependencies(step, stepOutputs);
+
+        if (step.tools.length === 0) {
+          // LLM reasoning step — no tool
+          result = await this.executeReasoningStep(step, context, scopedOutputs);
+        } else {
+          // Tool execution step — execute each tool in sequence
+          result = await this.executeToolStep(step, context, scopedOutputs);
+        }
       }
 
       const durationMs = Date.now() - startTime;
       result.durationMs = durationMs;
       totalTokens += result.tokensUsed;
 
-      // Store output for subsequent steps
+      // Store output in full map (unscoped)
       stepOutputs.set(step.id, result.output);
       results.push(result);
+
+      // Emit postStep
+      if (eventBus && cycleMeta) {
+        await eventBus.run("postStep", { step, result, cycle: context.cycle }, cycleMeta);
+      }
 
       // Record log entry
       logs.push({
@@ -226,7 +335,7 @@ export class Executor {
       ];
 
       const response = await this.provider.complete(messages, {
-        model: this.model,
+        model: step.model ?? this.model,
         systemPrompt: buildReasoningSystemPrompt(),
       });
 
@@ -292,7 +401,7 @@ export class Executor {
         ];
 
         const paramResponse = await this.provider.complete(messages, {
-          model: this.model,
+          model: step.model ?? this.model,
           systemPrompt: buildParamSystemPrompt(),
         });
 
@@ -324,3 +433,9 @@ export class Executor {
     };
   }
 }
+
+// Export utilities for testing
+export {
+  topoSort as _topoSort,
+  filterOutputsByDependencies as _filterOutputsByDependencies,
+};

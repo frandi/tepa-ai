@@ -130,6 +130,7 @@ export class Tepa {
       this.provider,
       registry,
       this.config.model.planner,
+      this.config.model,
     );
     const executor = new Executor(
       registry,
@@ -192,6 +193,8 @@ export class Tepa {
             scratchpad: executorInput.scratchpad,
             previousResults: executorInput.previousResults,
           },
+          eventBus,
+          cycleMeta,
         );
         tokenTracker.add(executorOutput.tokensUsed);
         allLogs.push(...executorOutput.logs);

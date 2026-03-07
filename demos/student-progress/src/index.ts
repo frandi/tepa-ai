@@ -10,7 +10,7 @@ dotenv.config({ path: path.join(demoRoot, ".env.local") });
 dotenv.config({ path: path.join(demoRoot, ".env") });
 
 import { Tepa, parsePromptFile } from "tepa";
-import type { Plan, EvaluationResult } from "@tepa/types";
+import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import {
   fileReadTool,
   fileWriteTool,
@@ -35,6 +35,9 @@ async function main() {
   console.log(`Goal: ${prompt.goal}`);
   console.log(`Data: ${classDir}\n`);
 
+  // Shared state for step visualization
+  const depthMap = new Map<string, number>();
+
   // Create the Tepa pipeline
   const tepa = new Tepa({
     tools: [
@@ -50,20 +53,62 @@ async function main() {
     config: {
       limits: {
         maxCycles: 3,
-        maxTokens: 50_000,
+        maxTokens: 150_000,
       },
       logging: {
         level: "verbose",
       },
     },
     events: {
+      postStep: [
+        (data: unknown) => {
+          const { step, result } = data as PostStepPayload;
+          const icon = result.status === "success" ? "OK" : "FAIL";
+          const depth = depthMap.get(step.id) ?? 0;
+          const indent = "  " + "  ".repeat(depth);
+          const model = step.model ? ` [${step.model}]` : "";
+          console.log(`${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`);
+        },
+      ],
       postPlanner: [
         (data: unknown) => {
           const plan = data as Plan;
+          // Build depth map from dependencies (BFS from roots)
+          depthMap.clear();
+          const childMap = new Map<string, string[]>();
+          for (const s of plan.steps) {
+            depthMap.set(s.id, 0);
+            childMap.set(s.id, []);
+          }
+          for (const s of plan.steps) {
+            for (const dep of s.dependencies) {
+              if (childMap.has(dep)) childMap.get(dep)!.push(s.id);
+            }
+          }
+          // BFS to compute depths
+          const roots = plan.steps.filter((s) => s.dependencies.length === 0);
+          const queue: PlanStep[] = [...roots];
+          while (queue.length > 0) {
+            const current = queue.shift()!;
+            const currentDepth = depthMap.get(current.id)!;
+            for (const childId of childMap.get(current.id)!) {
+              const newDepth = currentDepth + 1;
+              if (newDepth > (depthMap.get(childId) ?? 0)) {
+                depthMap.set(childId, newDepth);
+              }
+              const child = plan.steps.find((s) => s.id === childId);
+              if (child) queue.push(child);
+            }
+          }
+
           console.log(`\n--- Plan (${plan.steps.length} steps) ---`);
           for (const step of plan.steps) {
+            const depth = depthMap.get(step.id) ?? 0;
+            const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
-            console.log(`  ${step.id}: ${step.description} [${tools}]`);
+            const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
+            const model = step.model ? ` [${step.model}]` : "";
+            console.log(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
           }
           console.log();
         },

@@ -34,6 +34,8 @@ export type {
   EventRegistration,
   EventMap,
   CycleMetadata,
+  PreStepPayload,
+  PostStepPayload,
 } from "./event.js";
 
 export type { TepaResult, OutputArtifact, LogEntry } from "./result.js";

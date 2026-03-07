@@ -2,8 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { LLMProvider, LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { toAnthropicMessages, toFinishReason, extractText } from "./formatting.js";
 
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
-const DEFAULT_MAX_TOKENS = 4096;
+const DEFAULT_MODEL = "claude-haiku-4-5-20250414";
+const DEFAULT_MAX_TOKENS = 64_000;
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
@@ -25,6 +25,7 @@ export class AnthropicProvider implements LLMProvider {
   constructor(options: AnthropicProviderOptions = {}) {
     this.client = new Anthropic({
       apiKey: options.apiKey,
+      timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
     });
     this.maxRetries = options.maxRetries ?? MAX_RETRIES;
     this.retryBaseDelayMs = options.retryBaseDelayMs ?? RETRY_BASE_DELAY_MS;
@@ -91,6 +92,9 @@ export class AnthropicProvider implements LLMProvider {
       return true;
     }
     if (error instanceof Anthropic.APIConnectionError) {
+      return true;
+    }
+    if (error instanceof Anthropic.APIError && error.status === 529) {
       return true;
     }
     return false;

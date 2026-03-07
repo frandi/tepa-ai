@@ -110,7 +110,7 @@ describe("AnthropicProvider", () => {
       const callArgs = mockCreate.mock.calls[0]![0];
       // When model is empty string, falls through to the empty string
       // The defaults are used when undefined
-      expect(callArgs.max_tokens).toBe(4096);
+      expect(callArgs.max_tokens).toBe(64_000);
     });
 
     it("omits temperature when not provided", async () => {

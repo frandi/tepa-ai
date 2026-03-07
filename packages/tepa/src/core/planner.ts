@@ -4,6 +4,7 @@ import type {
   ToolRegistry,
   ToolSchema,
   TepaPrompt,
+  ModelConfig,
   Plan,
   PlanStep,
 } from "@tepa/types";
@@ -12,7 +13,7 @@ import { TepaCycleError } from "../utils/errors.js";
 /**
  * Build the system prompt for initial planning.
  */
-function buildPlanSystemPrompt(toolSchemas: ToolSchema[]): string {
+function buildPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConfig): string {
   const toolList = toolSchemas
     .map((t) => {
       const params = Object.entries(t.parameters)
@@ -38,6 +39,10 @@ Given a goal, context, and expected output, you must:
 4. Estimate the total token usage for executing the plan.
 5. Provide your reasoning for the plan structure.
 
+Available models (from least to most capable):
+- "${modelConfig.executor}" (default for all steps — fast, cheap, good for simple tool parameter construction)
+- "${modelConfig.planner}" (more capable — use for complex reasoning, synthesis, and analysis steps)
+
 You MUST respond with ONLY a valid JSON object in this exact format (no markdown, no code fences, no extra text):
 
 {
@@ -49,7 +54,8 @@ You MUST respond with ONLY a valid JSON object in this exact format (no markdown
       "description": "What this step does",
       "tools": ["tool_name"],
       "expectedOutcome": "What this step should produce",
-      "dependencies": []
+      "dependencies": [],
+      "model": "${modelConfig.executor}"
     }
   ]
 }
@@ -59,13 +65,17 @@ Rules:
 - Dependencies reference other step IDs that must complete first.
 - Every tool name must exactly match one of the available tools listed above.
 - If a step requires LLM reasoning without a tool, use an empty tools array.
-- Keep the plan minimal — only include steps necessary to achieve the goal.`;
+- Keep the plan minimal — only include steps necessary to achieve the goal.
+- Dependencies must be DIRECT only — if step_3 depends on step_2 which depends on step_1, step_3 should list only ["step_2"], not ["step_1", "step_2"], unless it directly needs step_1's output.
+- IMPORTANT: The executor only provides each step with the outputs of its declared dependencies. If a step needs data from a prior step, that step MUST be listed in dependencies.
+- Use LLM reasoning steps (empty tools array) as data-distillation boundaries: have a reasoning step summarize/extract key findings from raw data before downstream steps consume it.
+- Each step can optionally specify a "model" to override the default executor model. Use the more capable model ("${modelConfig.planner}") for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model ("${modelConfig.executor}") for simple tool parameter construction steps. If "model" is omitted, the default executor model is used.`;
 }
 
 /**
  * Build the system prompt for revised planning (with evaluator feedback).
  */
-function buildRevisedPlanSystemPrompt(toolSchemas: ToolSchema[]): string {
+function buildRevisedPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConfig): string {
   const toolList = toolSchemas
     .map((t) => `  - ${t.name}: ${t.description}`)
     .join("\n");
@@ -74,6 +84,10 @@ function buildRevisedPlanSystemPrompt(toolSchemas: ToolSchema[]): string {
 
 Available tools:
 ${toolList}
+
+Available models (from least to most capable):
+- "${modelConfig.executor}" (default for all steps — fast, cheap, good for simple tool parameter construction)
+- "${modelConfig.planner}" (more capable — use for complex reasoning, synthesis, and analysis steps)
 
 You will receive the original goal and feedback from an evaluator describing what went wrong. Your job is to produce a MINIMAL revised plan that addresses the feedback. Do not regenerate the entire plan from scratch — only add, modify, or replace the steps necessary to fix the issues identified.
 
@@ -88,7 +102,8 @@ You MUST respond with ONLY a valid JSON object in this exact format (no markdown
       "description": "What this step does",
       "tools": ["tool_name"],
       "expectedOutcome": "What this step should produce",
-      "dependencies": []
+      "dependencies": [],
+      "model": "${modelConfig.executor}"
     }
   ]
 }
@@ -97,7 +112,11 @@ Rules:
 - Focus on fixing the specific issues from the feedback.
 - Reuse successful parts of the previous execution where possible.
 - Keep changes minimal — only modify what's necessary.
-- The revised plan must be self-contained: all dependency references must point to step IDs that exist within THIS plan. Do not reference step IDs from the original plan unless they are included in the revised plan.`;
+- The revised plan must be self-contained: all dependency references must point to step IDs that exist within THIS plan. Do not reference step IDs from the original plan unless they are included in the revised plan.
+- Dependencies must be DIRECT only — if step_3 depends on step_2 which depends on step_1, step_3 should list only ["step_2"], not ["step_1", "step_2"], unless it directly needs step_1's output.
+- IMPORTANT: The executor only provides each step with the outputs of its declared dependencies. If a step needs data from a prior step, that step MUST be listed in dependencies.
+- Use LLM reasoning steps (empty tools array) as data-distillation boundaries: have a reasoning step summarize/extract key findings from raw data before downstream steps consume it.
+- Each step can optionally specify a "model" to override the default executor model. Use the more capable model ("${modelConfig.planner}") for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model ("${modelConfig.executor}") for simple tool parameter construction steps. If "model" is omitted, the default executor model is used.`;
 }
 
 /**
@@ -227,12 +246,17 @@ function validatePlanStructure(data: unknown): Plan {
       }
     }
 
+    if (s.model !== undefined && typeof s.model !== "string") {
+      throw new Error(`Step "${s.id}" model must be a string if provided`);
+    }
+
     steps.push({
       id: s.id,
       description: s.description,
       tools: s.tools as string[],
       expectedOutcome: s.expectedOutcome,
       dependencies: s.dependencies as string[],
+      ...(typeof s.model === "string" ? { model: s.model } : {}),
     });
   }
 
@@ -301,15 +325,18 @@ export class Planner {
   private readonly provider: LLMProvider;
   private readonly registry: ToolRegistry;
   private readonly model: string;
+  private readonly modelConfig: ModelConfig;
 
   constructor(
     provider: LLMProvider,
     registry: ToolRegistry,
     model: string,
+    modelConfig: ModelConfig,
   ) {
     this.provider = provider;
     this.registry = registry;
     this.model = model;
+    this.modelConfig = modelConfig;
   }
 
   /**
@@ -322,8 +349,8 @@ export class Planner {
     const hasFeedback = feedback !== undefined && feedback.length > 0;
 
     const systemPrompt = hasFeedback
-      ? buildRevisedPlanSystemPrompt(toolSchemas)
-      : buildPlanSystemPrompt(toolSchemas);
+      ? buildRevisedPlanSystemPrompt(toolSchemas, this.modelConfig)
+      : buildPlanSystemPrompt(toolSchemas, this.modelConfig);
 
     const userMessage = hasFeedback
       ? buildRevisedPlanUserMessage(prompt, feedback)

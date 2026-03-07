@@ -10,8 +10,11 @@ import type {
   Plan,
   TepaPrompt,
 } from "@tepa/types";
-import { Executor, type ExecutionContext } from "../../src/core/executor.js";
+import type { CycleMetadata } from "@tepa/types";
+import { Executor, type ExecutionContext, _topoSort, _filterOutputsByDependencies } from "../../src/core/executor.js";
 import { Scratchpad } from "../../src/core/scratchpad.js";
+import { EventBus } from "../../src/events/event-bus.js";
+import { TepaCycleError } from "../../src/utils/errors.js";
 
 // --- Helpers ---
 
@@ -450,6 +453,205 @@ describe("Executor", () => {
 
       // Scratchpad still has original data
       expect(scratchpad.read("shared_key")).toBe("shared_value");
+    });
+  });
+
+  describe("topoSort", () => {
+    it("sorts steps so dependencies execute first regardless of array order", () => {
+      const steps = [
+        { id: "step_2", description: "B", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+        { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: [] },
+        { id: "step_3", description: "C", tools: [], expectedOutcome: "", dependencies: ["step_2"] },
+      ];
+
+      const sorted = _topoSort(steps);
+      const ids = sorted.map((s) => s.id);
+      expect(ids.indexOf("step_1")).toBeLessThan(ids.indexOf("step_2"));
+      expect(ids.indexOf("step_2")).toBeLessThan(ids.indexOf("step_3"));
+    });
+
+    it("throws TepaCycleError for circular dependencies", () => {
+      const steps = [
+        { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: ["step_2"] },
+        { id: "step_2", description: "B", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+      ];
+
+      expect(() => _topoSort(steps)).toThrow(TepaCycleError);
+    });
+
+    it("detects self-dependency as a cycle", () => {
+      const steps = [
+        { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+      ];
+
+      expect(() => _topoSort(steps)).toThrow(TepaCycleError);
+    });
+  });
+
+  describe("filterOutputsByDependencies", () => {
+    it("returns only outputs for declared dependencies", () => {
+      const allOutputs = new Map<string, unknown>([
+        ["step_1", "output1"],
+        ["step_2", "output2"],
+        ["step_3", "output3"],
+      ]);
+      const step = { id: "step_4", description: "", tools: [], expectedOutcome: "", dependencies: ["step_2"] };
+
+      const scoped = _filterOutputsByDependencies(step, allOutputs);
+      expect(scoped.size).toBe(1);
+      expect(scoped.get("step_2")).toBe("output2");
+      expect(scoped.has("step_1")).toBe(false);
+    });
+
+    it("returns empty map for steps with no dependencies", () => {
+      const allOutputs = new Map<string, unknown>([["step_1", "output1"]]);
+      const step = { id: "step_2", description: "", tools: [], expectedOutcome: "", dependencies: [] };
+
+      const scoped = _filterOutputsByDependencies(step, allOutputs);
+      expect(scoped.size).toBe(0);
+    });
+  });
+
+  describe("execute — dependency-scoped context", () => {
+    it("only passes declared dependency outputs to step LLM prompt", async () => {
+      const plan: Plan = {
+        reasoning: "Three steps, step_3 only depends on step_2",
+        estimatedTokens: 300,
+        steps: [
+          { id: "step_1", description: "First", tools: [], expectedOutcome: "Result 1", dependencies: [] },
+          { id: "step_2", description: "Second", tools: [], expectedOutcome: "Result 2", dependencies: ["step_1"] },
+          { id: "step_3", description: "Third", tools: [], expectedOutcome: "Result 3", dependencies: ["step_2"] },
+        ],
+      };
+
+      const provider = createMockProvider([
+        makeResponse("output_from_step_1"),
+        makeResponse("output_from_step_2"),
+        makeResponse("output_from_step_3"),
+      ]);
+
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      await executor.execute(plan, makeContext());
+
+      // step_3's LLM call should contain step_2's output but NOT step_1's
+      const thirdCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[2]!;
+      const userMessage = (thirdCall[0] as LLMMessage[])[0]!.content;
+      expect(userMessage).toContain("step_2");
+      expect(userMessage).toContain("output_from_step_2");
+      expect(userMessage).not.toContain("output_from_step_1");
+    });
+
+    it("passes no prior outputs for steps with empty dependencies", async () => {
+      const plan: Plan = {
+        reasoning: "Independent step",
+        estimatedTokens: 100,
+        steps: [
+          { id: "step_1", description: "First", tools: [], expectedOutcome: "R1", dependencies: [] },
+          { id: "step_2", description: "Second", tools: [], expectedOutcome: "R2", dependencies: [] },
+        ],
+      };
+
+      const provider = createMockProvider([
+        makeResponse("output1"),
+        makeResponse("output2"),
+      ]);
+
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      await executor.execute(plan, makeContext());
+
+      const secondCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
+      const userMessage = (secondCall[0] as LLMMessage[])[0]!.content;
+      expect(userMessage).not.toContain("Previous step outputs");
+    });
+  });
+
+  describe("execute — failed dependency skip", () => {
+    it("skips step when a dependency failed, zero tokens used", async () => {
+      const failingTool: ToolDefinition = {
+        name: "fail_tool",
+        description: "Fails",
+        parameters: {},
+        execute: vi.fn(async () => { throw new Error("Boom"); }),
+      };
+      const failRegistry = createMockRegistry([failingTool, fileWriteTool]);
+
+      const plan: Plan = {
+        reasoning: "step_2 depends on failing step_1",
+        estimatedTokens: 200,
+        steps: [
+          { id: "step_1", description: "Will fail", tools: ["fail_tool"], expectedOutcome: "N/A", dependencies: [] },
+          { id: "step_2", description: "Depends on step_1", tools: ["file_write"], expectedOutcome: "File created", dependencies: ["step_1"] },
+        ],
+      };
+
+      const provider = createMockProvider([makeResponse("{}")]);
+      const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
+      const { results } = await executor.execute(plan, makeContext());
+
+      expect(results).toHaveLength(2);
+      expect(results[1]!.status).toBe("failure");
+      expect(results[1]!.error).toContain('Skipped: dependency "step_1" failed');
+      expect(results[1]!.tokensUsed).toBe(0);
+
+      // Only 1 LLM call (for step_1's param construction), step_2 was skipped
+      expect(provider.complete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("execute — preStep/postStep events", () => {
+    it("emits preStep and postStep events with correct payloads", async () => {
+      const plan: Plan = {
+        reasoning: "Single step",
+        estimatedTokens: 100,
+        steps: [
+          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "File created", dependencies: [] },
+        ],
+      };
+
+      const preStepHandler = vi.fn();
+      const postStepHandler = vi.fn();
+      const eventBus = new EventBus({
+        preStep: [preStepHandler],
+        postStep: [postStepHandler],
+      });
+      const cycleMeta: CycleMetadata = { cycleNumber: 1, totalCyclesUsed: 0, tokensUsed: 0 };
+
+      const provider = createMockProvider([
+        makeResponse('{"path": "/tmp/f.ts", "content": "x"}'),
+      ]);
+
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      await executor.execute(plan, makeContext(), eventBus, cycleMeta);
+
+      expect(preStepHandler).toHaveBeenCalledTimes(1);
+      expect(preStepHandler.mock.calls[0]![0]).toMatchObject({
+        step: expect.objectContaining({ id: "step_1" }),
+        cycle: 1,
+      });
+
+      expect(postStepHandler).toHaveBeenCalledTimes(1);
+      expect(postStepHandler.mock.calls[0]![0]).toMatchObject({
+        step: expect.objectContaining({ id: "step_1" }),
+        result: expect.objectContaining({ stepId: "step_1", status: "success" }),
+        cycle: 1,
+      });
+    });
+
+    it("works without eventBus (backward compatible)", async () => {
+      const plan: Plan = {
+        reasoning: "No events",
+        estimatedTokens: 100,
+        steps: [
+          { id: "step_1", description: "Write", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+        ],
+      };
+
+      const provider = createMockProvider([makeResponse('{"path": "/tmp/f.ts", "content": "x"}')]);
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const { results } = await executor.execute(plan, makeContext());
+
+      expect(results).toHaveLength(1);
+      expect(results[0]!.status).toBe("success");
     });
   });
 
