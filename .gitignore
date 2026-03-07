@@ -4,5 +4,6 @@ dist/
 .eslintcache
 coverage/
 .env
-.env.*
+.env.local
+.env.*.local
 *.log

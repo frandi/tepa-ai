@@ -276,9 +276,17 @@ export class Tepa {
         };
       }
 
-      // Re-throw TepaErrors as-is, wrap unknown errors
+      // Pipeline component errors (planner parse failures, cycle errors, etc.)
+      // return a structured failure rather than crashing
       if (error instanceof TepaError) {
-        throw error;
+        return {
+          status: "fail",
+          cycles: cyclesUsed,
+          tokensUsed: tokenTracker.getUsed(),
+          outputs: [],
+          logs: allLogs,
+          feedback: error.message,
+        };
       }
 
       throw new TepaError(

@@ -10,10 +10,21 @@ npm install @tepa/provider-anthropic
 
 ## Setup
 
-Set the `ANTHROPIC_API_KEY` environment variable:
+Set the `ANTHROPIC_API_KEY` environment variable. You can either export it directly:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Or use a `.env` file with [dotenv](https://www.npmjs.com/package/dotenv):
+
+```bash
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```typescript
+import "dotenv/config";
 ```
 
 ## Usage

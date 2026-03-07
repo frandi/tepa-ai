@@ -197,8 +197,12 @@ Run a demo:
 
 ```bash
 cd demos/api-client-gen
-npm start
+cp .env.example .env.local
+# Edit .env.local and add your ANTHROPIC_API_KEY
+./run.sh
 ```
+
+Each demo has its own `.env.example` — copy it to `.env.local` and set your API key. The `run.sh` script cleans previous output before running.
 
 ## Monorepo Development
 

@@ -96,7 +96,8 @@ You MUST respond with ONLY a valid JSON object in this exact format (no markdown
 Rules:
 - Focus on fixing the specific issues from the feedback.
 - Reuse successful parts of the previous execution where possible.
-- Keep changes minimal — only modify what's necessary.`;
+- Keep changes minimal — only modify what's necessary.
+- The revised plan must be self-contained: all dependency references must point to step IDs that exist within THIS plan. Do not reference step IDs from the original plan unless they are included in the revised plan.`;
 }
 
 /**
