@@ -6,6 +6,7 @@
     "packages/tepa",
     "packages/tools",
     "packages/provider-anthropic",
+    "packages/provider-openai",
     "demos/*"
   ],
   "scripts": {
