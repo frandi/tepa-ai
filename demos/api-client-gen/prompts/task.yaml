@@ -1,6 +1,9 @@
 goal: >
   Create a TypeScript API client module for the JSONPlaceholder API
   (https://jsonplaceholder.typicode.com).
+  All file paths are relative to the projectRoot directory specified in context.
+  All file operations (read, write, search, shell commands) must use absolute paths
+  resolved from projectRoot.
 
 context:
   projectRoot: ./my-project
@@ -11,6 +14,7 @@ context:
   notes:
     - Follow existing code style in the project
     - Check src/utils/http.ts for the HTTP utility pattern
+    - All paths in expectedOutput are relative to projectRoot
 
 expectedOutput:
   - path: src/api/jsonplaceholder.ts

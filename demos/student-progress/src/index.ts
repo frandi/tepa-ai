@@ -1,5 +1,14 @@
+import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const demoRoot = path.resolve(__dirname, "..");
+
+// Load .env.local first, then .env as fallback
+dotenv.config({ path: path.join(demoRoot, ".env.local") });
+dotenv.config({ path: path.join(demoRoot, ".env") });
+
 import { Tepa, parsePromptFile } from "tepa";
 import type { Plan, EvaluationResult } from "@tepa/types";
 import {
@@ -12,9 +21,6 @@ import {
   logObserveTool,
 } from "@tepa/tools";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const demoRoot = path.resolve(__dirname, "..");
 
 async function main() {
   // Load prompt from YAML file
