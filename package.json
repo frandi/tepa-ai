@@ -7,6 +7,7 @@
     "packages/tools",
     "packages/provider-anthropic",
     "packages/provider-openai",
+    "packages/provider-gemini",
     "demos/*"
   ],
   "scripts": {
