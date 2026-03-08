@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@tepa/types": "*",
+    "@tepa/provider-core": "*",
     "openai": "^4.x"
   },
   "devDependencies": {

@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/types",
+    "packages/provider-core",
     "packages/tepa",
     "packages/tools",
     "packages/provider-anthropic",

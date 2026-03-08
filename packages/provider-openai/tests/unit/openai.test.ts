@@ -3,15 +3,25 @@ import type { LLMMessage, LLMRequestOptions, LLMProvider } from "@tepa/types";
 
 // Mock the OpenAI SDK before importing the provider
 vi.mock("openai", () => {
-  const RateLimitError = class extends Error {
+  const APIError = class extends Error {
+    status: number;
+    headers: Record<string, string>;
+    constructor(status = 0, message = "api error") {
+      super(message);
+      this.name = "APIError";
+      this.status = status;
+      this.headers = {};
+    }
+  };
+  const RateLimitError = class extends APIError {
     constructor() {
-      super("rate limited");
+      super(429, "rate limited");
       this.name = "RateLimitError";
     }
   };
-  const InternalServerError = class extends Error {
+  const InternalServerError = class extends APIError {
     constructor() {
-      super("internal server error");
+      super(500, "internal server error");
       this.name = "InternalServerError";
     }
   };
@@ -21,9 +31,9 @@ vi.mock("openai", () => {
       this.name = "APIConnectionError";
     }
   };
-  const AuthenticationError = class extends Error {
+  const AuthenticationError = class extends APIError {
     constructor() {
-      super("invalid api key");
+      super(401, "invalid api key");
       this.name = "AuthenticationError";
     }
   };
@@ -34,7 +44,7 @@ vi.mock("openai", () => {
     vi.fn().mockImplementation(() => ({
       responses: { create: mockCreate },
     })),
-    { RateLimitError, InternalServerError, APIConnectionError, AuthenticationError },
+    { APIError, RateLimitError, InternalServerError, APIConnectionError, AuthenticationError },
   );
 
   return { default: MockOpenAI };
@@ -67,8 +77,9 @@ describe("OpenAIProvider", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    provider = new OpenAIProvider({ apiKey: "test-key" });
+    provider = new OpenAIProvider({ apiKey: "test-key", defaultLog: false });
     mockCreate = getMockCreate();
+    mockCreate.mockReset();
   });
 
   describe("interface compliance", () => {
@@ -202,6 +213,7 @@ describe("OpenAIProvider", () => {
       const fastProvider = new OpenAIProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -222,6 +234,7 @@ describe("OpenAIProvider", () => {
       const fastProvider = new OpenAIProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -242,6 +255,7 @@ describe("OpenAIProvider", () => {
       const fastProvider = new OpenAIProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -259,6 +273,7 @@ describe("OpenAIProvider", () => {
       const fastProvider = new OpenAIProvider({
         apiKey: "bad-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(
@@ -280,6 +295,7 @@ describe("OpenAIProvider", () => {
         apiKey: "test-key",
         maxRetries: 2,
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(

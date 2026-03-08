@@ -3,15 +3,25 @@ import type { LLMMessage, LLMRequestOptions, LLMProvider } from "@tepa/types";
 
 // Mock the Anthropic SDK before importing the provider
 vi.mock("@anthropic-ai/sdk", () => {
-  const RateLimitError = class extends Error {
+  const APIError = class extends Error {
+    status: number;
+    headers: Record<string, string>;
+    constructor(status = 0, message = "api error") {
+      super(message);
+      this.name = "APIError";
+      this.status = status;
+      this.headers = {};
+    }
+  };
+  const RateLimitError = class extends APIError {
     constructor() {
-      super("rate limited");
+      super(429, "rate limited");
       this.name = "RateLimitError";
     }
   };
-  const InternalServerError = class extends Error {
+  const InternalServerError = class extends APIError {
     constructor() {
-      super("internal server error");
+      super(500, "internal server error");
       this.name = "InternalServerError";
     }
   };
@@ -21,9 +31,9 @@ vi.mock("@anthropic-ai/sdk", () => {
       this.name = "APIConnectionError";
     }
   };
-  const AuthenticationError = class extends Error {
+  const AuthenticationError = class extends APIError {
     constructor() {
-      super("invalid api key");
+      super(401, "invalid api key");
       this.name = "AuthenticationError";
     }
   };
@@ -35,6 +45,7 @@ vi.mock("@anthropic-ai/sdk", () => {
   }));
 
   // Attach error classes as static properties
+  MockAnthropic.APIError = APIError;
   MockAnthropic.RateLimitError = RateLimitError;
   MockAnthropic.InternalServerError = InternalServerError;
   MockAnthropic.APIConnectionError = APIConnectionError;
@@ -65,8 +76,9 @@ describe("AnthropicProvider", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    provider = new AnthropicProvider({ apiKey: "test-key" });
+    provider = new AnthropicProvider({ apiKey: "test-key", defaultLog: false });
     mockCreate = getMockCreate();
+    mockCreate.mockReset();
   });
 
   describe("interface compliance", () => {
@@ -195,6 +207,7 @@ describe("AnthropicProvider", () => {
       const fastProvider = new AnthropicProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -215,6 +228,7 @@ describe("AnthropicProvider", () => {
       const fastProvider = new AnthropicProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -235,6 +249,7 @@ describe("AnthropicProvider", () => {
       const fastProvider = new AnthropicProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -252,6 +267,7 @@ describe("AnthropicProvider", () => {
       const fastProvider = new AnthropicProvider({
         apiKey: "bad-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(
@@ -273,6 +289,7 @@ describe("AnthropicProvider", () => {
         apiKey: "test-key",
         maxRetries: 2,
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(

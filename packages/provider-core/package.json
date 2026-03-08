@@ -1,7 +1,7 @@
 {
-  "name": "@tepa/provider-gemini",
+  "name": "@tepa/provider-core",
   "version": "0.1.0",
-  "description": "Google Gemini LLM provider for the Tepa autonomous agent",
+  "description": "Base LLM provider with centralized retry logic and structured logging",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -24,9 +24,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@tepa/types": "*",
-    "@tepa/provider-core": "*",
-    "@google/genai": "^1.x"
+    "@tepa/types": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

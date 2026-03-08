@@ -51,7 +51,7 @@ describe("GeminiProvider", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    provider = new GeminiProvider({ apiKey: "test-key" });
+    provider = new GeminiProvider({ apiKey: "test-key", defaultLog: false });
     mockGenerateContent = getMockGenerateContent();
   });
 
@@ -195,6 +195,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -215,6 +216,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -235,6 +237,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -255,6 +258,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       const result = await fastProvider.complete(
@@ -273,6 +277,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "bad-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(
@@ -292,6 +297,7 @@ describe("GeminiProvider", () => {
       const fastProvider = new GeminiProvider({
         apiKey: "test-key",
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(
@@ -312,6 +318,7 @@ describe("GeminiProvider", () => {
         apiKey: "test-key",
         maxRetries: 2,
         retryBaseDelayMs: 1,
+        defaultLog: false,
       });
 
       await expect(

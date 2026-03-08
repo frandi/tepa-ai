@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  external: ["@tepa/types", "@anthropic-ai/sdk"],
+  external: ["@tepa/types", "@tepa/provider-core", "@anthropic-ai/sdk"],
 });

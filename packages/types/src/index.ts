@@ -26,6 +26,9 @@ export type {
   LLMResponse,
   LLMMessage,
   LLMRequestOptions,
+  LLMLogStatus,
+  LLMLogEntry,
+  LLMLogCallback,
 } from "./llm.js";
 
 export type {

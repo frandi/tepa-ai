@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  external: ["@tepa/types", "@tepa/provider-core", "@google/genai"],
+  external: ["@tepa/types"],
 });

@@ -9,6 +9,7 @@ set -euo pipefail
 # Ordered by dependency: types first, then packages that depend on it.
 PACKAGES=(
   "types"
+  "provider-core"
   "tepa"
   "tools"
   "provider-anthropic"
@@ -44,6 +45,21 @@ changed_packages() {
   if [[ " ${pkgs[*]} " == *" types "* ]]; then
     echo "${PACKAGES[*]}"
     return
+  fi
+
+  # If provider-core changed, rebuild all providers
+  if [[ " ${pkgs[*]} " == *" provider-core "* ]]; then
+    local has_anthropic=false has_openai=false has_gemini=false
+    for p in "${pkgs[@]}"; do
+      case "$p" in
+        provider-anthropic) has_anthropic=true ;;
+        provider-openai)    has_openai=true ;;
+        provider-gemini)    has_gemini=true ;;
+      esac
+    done
+    $has_anthropic || pkgs+=("provider-anthropic")
+    $has_openai    || pkgs+=("provider-openai")
+    $has_gemini    || pkgs+=("provider-gemini")
   fi
 
   echo "${pkgs[*]}"
