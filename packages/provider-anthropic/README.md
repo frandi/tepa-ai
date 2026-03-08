@@ -44,8 +44,8 @@ const tepa = new Tepa({
 ```typescript
 const provider = new AnthropicProvider({
   apiKey: "sk-ant-...",        // defaults to ANTHROPIC_API_KEY env var
-  maxRetries: 3,               // retry attempts on transient failures
-  timeout: 60_000,             // request timeout in ms
+  maxRetries: 3,               // retry attempts on transient failures (default: 3)
+  retryBaseDelayMs: 1000,      // base delay for exponential backoff (default: 1000)
 });
 ```
 
@@ -57,8 +57,14 @@ Use `createProvider` to create providers from a string identifier:
 import { createProvider } from "@tepa/provider-anthropic";
 
 const provider = createProvider("anthropic");
-// Future: createProvider("openai"), createProvider("gemini"), etc.
 ```
+
+## Other Providers
+
+Tepa ships with multiple LLM providers — all following the same `LLMProvider` interface:
+
+- [`@tepa/provider-gemini`](../provider-gemini) — Google Gemini
+- [`@tepa/provider-openai`](../provider-openai) — OpenAI
 
 ## Implementing Custom Providers
 
@@ -79,4 +85,4 @@ export class MyProvider implements LLMProvider {
 }
 ```
 
-The provider interface is intentionally minimal — one method, clear input/output types. Future providers (`@tepa/provider-openai`, `@tepa/provider-gemini`) follow the same pattern.
+The provider interface is intentionally minimal — one method, clear input/output types.

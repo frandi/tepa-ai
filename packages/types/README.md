@@ -54,7 +54,7 @@ export const myTool: ToolDefinition = {
 
 ### Events
 
-- `EventName` — The 6 event hook points
+- `EventName` — The 8 event hook points
 - `EventCallback` — Callback function signature
 - `EventRegistration` — Callback with `continueOnError` option
 - `EventMap` — Map of event names to callback arrays

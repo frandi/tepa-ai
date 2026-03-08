@@ -11,7 +11,9 @@ Tepa is a TypeScript framework for building autonomous agent pipelines. It runs 
     ↑
     ├── tepa              ← core pipeline engine
     ├── @tepa/tools       ← built-in tool collection
-    └── @tepa/provider-anthropic  ← Anthropic Claude provider
+    ├── @tepa/provider-anthropic  ← Anthropic Claude provider
+    ├── @tepa/provider-gemini     ← Google Gemini provider
+    └── @tepa/provider-openai     ← OpenAI provider
          ↑
          └── demos/*      ← example applications
 ```
@@ -65,6 +67,8 @@ npm install @tepa/types
 | [`@tepa/types`](packages/types) | Shared TypeScript interfaces. Zero runtime dependencies |
 | [`@tepa/tools`](packages/tools) | Built-in tool collection + `defineTool` helper + `ToolRegistry` |
 | [`@tepa/provider-anthropic`](packages/provider-anthropic) | Anthropic Claude LLM provider |
+| [`@tepa/provider-gemini`](packages/provider-gemini) | Google Gemini LLM provider |
+| [`@tepa/provider-openai`](packages/provider-openai) | OpenAI LLM provider |
 
 ## How It Works
 
@@ -135,7 +139,7 @@ const tepa = new Tepa({
 });
 ```
 
-Six event points: `prePlanner`, `postPlanner`, `preExecutor`, `postExecutor`, `preEvaluator`, `postEvaluator`.
+Eight event points: `prePlanner`, `postPlanner`, `preExecutor`, `postExecutor`, `preEvaluator`, `postEvaluator`, `preStep`, `postStep`.
 
 ## Custom Tools
 
