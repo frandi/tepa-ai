@@ -9,4 +9,4 @@ rm -f class-5b/progress_report.md class-5b/progress-report.md
 rm -f class-5b/flagged_students.csv class-5b/flagged-students.csv
 
 echo "Running demo..."
-npx tsx src/index.ts
+npm start

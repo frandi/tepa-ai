@@ -11,10 +11,31 @@ context:
   runtime: Node.js
   httpClient: axios
   testFramework: vitest
+  existingStructure: |
+    my-project/
+    ├── package.json
+    ├── tsconfig.json
+    ├── vitest.config.ts
+    └── src/
+        └── utils/
+            └── http.ts          # HttpClient class wrapping axios.create()
+  targetStructure: |
+    my-project/
+    ├── package.json
+    ├── tsconfig.json
+    ├── vitest.config.ts
+    └── src/
+        ├── utils/
+        │   └── http.ts
+        └── api/                 # NEW — all files below must be created
+            ├── types.ts
+            ├── jsonplaceholder.ts
+            └── __tests__/
+                └── jsonplaceholder.test.ts
   notes:
-    - Follow existing code style in the project
-    - Check src/utils/http.ts for the HTTP utility pattern
+    - Follow existing code style in src/utils/http.ts for the HTTP utility pattern
     - All paths in expectedOutput are relative to projectRoot
+    - Do NOT read or search for test files — there are none yet
 
 expectedOutput:
   - path: src/api/jsonplaceholder.ts

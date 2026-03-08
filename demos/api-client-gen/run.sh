@@ -8,4 +8,4 @@ echo "Cleaning previous output..."
 rm -rf my-project/src/api
 
 echo "Running demo..."
-npx tsx src/index.ts
+npm start
