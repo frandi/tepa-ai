@@ -165,6 +165,7 @@ export class Tepa {
         const planResult = await planner.plan(
           plannerInput.prompt,
           plannerInput.feedback,
+          scratchpad,
         );
         tokenTracker.add(planResult.tokensUsed);
 
@@ -210,6 +211,14 @@ export class Tepa {
           cycleMeta,
         );
         lastResults = executorResult.results;
+
+        // Write execution summary to scratchpad so the planner has context on re-planning
+        scratchpad.write("_execution_summary", lastResults.map((r) => ({
+          stepId: r.stepId,
+          status: r.status,
+          output: r.output,
+          ...(r.error ? { error: r.error } : {}),
+        })));
 
         // --- Evaluator ---
         let evaluatorInput: EvaluatorInput = {

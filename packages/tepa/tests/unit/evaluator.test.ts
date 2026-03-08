@@ -264,10 +264,50 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("evaluate — graceful handling of bad LLM output", () => {
-    it("returns fail with raw text when LLM produces unparseable JSON", async () => {
+  describe("evaluate — retry and graceful handling of bad LLM output", () => {
+    it("retries once on unparseable JSON and succeeds on second attempt", async () => {
       const provider = createMockProvider([
         makeResponse("I think everything looks fine but I can't format JSON"),
+        makeResponse(makePassJson()),
+      ]);
+      const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
+
+      const result = await evaluator.evaluate(
+        samplePrompt,
+        successResults,
+        new Scratchpad(),
+      );
+
+      expect(result.verdict).toBe("pass");
+      expect(result.confidence).toBe(0.95);
+      expect(result.tokensUsed).toBe(140); // 70 + 70
+      expect(provider.complete).toHaveBeenCalledTimes(2);
+    });
+
+    it("includes original response in retry conversation", async () => {
+      const badResponse = "This is not valid JSON output";
+      const provider = createMockProvider([
+        makeResponse(badResponse),
+        makeResponse(makePassJson()),
+      ]);
+      const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
+
+      await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
+
+      const retryCallArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
+      const retryMessages = retryCallArgs[0] as LLMMessage[];
+      expect(retryMessages).toHaveLength(3);
+      expect(retryMessages[0]!.role).toBe("user");
+      expect(retryMessages[1]!.role).toBe("assistant");
+      expect(retryMessages[1]!.content).toBe(badResponse);
+      expect(retryMessages[2]!.role).toBe("user");
+      expect(retryMessages[2]!.content).toContain("could not be parsed");
+    });
+
+    it("returns synthetic fail when both attempts produce unparseable output", async () => {
+      const provider = createMockProvider([
+        makeResponse("not json at all"),
+        makeResponse("still not json"),
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
@@ -279,12 +319,15 @@ describe("Evaluator", () => {
 
       expect(result.verdict).toBe("fail");
       expect(result.confidence).toBe(0);
-      expect(result.feedback).toContain("unparseable");
+      expect(result.feedback).toContain("unparseable response after retry");
+      expect(result.tokensUsed).toBe(140);
+      expect(provider.complete).toHaveBeenCalledTimes(2);
     });
 
-    it("returns fail when LLM response has invalid structure", async () => {
+    it("returns synthetic fail when both attempts have invalid structure", async () => {
       const provider = createMockProvider([
         makeResponse(JSON.stringify({ verdict: "maybe", confidence: 2.0 })),
+        makeResponse(JSON.stringify({ verdict: "dunno" })),
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
@@ -296,10 +339,10 @@ describe("Evaluator", () => {
 
       expect(result.verdict).toBe("fail");
       expect(result.confidence).toBe(0);
-      expect(result.feedback).toContain("validation failed");
+      expect(result.feedback).toContain("unparseable response after retry");
     });
 
-    it("handles JSON wrapped in markdown code fences", async () => {
+    it("handles JSON wrapped in markdown code fences without retry", async () => {
       const wrappedJson = "```json\n" + makePassJson() + "\n```";
       const provider = createMockProvider([makeResponse(wrappedJson)]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
@@ -311,6 +354,7 @@ describe("Evaluator", () => {
       );
 
       expect(result.verdict).toBe("pass");
+      expect(provider.complete).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -330,9 +374,10 @@ describe("Evaluator", () => {
       expect(result.tokensUsed).toBe(300);
     });
 
-    it("reports tokens even on parse failure", async () => {
+    it("reports tokens from both attempts on parse failure", async () => {
       const provider = createMockProvider([
         makeResponse("not json", 50, 60),
+        makeResponse("still not json", 50, 60),
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
@@ -342,7 +387,7 @@ describe("Evaluator", () => {
         new Scratchpad(),
       );
 
-      expect(result.tokensUsed).toBe(110);
+      expect(result.tokensUsed).toBe(220); // 110 + 110
     });
   });
 });

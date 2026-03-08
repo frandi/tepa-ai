@@ -151,6 +151,23 @@ function parseEvalResult(data: unknown): Omit<EvaluationResult, "tokensUsed"> {
   return result;
 }
 
+/**
+ * Build a simplified retry prompt when the first attempt produces unparseable output.
+ */
+function buildEvalRetryPrompt(): string {
+  return `Your previous response could not be parsed as valid JSON. Please try again.
+
+Respond with ONLY a valid JSON object. No markdown, no code fences, no explanation outside the JSON.
+
+The JSON must have this structure:
+{
+  "verdict": "pass" or "fail",
+  "confidence": <number between 0 and 1>,
+  "feedback": "If fail: description of what went wrong",
+  "summary": "If pass: description of what was achieved"
+}`;
+}
+
 export class Evaluator {
   private readonly provider: LLMProvider;
   private readonly model: string;
@@ -161,53 +178,68 @@ export class Evaluator {
   }
 
   /**
+   * Try to parse and validate an LLM response as an evaluation result.
+   * Returns null on failure.
+   */
+  private tryParse(text: string): Omit<EvaluationResult, "tokensUsed"> | null {
+    try {
+      const jsonStr = extractJson(text);
+      const parsed = JSON.parse(jsonStr);
+      return parseEvalResult(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Evaluate execution results against the original prompt's expected output.
    * Returns a verdict (pass/fail), confidence, and feedback or summary.
+   * Retries once on parse failure before returning a synthetic fail result.
    */
   async evaluate(
     prompt: TepaPrompt,
     executionResults: ExecutionResult[],
     scratchpad: Scratchpad,
   ): Promise<EvaluationResult> {
+    const userContent = buildEvalUserMessage(prompt, executionResults, scratchpad);
+    const systemPrompt = buildEvalSystemPrompt();
+    const options = { model: this.model, systemPrompt };
+
     const messages: LLMMessage[] = [
-      {
-        role: "user",
-        content: buildEvalUserMessage(prompt, executionResults, scratchpad),
-      },
+      { role: "user", content: userContent },
     ];
 
-    const response = await this.provider.complete(messages, {
-      model: this.model,
-      systemPrompt: buildEvalSystemPrompt(),
-    });
+    // First attempt
+    let response = await this.provider.complete(messages, options);
+    let totalTokens = response.tokensUsed.input + response.tokensUsed.output;
 
-    const tokensUsed = response.tokensUsed.input + response.tokensUsed.output;
-
-    const jsonStr = extractJson(response.text);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      // If parsing fails, treat as a fail verdict with the raw text as feedback
-      return {
-        verdict: "fail",
-        confidence: 0,
-        feedback: `Evaluator produced unparseable response: ${response.text.slice(0, 300)}`,
-        tokensUsed,
-      };
+    const firstResult = this.tryParse(response.text);
+    if (firstResult) {
+      return { ...firstResult, tokensUsed: totalTokens };
     }
 
-    try {
-      const result = parseEvalResult(parsed);
-      return { ...result, tokensUsed };
-    } catch (validationError) {
-      return {
-        verdict: "fail",
-        confidence: 0,
-        feedback: `Evaluator response validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
-        tokensUsed,
-      };
+    // Retry with conversational context
+    const retryMessages: LLMMessage[] = [
+      { role: "user", content: userContent },
+      { role: "assistant", content: response.text },
+      { role: "user", content: buildEvalRetryPrompt() },
+    ];
+
+    response = await this.provider.complete(retryMessages, options);
+    totalTokens += response.tokensUsed.input + response.tokensUsed.output;
+
+    const retryResult = this.tryParse(response.text);
+    if (retryResult) {
+      return { ...retryResult, tokensUsed: totalTokens };
     }
+
+    // Both attempts failed — return synthetic fail
+    return {
+      verdict: "fail",
+      confidence: 0,
+      feedback: `Evaluator produced unparseable response after retry: ${response.text.slice(0, 500)}`,
+      tokensUsed: totalTokens,
+    };
   }
 }
 
@@ -215,5 +247,6 @@ export class Evaluator {
 export {
   buildEvalSystemPrompt as _buildEvalSystemPrompt,
   buildEvalUserMessage as _buildEvalUserMessage,
+  buildEvalRetryPrompt as _buildEvalRetryPrompt,
   parseEvalResult as _parseEvalResult,
 };

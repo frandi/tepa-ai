@@ -53,7 +53,7 @@ async function main() {
     config: {
       limits: {
         maxCycles: 3,
-        maxTokens: 150_000,
+        maxTokens: 250_000,
       },
       logging: {
         level: "verbose",
@@ -68,6 +68,9 @@ async function main() {
           const indent = "  " + "  ".repeat(depth);
           const model = step.model ? ` [${step.model}]` : "";
           console.log(`${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`);
+          if (result.error) {
+            console.log(`${indent}  Error: ${result.error}`);
+          }
         },
       ],
       postPlanner: [

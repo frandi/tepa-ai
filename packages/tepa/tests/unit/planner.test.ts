@@ -12,6 +12,7 @@ import type {
 } from "@tepa/types";
 import type { ModelConfig } from "@tepa/types";
 import { Planner, _extractJson, _validatePlanStructure } from "../../src/core/planner.js";
+import { Scratchpad } from "../../src/core/scratchpad.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
 
 const defaultModelConfig: ModelConfig = {
@@ -348,6 +349,41 @@ describe("Planner", () => {
       const messages = callArgs[0] as LLMMessage[];
       expect(messages[0]!.content).toContain("Missing test execution step");
       expect(messages[0]!.content).toContain("Evaluator Feedback");
+    });
+
+    it("includes scratchpad state in revised plan user message", async () => {
+      const provider = createMockProvider([
+        makeResponse(makeValidPlanJson()),
+      ]);
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
+      const scratchpad = new Scratchpad();
+      scratchpad.write("_execution_summary", [
+        { stepId: "step_1", status: "success", output: "file written" },
+        { stepId: "step_2", status: "failure", output: "null", error: "File not found" },
+      ]);
+
+      await planner.plan(samplePrompt, "Step 2 failed", scratchpad);
+
+      const callArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const messages = callArgs[0] as LLMMessage[];
+      const content = messages[0]!.content;
+      expect(content).toContain("_execution_summary");
+      expect(content).toContain("step_1");
+      expect(content).toContain("success");
+      expect(content).toContain("step_2");
+      expect(content).toContain("failure");
+      expect(content).toContain("Evaluator Feedback");
+    });
+
+    it("works with undefined scratchpad (backward compat)", async () => {
+      const provider = createMockProvider([
+        makeResponse(makeValidPlanJson()),
+      ]);
+      const planner = new Planner(provider, registry, "claude-sonnet-4-20250514", defaultModelConfig);
+
+      const { plan } = await planner.plan(samplePrompt, "Some feedback");
+
+      expect(plan.steps).toHaveLength(2);
     });
 
     it("uses revised system prompt when feedback is provided", async () => {

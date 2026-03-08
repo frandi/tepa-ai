@@ -3,7 +3,7 @@ import type { TepaConfig } from "@tepa/types";
 export const DEFAULT_CONFIG: TepaConfig = {
   model: {
     planner: "claude-sonnet-4-6",
-    executor: "claude-haiku-4-5-20250414",
+    executor: "claude-haiku-4-5",
     evaluator: "claude-sonnet-4-6",
   },
   limits: {

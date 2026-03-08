@@ -8,6 +8,7 @@ import type {
   Plan,
   PlanStep,
 } from "@tepa/types";
+import type { Scratchpad } from "./scratchpad.js";
 import { TepaCycleError } from "../utils/errors.js";
 
 /**
@@ -143,13 +144,20 @@ ${expectedOutput}`;
 function buildRevisedPlanUserMessage(
   prompt: TepaPrompt,
   feedback: string,
+  scratchpad?: Scratchpad,
 ): string {
-  return `${buildPlanUserMessage(prompt)}
+  const parts = [buildPlanUserMessage(prompt)];
 
---- Evaluator Feedback ---
-${feedback}
+  if (scratchpad) {
+    const entries = scratchpad.entries();
+    if (Object.keys(entries).length > 0) {
+      parts.push(`--- Scratchpad (persisted state from previous execution) ---\n${JSON.stringify(entries, null, 2)}`);
+    }
+  }
 
-Please produce a revised plan that addresses the feedback above.`;
+  parts.push(`--- Evaluator Feedback ---\n${feedback}\n\nPlease produce a revised plan that addresses the feedback above.`);
+
+  return parts.join("\n\n");
 }
 
 /**
@@ -344,7 +352,7 @@ export class Planner {
    * On first call, receives the full prompt.
    * On subsequent calls (self-correction), also receives feedback.
    */
-  async plan(prompt: TepaPrompt, feedback?: string): Promise<{ plan: Plan; tokensUsed: number }> {
+  async plan(prompt: TepaPrompt, feedback?: string, scratchpad?: Scratchpad): Promise<{ plan: Plan; tokensUsed: number }> {
     const toolSchemas = this.registry.toSchema();
     const hasFeedback = feedback !== undefined && feedback.length > 0;
 
@@ -353,7 +361,7 @@ export class Planner {
       : buildPlanSystemPrompt(toolSchemas, this.modelConfig);
 
     const userMessage = hasFeedback
-      ? buildRevisedPlanUserMessage(prompt, feedback)
+      ? buildRevisedPlanUserMessage(prompt, feedback, scratchpad)
       : buildPlanUserMessage(prompt);
 
     const messages: LLMMessage[] = [{ role: "user", content: userMessage }];

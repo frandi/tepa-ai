@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { LLMProvider, LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { toAnthropicMessages, toFinishReason, extractText } from "./formatting.js";
 
-const DEFAULT_MODEL = "claude-haiku-4-5-20250414";
+const DEFAULT_MODEL = "claude-haiku-4-5";
 const DEFAULT_MAX_TOKENS = 64_000;
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
