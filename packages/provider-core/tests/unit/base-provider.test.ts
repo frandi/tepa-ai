@@ -1,6 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMLogEntry } from "@tepa/types";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "../../src/base-provider.js";
+
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof fs>("node:fs");
+  return {
+    ...actual,
+    mkdirSync: vi.fn(),
+    appendFileSync: vi.fn(),
+  };
+});
 
 class TestProvider extends BaseLLMProvider {
   protected readonly providerName = "test";
@@ -78,8 +88,6 @@ describe("BaseLLMProvider", () => {
 
     it("throws after exhausting retries", async () => {
       const error = new Error("persistent");
-      provider.doCompleteFn.mockRejectedValue(error);
-      provider.isRetryableFn.mockReturnValue(true);
 
       const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 1, maxRetries: 2 });
       p.doCompleteFn.mockRejectedValue(error);
@@ -189,29 +197,40 @@ describe("BaseLLMProvider", () => {
     });
   });
 
-  describe("defaultLog option", () => {
-    it("calls console.log by default with header, prompt, and response", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-      const p = new TestProvider(); // defaultLog defaults to true
+  describe("file logging (default)", () => {
+    it("writes JSONL to a log file by default", async () => {
+      const p = new TestProvider({ retryBaseDelayMs: 1 }); // defaultLog: true (default)
       p.doCompleteFn.mockResolvedValue(testResponse);
 
       await p.complete(testMessages, testOptions);
 
-      // 3 lines: header, prompt preview (→), response preview (←)
-      expect(consoleSpy).toHaveBeenCalledTimes(3);
-      expect(consoleSpy.mock.calls[0]![0]).toMatch(/\[\d{2}:\d{2}:\d{2}\.\d{3}\]\[success\]\[test\]/);
-      expect(consoleSpy.mock.calls[1]![0]).toMatch(/→.*Hello/);
-      expect(consoleSpy.mock.calls[2]![0]).toMatch(/←.*Hi there/);
-      consoleSpy.mockRestore();
+      expect(fs.mkdirSync).toHaveBeenCalled();
+      expect(fs.appendFileSync).toHaveBeenCalledTimes(1);
+      const [filePath, content] = (fs.appendFileSync as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      expect(filePath).toMatch(/llm-.*\.jsonl$/);
+      const parsed = JSON.parse(content.replace("\n", ""));
+      expect(parsed.status).toBe("success");
+      expect(parsed.provider).toBe("test");
     });
 
-    it("suppresses console.log when defaultLog is false", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    it("exposes log file path via getLogFilePath()", async () => {
+      const p = new TestProvider({ retryBaseDelayMs: 1 });
+      const filePath = p.getLogFilePath();
+      expect(filePath).toBeDefined();
+      expect(filePath).toMatch(/llm-.*\.jsonl$/);
+    });
 
-      await provider.complete(testMessages, testOptions); // provider has defaultLog: false
+    it("returns undefined logFilePath when defaultLog is false", () => {
+      expect(provider.getLogFilePath()).toBeUndefined();
+    });
 
-      expect(consoleSpy).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
+    it("does not write to file when defaultLog is false", async () => {
+      await provider.complete(testMessages, testOptions);
+
+      // mkdirSync may be called from other tests, but appendFileSync should not
+      // be called for this provider instance
+      const appendCalls = (fs.appendFileSync as ReturnType<typeof vi.fn>).mock.calls;
+      expect(appendCalls).toHaveLength(0);
     });
   });
 

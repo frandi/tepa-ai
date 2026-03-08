@@ -6,15 +6,17 @@ import type {
   LLMLogEntry,
   LLMLogCallback,
 } from "@tepa/types";
-import { defaultLogCallback } from "./default-log-callback.js";
+import { createFileLogWriter } from "./file-log-writer.js";
 
 export interface BaseLLMProviderOptions {
   /** Maximum number of retries on rate limit or transient errors. Default: 3 */
   maxRetries?: number;
   /** Base delay in ms for exponential backoff between retries. Default: 1000 */
   retryBaseDelayMs?: number;
-  /** Enable default console logger. Default: true */
+  /** Enable default file logger. Default: true. Set false to disable. */
   defaultLog?: boolean;
+  /** Directory for log files. Default: ".tepa/logs" relative to cwd. */
+  logDir?: string;
   /** Include full message content in log entries. Default: false */
   includeContent?: boolean;
 }
@@ -30,6 +32,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
   private readonly includeContent: boolean;
   private readonly logCallbacks: LLMLogCallback[] = [];
   private readonly logHistory: LLMLogEntry[] = [];
+  private readonly _logFilePath?: string;
 
   constructor(options: BaseLLMProviderOptions = {}) {
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
@@ -37,7 +40,9 @@ export abstract class BaseLLMProvider implements LLMProvider {
     this.includeContent = options.includeContent ?? false;
 
     if (options.defaultLog !== false) {
-      this.logCallbacks.push(defaultLogCallback);
+      const writer = createFileLogWriter(options.logDir);
+      this._logFilePath = writer.filePath;
+      this.logCallbacks.push(writer.callback);
     }
   }
 
@@ -67,6 +72,11 @@ export abstract class BaseLLMProvider implements LLMProvider {
   /** Get a copy of accumulated log history. */
   getLogEntries(): LLMLogEntry[] {
     return [...this.logHistory];
+  }
+
+  /** Get the path to the log file, if file logging is enabled. */
+  getLogFilePath(): string | undefined {
+    return this._logFilePath;
   }
 
   async complete(

@@ -2,7 +2,7 @@ import type { LLMLogEntry } from "@tepa/types";
 
 const RESPONSE_PREVIEW_LENGTH = 120;
 
-export function defaultLogCallback(entry: LLMLogEntry): void {
+export function consoleLogCallback(entry: LLMLogEntry): void {
   const { provider, status, durationMs, request, response, error } = entry;
 
   let detail: string;

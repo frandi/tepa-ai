@@ -37,6 +37,9 @@ async function main() {
   // Shared state for step visualization
   const depthMap = new Map<string, number>();
 
+  // Create the LLM provider (logs all calls to a JSONL file)
+  const provider = new AnthropicProvider();
+
   // Create the Tepa pipeline
   const tepa = new Tepa({
     tools: [
@@ -47,7 +50,7 @@ async function main() {
       shellExecuteTool,
       httpRequestTool,
     ],
-    provider: new AnthropicProvider(),
+    provider,
     config: {
       limits: {
         maxCycles: 3,
@@ -139,6 +142,11 @@ async function main() {
 
   if (result.logs.length > 0) {
     console.log(`\nExecution log: ${result.logs.length} entries`);
+  }
+
+  const logFilePath = provider.getLogFilePath();
+  if (logFilePath) {
+    console.log(`LLM call log: ${logFilePath}`);
   }
 
   process.exit(result.status === "pass" ? 0 : 1);
