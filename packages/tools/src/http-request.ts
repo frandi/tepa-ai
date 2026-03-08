@@ -1,6 +1,27 @@
 import { defineTool } from "./define-tool.js";
 
 const DEFAULT_TIMEOUT = 30_000;
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+
+/**
+ * Check if an error is a network-level error that warrants a retry
+ * (as opposed to an HTTP error like 4xx/5xx which should not be retried).
+ */
+function isNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    message.includes("econnrefused") ||
+    message.includes("econnreset") ||
+    message.includes("etimedout") ||
+    message.includes("enotfound") ||
+    message.includes("dns") ||
+    error.name === "AbortError"
+  );
+}
 
 export const httpRequestTool = defineTool({
   name: "http_request",
@@ -31,26 +52,43 @@ export const httpRequestTool = defineTool({
       }
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
+    let lastError: unknown;
 
-    try {
-      const response = await fetch(urlObj.toString(), {
-        method,
-        headers,
-        body,
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
 
-      const text = await response.text();
-      return {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: text,
-      };
-    } finally {
-      clearTimeout(timer);
+      try {
+        const response = await fetch(urlObj.toString(), {
+          method,
+          headers,
+          body,
+          signal: controller.signal,
+        });
+
+        const text = await response.text();
+        return {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: text,
+        };
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < MAX_RETRIES && isNetworkError(error)) {
+          const delay = BASE_DELAY_MS * 2 ** attempt;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
     }
+
+    // Should not be reached, but just in case
+    throw lastError;
   },
 });

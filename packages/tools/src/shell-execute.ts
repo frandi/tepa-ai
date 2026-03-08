@@ -1,4 +1,5 @@
 import { exec } from "node:child_process";
+import path from "node:path";
 import { defineTool } from "./define-tool.js";
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -23,7 +24,7 @@ export const shellExecuteTool = defineTool({
   },
   execute: async (params) => {
     const command = params.command as string;
-    const cwd = params.cwd as string | undefined;
+    const cwd = params.cwd ? path.resolve(params.cwd as string) : undefined;
     const timeout = (params.timeout as number) ?? DEFAULT_TIMEOUT;
 
     return new Promise((resolve) => {

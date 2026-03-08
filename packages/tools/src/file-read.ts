@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import { defineTool } from "./define-tool.js";
 
 export const fileReadTool = defineTool({
@@ -13,9 +14,9 @@ export const fileReadTool = defineTool({
     },
   },
   execute: async (params) => {
-    const path = params.path as string;
+    const filePath = path.resolve(params.path as string);
     const encoding = (params.encoding as BufferEncoding) ?? "utf-8";
-    const content = await fs.readFile(path, { encoding });
+    const content = await fs.readFile(filePath, { encoding });
     return content;
   },
 });

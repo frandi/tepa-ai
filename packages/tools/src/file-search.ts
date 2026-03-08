@@ -1,4 +1,5 @@
 import { glob } from "glob";
+import path from "node:path";
 import { defineTool } from "./define-tool.js";
 
 export const fileSearchTool = defineTool({
@@ -10,7 +11,7 @@ export const fileSearchTool = defineTool({
   },
   execute: async (params) => {
     const pattern = params.pattern as string;
-    const cwd = (params.cwd as string) ?? ".";
+    const cwd = path.resolve((params.cwd as string) ?? ".");
     const matches = await glob(pattern, { cwd, nodir: true });
     return matches;
   },

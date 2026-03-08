@@ -54,12 +54,45 @@ describe("http_request tool", () => {
     );
   });
 
-  it("should handle fetch errors", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+  it("should throw non-network errors immediately without retry", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Invalid URL"));
 
     await expect(
-      httpRequestTool.execute({ url: "https://unreachable.com" }),
-    ).rejects.toThrow("Network error");
+      httpRequestTool.execute({ url: "https://example.com" }),
+    ).rejects.toThrow("Invalid URL");
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("should retry on network errors up to 3 times", async () => {
+    const mockResponse = {
+      status: 200,
+      statusText: "OK",
+      headers: new Headers(),
+      text: vi.fn().mockResolvedValue("ok"),
+    };
+    vi.spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce(mockResponse as unknown as Response);
+
+    const result = (await httpRequestTool.execute({ url: "https://example.com" })) as {
+      status: number;
+    };
+
+    expect(result.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("should throw after exhausting retries on network errors", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("fetch failed"));
+
+    await expect(
+      httpRequestTool.execute({ url: "https://example.com" }),
+    ).rejects.toThrow("fetch failed");
+
+    // 1 initial + 3 retries = 4 calls
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 
   it("should append query params to URL", async () => {

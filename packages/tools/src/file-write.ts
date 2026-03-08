@@ -10,10 +10,10 @@ export const fileWriteTool = defineTool({
     content: { type: "string", description: "Content to write", required: true },
   },
   execute: async (params) => {
-    const filePath = params.path as string;
+    const filePath = path.resolve(params.path as string);
     const content = params.content as string;
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, "utf-8");
-    return { bytesWritten: Buffer.byteLength(content, "utf-8") };
+    return { path: filePath, bytesWritten: Buffer.byteLength(content, "utf-8") };
   },
 });

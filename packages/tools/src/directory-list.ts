@@ -40,7 +40,7 @@ export const directoryListTool = defineTool({
     },
   },
   execute: async (params) => {
-    const dirPath = params.path as string;
+    const dirPath = path.resolve(params.path as string);
     const maxDepth = (params.maxDepth as number) ?? 1;
     return listDir(dirPath, 0, maxDepth);
   },

@@ -18,7 +18,7 @@ describe("file_write tool", () => {
 
     expect(fs.mkdir).toHaveBeenCalledWith("/tmp/sub/dir", { recursive: true });
     expect(fs.writeFile).toHaveBeenCalledWith("/tmp/sub/dir/file.txt", "hello world", "utf-8");
-    expect(result).toEqual({ bytesWritten: 11 });
+    expect(result).toEqual({ path: "/tmp/sub/dir/file.txt", bytesWritten: 11 });
   });
 
   it("should return correct byte count for multi-byte content", async () => {
@@ -31,5 +31,16 @@ describe("file_write tool", () => {
     expect((result as { bytesWritten: number }).bytesWritten).toBe(
       Buffer.byteLength(content, "utf-8"),
     );
+  });
+
+  it("should resolve relative paths to absolute", async () => {
+    const result = await fileWriteTool.execute({
+      path: "relative/file.txt",
+      content: "test",
+    });
+
+    const resolved = (result as { path: string }).path;
+    expect(resolved).toMatch(/^\//); // absolute path
+    expect(resolved).toContain("relative/file.txt");
   });
 });

@@ -30,6 +30,17 @@ describe("file_read tool", () => {
     expect(fs.readFile).toHaveBeenCalledWith("/tmp/test.txt", { encoding: "ascii" });
   });
 
+  it("should resolve relative paths to absolute", async () => {
+    vi.mocked(fs.readFile).mockResolvedValue("content");
+
+    await fileReadTool.execute({ path: "relative/file.txt" });
+
+    const lastCall = vi.mocked(fs.readFile).mock.calls.at(-1)!;
+    const calledPath = lastCall[0] as string;
+    expect(calledPath).toMatch(/^\//); // absolute path
+    expect(calledPath).toContain("relative/file.txt");
+  });
+
   it("should propagate fs errors", async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error("ENOENT"));
 
