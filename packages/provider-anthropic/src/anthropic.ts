@@ -76,12 +76,32 @@ export class AnthropicProvider implements LLMProvider {
           throw error;
         }
 
-        const delay = this.retryBaseDelayMs * Math.pow(2, attempt);
+        const delay = this.getRetryDelay(error, attempt);
         await this.sleep(delay);
       }
     }
 
     throw lastError;
+  }
+
+  private getRetryDelay(error: unknown, attempt: number): number {
+    // Use retry-after header from rate limit responses when available
+    if (error instanceof Anthropic.APIError) {
+      const retryAfter = error.headers?.["retry-after"];
+      if (retryAfter) {
+        const seconds = Number(retryAfter);
+        if (!Number.isNaN(seconds) && seconds > 0) {
+          return seconds * 1000;
+        }
+      }
+    }
+
+    // For rate limit errors, use a longer base delay (30s) to respect per-minute windows
+    if (error instanceof Anthropic.RateLimitError) {
+      return Math.max(30_000, this.retryBaseDelayMs) * Math.pow(2, attempt);
+    }
+
+    return this.retryBaseDelayMs * Math.pow(2, attempt);
   }
 
   private isRetryable(error: unknown): boolean {

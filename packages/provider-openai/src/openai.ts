@@ -74,12 +74,30 @@ export class OpenAIProvider implements LLMProvider {
           throw error;
         }
 
-        const delay = this.retryBaseDelayMs * Math.pow(2, attempt);
+        const delay = this.getRetryDelay(error, attempt);
         await this.sleep(delay);
       }
     }
 
     throw lastError;
+  }
+
+  private getRetryDelay(error: unknown, attempt: number): number {
+    if (error instanceof OpenAI.APIError) {
+      const retryAfter = error.headers?.["retry-after"];
+      if (retryAfter) {
+        const seconds = Number(retryAfter);
+        if (!Number.isNaN(seconds) && seconds > 0) {
+          return seconds * 1000;
+        }
+      }
+    }
+
+    if (error instanceof OpenAI.RateLimitError) {
+      return Math.max(30_000, this.retryBaseDelayMs) * Math.pow(2, attempt);
+    }
+
+    return this.retryBaseDelayMs * Math.pow(2, attempt);
   }
 
   private isRetryable(error: unknown): boolean {

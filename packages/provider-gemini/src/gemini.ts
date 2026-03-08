@@ -82,12 +82,21 @@ export class GeminiProvider implements LLMProvider {
           throw error;
         }
 
-        const delay = this.retryBaseDelayMs * Math.pow(2, attempt);
+        const delay = this.getRetryDelay(error, attempt);
         await this.sleep(delay);
       }
     }
 
     throw lastError;
+  }
+
+  private getRetryDelay(error: unknown, attempt: number): number {
+    // For rate limit errors, use a longer base delay to respect per-minute windows
+    if (error instanceof ApiError && error.status === 429) {
+      return Math.max(30_000, this.retryBaseDelayMs) * Math.pow(2, attempt);
+    }
+
+    return this.retryBaseDelayMs * Math.pow(2, attempt);
   }
 
   private isRetryable(error: unknown): boolean {
