@@ -59,6 +59,20 @@ import { createProvider } from "@tepa/provider-anthropic";
 const provider = createProvider("anthropic");
 ```
 
+## Logging
+
+Every LLM call is automatically logged to a JSONL file in `.tepa/logs/`. You can disable the default file logger, add custom log listeners, or send logs to external services like Prometheus, NewRelic, or Datadog using the `onLog()` method:
+
+```typescript
+const provider = new AnthropicProvider({ defaultLog: false });
+
+provider.onLog((entry) => {
+  externalLogger.send(entry);
+});
+```
+
+See [`@tepa/provider-core`](../provider-core) for full logging documentation.
+
 ## Other Providers
 
 Tepa ships with multiple LLM providers — all following the same `LLMProvider` interface:
