@@ -1,2 +1,2 @@
 export { GeminiProvider, type GeminiProviderOptions } from "./gemini.js";
-export { toGeminiContents, toFinishReason, extractText } from "./formatting.js";
+export { toGeminiContents, toGeminiTools, toFinishReason, extractText, extractToolUse } from "./formatting.js";

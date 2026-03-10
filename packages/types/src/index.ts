@@ -24,6 +24,7 @@ export type {
 export type {
   LLMProvider,
   LLMResponse,
+  LLMToolUseBlock,
   LLMMessage,
   LLMRequestOptions,
   LLMLogStatus,

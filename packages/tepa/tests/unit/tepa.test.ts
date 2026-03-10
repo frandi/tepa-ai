@@ -22,6 +22,29 @@ function makeResponse(text: string, inputTokens = 10, outputTokens = 10): LLMRes
   };
 }
 
+/**
+ * Create a response with native tool_use blocks.
+ */
+function makeToolUseResponse(
+  toolName: string,
+  input: Record<string, unknown>,
+  inputTokens = 10,
+  outputTokens = 10,
+): LLMResponse {
+  return {
+    text: "",
+    tokensUsed: { input: inputTokens, output: outputTokens },
+    finishReason: "tool_use",
+    toolUse: [
+      {
+        id: `call_${toolName}_1`,
+        name: toolName,
+        input,
+      },
+    ],
+  };
+}
+
 function makePlanJson(steps: Array<{ id: string; description: string; tools: string[] }>): string {
   const plan = {
     reasoning: "Test plan",
@@ -78,10 +101,10 @@ const samplePrompt: TepaPrompt = {
 describe("Tepa", () => {
   describe("run — happy path", () => {
     it("completes in a single cycle when evaluator passes", async () => {
-      // LLM calls: planner plan, executor params, evaluator eval
+      // LLM calls: planner plan, executor tool_use, evaluator eval
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }])),
-        makeResponse('{"input": "hello"}'),
+        makeToolUseResponse("file_write", { input: "hello" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -106,13 +129,13 @@ describe("Tepa", () => {
   describe("run — self-correction", () => {
     it("cycle 1 fails, cycle 2 succeeds with feedback", async () => {
       const provider = createMockProvider([
-        // Cycle 1: plan → exec params → eval (fail)
+        // Cycle 1: plan → exec tool_use → eval (fail)
         makeResponse(makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }])),
-        makeResponse('{"input": "v1"}'),
+        makeToolUseResponse("file_write", { input: "v1" }),
         makeResponse(makeEvalJson("fail", { feedback: "Missing header comment" })),
-        // Cycle 2: revised plan → exec params → eval (pass)
+        // Cycle 2: revised plan → exec tool_use → eval (pass)
         makeResponse(makePlanJson([{ id: "step_1", description: "Write file with header", tools: ["file_write"] }])),
-        makeResponse('{"input": "v2"}'),
+        makeToolUseResponse("file_write", { input: "v2" }),
         makeResponse(makeEvalJson("pass", { summary: "Fixed with header" })),
       ]);
 
@@ -142,11 +165,11 @@ describe("Tepa", () => {
       const provider = createMockProvider([
         // Cycle 1: plan → exec → eval (fail)
         makeResponse(makePlanJson([{ id: "step_1", description: "Try", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("fail", { feedback: "Not good enough" })),
         // Cycle 2: plan → exec → eval (fail)
         makeResponse(makePlanJson([{ id: "step_1", description: "Try again", tools: ["tool_a"] }])),
-        makeResponse('{"input": "y"}'),
+        makeToolUseResponse("tool_a", { input: "y" }),
         makeResponse(makeEvalJson("fail", { feedback: "Still not good" })),
       ]);
 
@@ -169,7 +192,7 @@ describe("Tepa", () => {
       // Budget is 50 tokens — third LLM call (evaluator) will exceed it
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("fail")),
       ]);
 
@@ -197,7 +220,7 @@ describe("Tepa", () => {
 
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do it", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -230,7 +253,7 @@ describe("Tepa", () => {
           { id: "step_1", description: "Original step", tools: ["tool_a"] },
         ])),
         // Executor will use the injected plan's tool
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_b", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -267,7 +290,7 @@ describe("Tepa", () => {
     it("postExecutor event can transform executor output", async () => {
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -295,7 +318,7 @@ describe("Tepa", () => {
 
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -321,7 +344,7 @@ describe("Tepa", () => {
     it("postEvaluator event can transform evaluation result", async () => {
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         // Evaluator returns fail, but the event will override it to pass
         makeResponse(makeEvalJson("fail", { feedback: "Not good" })),
       ]);
@@ -355,7 +378,7 @@ describe("Tepa", () => {
 
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -413,7 +436,7 @@ describe("Tepa", () => {
     it("event callback with continueOnError does not abort", async () => {
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -446,11 +469,11 @@ describe("Tepa", () => {
       const provider = createMockProvider([
         // Cycle 1: fail
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("fail", { feedback: "Nope" })),
         // Cycle 2: pass
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "y"}'),
+        makeToolUseResponse("tool_a", { input: "y" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -499,7 +522,7 @@ describe("Tepa", () => {
       // Cycle 1: planner(20) + executor(20) + evaluator(20) = 60
       const provider = createMockProvider([
         makeResponse(makePlanJson([{ id: "step_1", description: "Do", tools: ["tool_a"] }])),
-        makeResponse('{"input": "x"}'),
+        makeToolUseResponse("tool_a", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 
@@ -522,8 +545,8 @@ describe("Tepa", () => {
           { id: "step_1", description: "A", tools: ["tool_a"] },
           { id: "step_2", description: "B", tools: ["tool_a"] },
         ])),
-        makeResponse('{"input": "1"}'),
-        makeResponse('{"input": "2"}'),
+        makeToolUseResponse("tool_a", { input: "1" }),
+        makeToolUseResponse("tool_a", { input: "2" }),
         makeResponse(makeEvalJson("pass")),
       ]);
 

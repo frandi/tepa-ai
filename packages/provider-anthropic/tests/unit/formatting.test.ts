@@ -45,8 +45,12 @@ describe("toFinishReason", () => {
     expect(toFinishReason(null)).toBe("end_turn");
   });
 
+  it("maps tool_use to tool_use", () => {
+    expect(toFinishReason("tool_use")).toBe("tool_use");
+  });
+
   it("maps unknown values to end_turn", () => {
-    expect(toFinishReason("tool_use")).toBe("end_turn");
+    expect(toFinishReason("something_else")).toBe("end_turn");
   });
 });
 

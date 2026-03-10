@@ -1,7 +1,7 @@
 import { GoogleGenAI, ApiError } from "@google/genai";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import { toGeminiContents, toFinishReason, extractText } from "./formatting.js";
+import { toGeminiContents, toGeminiTools, toFinishReason, extractText, extractToolUse } from "./formatting.js";
 
 const DEFAULT_MODEL = "gemini-3-flash-preview";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -40,11 +40,15 @@ export class GeminiProvider extends BaseLLMProvider {
       config.systemInstruction = options.systemPrompt;
     }
 
-    const params = {
+    const params: Record<string, unknown> = {
       model: options.model || DEFAULT_MODEL,
       contents,
       config,
     };
+
+    if (options.tools && options.tools.length > 0) {
+      params.tools = toGeminiTools(options.tools);
+    }
 
     const response = await this.client.models.generateContent(params as any);
 
@@ -52,13 +56,17 @@ export class GeminiProvider extends BaseLLMProvider {
     const finishReason = candidates[0]?.finishReason ?? null;
     const usage = response.usageMetadata ?? {};
 
+    const toolUse = extractToolUse(response);
+    const hasToolUse = toolUse.length > 0;
+
     return {
       text: extractText(response),
       tokensUsed: {
         input: usage.promptTokenCount ?? 0,
         output: usage.candidatesTokenCount ?? 0,
       },
-      finishReason: toFinishReason(finishReason),
+      finishReason: hasToolUse ? "tool_use" : toFinishReason(finishReason),
+      ...(hasToolUse && { toolUse }),
     };
   }
 

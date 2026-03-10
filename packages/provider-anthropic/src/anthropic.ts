@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import { toAnthropicMessages, toFinishReason, extractText } from "./formatting.js";
+import { toAnthropicMessages, toAnthropicTools, toFinishReason, extractText, extractToolUse } from "./formatting.js";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -42,7 +42,13 @@ export class AnthropicProvider extends BaseLLMProvider {
       params.system = options.systemPrompt;
     }
 
+    if (options.tools && options.tools.length > 0) {
+      params.tools = toAnthropicTools(options.tools);
+    }
+
     const response = await this.client.messages.create(params);
+
+    const toolUse = extractToolUse(response.content);
 
     return {
       text: extractText(response.content),
@@ -51,6 +57,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         output: response.usage.output_tokens,
       },
       finishReason: toFinishReason(response.stop_reason),
+      ...(toolUse.length > 0 && { toolUse }),
     };
   }
 

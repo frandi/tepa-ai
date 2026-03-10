@@ -40,6 +40,29 @@ function makeResponse(text: string, inputTokens = 20, outputTokens = 30): LLMRes
   };
 }
 
+/**
+ * Create a response with native tool_use blocks.
+ */
+function makeToolUseResponse(
+  toolName: string,
+  input: Record<string, unknown>,
+  inputTokens = 20,
+  outputTokens = 30,
+): LLMResponse {
+  return {
+    text: "",
+    tokensUsed: { input: inputTokens, output: outputTokens },
+    finishReason: "tool_use",
+    toolUse: [
+      {
+        id: `call_${toolName}_1`,
+        name: toolName,
+        input,
+      },
+    ],
+  };
+}
+
 function createMockTool(name: string, result: unknown): ToolDefinition {
   return {
     name,
@@ -157,10 +180,10 @@ describe("Executor", () => {
         ],
       };
 
-      // Two LLM calls: one for each step's param construction
+      // Two LLM calls: one for each step's native tool_use
       const provider = createMockProvider([
-        makeResponse('{"path": "/tmp/hello.ts", "content": "hello"}'),
-        makeResponse('{"path": "/tmp/hello.ts"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/hello.ts", content: "hello" }),
+        makeToolUseResponse("file_read", { path: "/tmp/hello.ts" }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -193,7 +216,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([
-        makeResponse('{"path": "/tmp/hello.ts", "content": "console.log(\\"hi\\")"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/hello.ts", content: 'console.log("hi")' }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -233,7 +256,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([
-        makeResponse("{}"),
+        makeToolUseResponse("failing_tool", {}),
       ]);
 
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
@@ -244,7 +267,7 @@ describe("Executor", () => {
       expect(results[0]!.error).toBe("Disk full");
     });
 
-    it("captures LLM param construction failure gracefully", async () => {
+    it("captures missing tool_use block as failure", async () => {
       const plan: Plan = {
         reasoning: "Test",
         estimatedTokens: 100,
@@ -259,16 +282,16 @@ describe("Executor", () => {
         ],
       };
 
-      // LLM returns unparseable params
+      // LLM returns a text response with no tool_use blocks
       const provider = createMockProvider([
-        makeResponse("This is not JSON at all and has no braces"),
+        makeResponse("I cannot call the tool"),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results[0]!.status).toBe("failure");
-      expect(results[0]!.error).toBeDefined();
+      expect(results[0]!.error).toContain("no tool_use block");
     });
 
     it("returns failure when tool is not found in registry", async () => {
@@ -320,7 +343,7 @@ describe("Executor", () => {
 
       const provider = createMockProvider([
         makeResponse("The project has a src/ directory with utils/ subfolder."),
-        makeResponse('{"path": "/tmp/hello.ts", "content": "hello"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/hello.ts", content: "hello" }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -358,13 +381,13 @@ describe("Executor", () => {
 
       const provider = createMockProvider([
         makeResponse("Write a greeting function"),
-        makeResponse('{"path": "/tmp/greet.ts", "content": "export function greet() {}"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/greet.ts", content: "export function greet() {}" }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       await executor.execute(plan, makeContext());
 
-      // The second LLM call (param construction) should include step_1's output
+      // The second LLM call (tool_use) should include step_1's output
       const secondCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
       const userMessage = (secondCall[0] as LLMMessage[])[0]!.content;
       expect(userMessage).toContain("Write a greeting function");
@@ -392,7 +415,7 @@ describe("Executor", () => {
       scratchpad.write("target_file", "/tmp/important.ts");
 
       const provider = createMockProvider([
-        makeResponse('{"path": "/tmp/important.ts"}'),
+        makeToolUseResponse("file_read", { path: "/tmp/important.ts" }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -440,8 +463,8 @@ describe("Executor", () => {
       scratchpad.write("shared_key", "shared_value");
 
       const provider = createMockProvider([
-        makeResponse("{}"),
-        makeResponse('{"path": "/tmp/file.ts"}'),
+        makeToolUseResponse("scratchpad_writer", {}),
+        makeToolUseResponse("file_read", { path: "/tmp/file.ts" }),
       ]);
 
       const executor = new Executor(scratchpadRegistry, provider, "claude-sonnet-4-20250514");
@@ -584,7 +607,9 @@ describe("Executor", () => {
         ],
       };
 
-      const provider = createMockProvider([makeResponse("{}")]);
+      const provider = createMockProvider([
+        makeToolUseResponse("fail_tool", {}),
+      ]);
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
 
@@ -593,7 +618,7 @@ describe("Executor", () => {
       expect(results[1]!.error).toContain('Skipped: dependency "step_1" failed');
       expect(results[1]!.tokensUsed).toBe(0);
 
-      // Only 1 LLM call (for step_1's param construction), step_2 was skipped
+      // Only 1 LLM call (for step_1's tool_use), step_2 was skipped
       expect(provider.complete).toHaveBeenCalledTimes(1);
     });
   });
@@ -617,7 +642,7 @@ describe("Executor", () => {
       const cycleMeta: CycleMetadata = { cycleNumber: 1, totalCyclesUsed: 0, tokensUsed: 0 };
 
       const provider = createMockProvider([
-        makeResponse('{"path": "/tmp/f.ts", "content": "x"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -646,7 +671,9 @@ describe("Executor", () => {
         ],
       };
 
-      const provider = createMockProvider([makeResponse('{"path": "/tmp/f.ts", "content": "x"}')]);
+      const provider = createMockProvider([
+        makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
+      ]);
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
 
@@ -679,7 +706,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([
-        makeResponse('{"path": "/tmp/f.ts", "content": "x"}'),
+        makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
         makeResponse("Analysis: everything looks good"),
       ]);
 
@@ -730,12 +757,63 @@ describe("Executor", () => {
         ],
       };
 
-      const provider = createMockProvider([makeResponse("{}")]);
+      const provider = createMockProvider([
+        makeToolUseResponse("fail_tool", {}),
+      ]);
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
       const { logs } = await executor.execute(plan, makeContext());
 
       expect(logs[0]!.message).toContain("failed");
       expect(logs[0]!.message).toContain("Something broke");
+    });
+  });
+
+  describe("execute — native tool_use", () => {
+    it("passes tool schemas to provider via options.tools", async () => {
+      const plan: Plan = {
+        reasoning: "Test tool schema passing",
+        estimatedTokens: 100,
+        steps: [
+          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+        ],
+      };
+
+      const provider = createMockProvider([
+        makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
+      ]);
+
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      await executor.execute(plan, makeContext());
+
+      // Verify that tools were passed to the provider
+      const call = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const options = call[1] as LLMRequestOptions;
+      expect(options.tools).toBeDefined();
+      expect(options.tools).toHaveLength(1);
+      expect(options.tools![0]!.name).toBe("file_write");
+    });
+
+    it("fails gracefully when LLM returns wrong tool name", async () => {
+      const plan: Plan = {
+        reasoning: "Test wrong tool name",
+        estimatedTokens: 100,
+        steps: [
+          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+        ],
+      };
+
+      const provider = createMockProvider([{
+        text: "",
+        tokensUsed: { input: 20, output: 30 },
+        finishReason: "tool_use" as const,
+        toolUse: [{ id: "call_1", name: "wrong_tool", input: {} }],
+      }]);
+
+      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const { results } = await executor.execute(plan, makeContext());
+
+      expect(results[0]!.status).toBe("failure");
+      expect(results[0]!.error).toContain("no tool_use block");
     });
   });
 });

@@ -104,6 +104,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
             text: response.text,
             tokensUsed: response.tokensUsed,
             finishReason: response.finishReason,
+            ...(response.toolUse && { toolUseCount: response.toolUse.length }),
           },
         });
 
@@ -169,6 +170,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
 
     if (options.maxTokens !== undefined) info.maxTokens = options.maxTokens;
     if (options.temperature !== undefined) info.temperature = options.temperature;
+    if (options.tools && options.tools.length > 0) info.hasTools = true;
 
     if (this.includeContent) {
       info.messages = messages;

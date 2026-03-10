@@ -1,2 +1,2 @@
 export { OpenAIProvider, type OpenAIProviderOptions } from "./openai.js";
-export { toOpenAIInput, toFinishReason, extractText } from "./formatting.js";
+export { toOpenAIInput, toOpenAITools, toFinishReason, extractText, extractToolUse } from "./formatting.js";

@@ -2,6 +2,7 @@ import type {
   LLMProvider,
   LLMMessage,
   ToolRegistry,
+  ToolSchema,
   Plan,
   PlanStep,
   ExecutionResult,
@@ -31,32 +32,25 @@ export interface ExecutorOutput {
 }
 
 /**
- * Build the system prompt for parameter construction.
+ * Build the system prompt for native tool-use execution.
  */
-function buildParamSystemPrompt(): string {
-  return `You are an execution agent. Given a step description, available tool schema, and execution context, produce the exact parameters to pass to the tool.
-
-You MUST respond with ONLY a valid JSON object containing the tool parameters. No markdown, no code fences, no extra text.
-
-Example: if the tool expects { "path": "string", "content": "string" }, respond with:
-{"path": "/tmp/file.ts", "content": "console.log('hello')"}`;
+function buildToolUseSystemPrompt(): string {
+  return `You are an execution agent. Given a step description and execution context, use the provided tool to accomplish the task. Call the tool with the correct parameters based on the context.`;
 }
 
 /**
- * Build the user message for parameter construction.
+ * Build the user message for native tool-use execution.
  */
-function buildParamUserMessage(
+function buildToolUseUserMessage(
   step: PlanStep,
   toolName: string,
-  toolParams: Record<string, unknown>,
   context: ExecutionContext,
   previousStepOutputs: Map<string, unknown>,
 ): string {
   const parts: string[] = [
     `Step: ${step.description}`,
     `Expected outcome: ${step.expectedOutcome}`,
-    `Tool: ${toolName}`,
-    `Tool parameters schema: ${JSON.stringify(toolParams)}`,
+    `Tool to use: ${toolName}`,
     `Original goal: ${context.prompt.goal}`,
   ];
 
@@ -119,26 +113,6 @@ function buildReasoningUserMessage(
   }
 
   return parts.join("\n\n");
-}
-
-/**
- * Extract JSON parameters from an LLM response string.
- */
-function extractParams(text: string): Record<string, unknown> {
-  const trimmed = text.trim();
-
-  // Try to extract from markdown code fences
-  const fenceMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-  const jsonStr = fenceMatch?.[1]?.trim() ?? trimmed;
-
-  // Find JSON object
-  const jsonStart = jsonStr.indexOf("{");
-  const jsonEnd = jsonStr.lastIndexOf("}");
-  if (jsonStart !== -1 && jsonEnd > jsonStart) {
-    return JSON.parse(jsonStr.slice(jsonStart, jsonEnd + 1)) as Record<string, unknown>;
-  }
-
-  return JSON.parse(jsonStr) as Record<string, unknown>;
 }
 
 /**
@@ -282,7 +256,7 @@ export class Executor {
           // LLM reasoning step — no tool
           result = await this.executeReasoningStep(step, context, scopedOutputs);
         } else {
-          // Tool execution step — execute each tool in sequence
+          // Tool execution step — use native tool calling
           result = await this.executeToolStep(step, context, scopedOutputs);
         }
       }
@@ -361,14 +335,15 @@ export class Executor {
   }
 
   /**
-   * Execute a tool step: resolve tool, construct parameters via LLM, invoke.
+   * Execute a tool step using the provider's native tool-use capability.
+   * The LLM receives tool schemas and returns structured tool_use blocks,
+   * avoiding the need to parse JSON from free-form text.
    */
   private async executeToolStep(
     step: PlanStep,
     context: ExecutionContext,
     stepOutputs: Map<string, unknown>,
   ): Promise<ExecutionResult> {
-    // Execute tools sequentially, accumulating outputs
     const toolOutputs: unknown[] = [];
     let totalTokens = 0;
 
@@ -386,31 +361,46 @@ export class Executor {
       }
 
       try {
-        // Use LLM to construct parameters
+        // Build the tool schema for the specific tool
+        const toolSchema: ToolSchema = {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        };
+
+        // Ask LLM to call the tool using native tool-use
         const messages: LLMMessage[] = [
           {
             role: "user",
-            content: buildParamUserMessage(
-              step,
-              toolName,
-              tool.parameters,
-              context,
-              stepOutputs,
-            ),
+            content: buildToolUseUserMessage(step, toolName, context, stepOutputs),
           },
         ];
 
-        const paramResponse = await this.provider.complete(messages, {
+        const response = await this.provider.complete(messages, {
           model: step.model ?? this.model,
-          systemPrompt: buildParamSystemPrompt(),
+          systemPrompt: buildToolUseSystemPrompt(),
+          tools: [toolSchema],
         });
 
-        totalTokens += paramResponse.tokensUsed.input + paramResponse.tokensUsed.output;
+        totalTokens += response.tokensUsed.input + response.tokensUsed.output;
 
-        const params = extractParams(paramResponse.text);
+        // Extract tool call from native tool_use response
+        const toolCall = response.toolUse?.find((t) => t.name === toolName);
 
-        // Invoke the tool
-        const toolOutput = await tool.execute(params);
+        if (!toolCall) {
+          // No tool_use block returned — tool was not called by the LLM
+          return {
+            stepId: step.id,
+            status: "failure",
+            output: null,
+            error: `LLM did not call tool "${toolName}" — no tool_use block in response`,
+            tokensUsed: totalTokens,
+            durationMs: 0,
+          };
+        }
+
+        // Invoke the tool with the LLM-provided parameters
+        const toolOutput = await tool.execute(toolCall.input);
         toolOutputs.push(toolOutput);
       } catch (error) {
         return {
