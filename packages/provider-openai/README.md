@@ -21,7 +21,7 @@ Or use a `.env` file in your project root.
 ## Usage
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import { OpenAIProvider } from "@tepa/provider-openai";
 
 const tepa = new Tepa({

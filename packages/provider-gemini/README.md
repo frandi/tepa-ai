@@ -21,7 +21,7 @@ Or use `GOOGLE_API_KEY`, or pass it directly in the constructor.
 ## Usage
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import { GeminiProvider } from "@tepa/provider-gemini";
 
 const tepa = new Tepa({

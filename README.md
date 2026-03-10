@@ -209,10 +209,24 @@ cp .env.example .env.local
 
 Each demo has its own `.env.example` — copy it to `.env.local` and set your API key. The `run.sh` script cleans previous output before running.
 
-## Monorepo Development
+## Using Published Packages
+
+All `@tepa/*` packages are published to npm. You can use them directly without cloning this repo:
 
 ```bash
-# Install all dependencies
+npm install @tepa/core @tepa/tools @tepa/provider-anthropic
+```
+
+See the [Quick Start](#quick-start) and [Install Patterns](#install-patterns) sections above for usage examples.
+
+## Monorepo Development
+
+If you want to contribute or run the demos from source:
+
+```bash
+# Clone and install all dependencies
+git clone https://github.com/AISyLab/tepa-ai.git
+cd tepa-ai
 npm install
 
 # Build all packages

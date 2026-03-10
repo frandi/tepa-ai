@@ -11,7 +11,7 @@ npm install @tepa/tools
 ## Usage
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import {
   fileReadTool,
   fileWriteTool,

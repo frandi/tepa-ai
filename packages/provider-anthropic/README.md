@@ -30,7 +30,7 @@ import "dotenv/config";
 ## Usage
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const tepa = new Tepa({
