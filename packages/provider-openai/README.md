@@ -54,6 +54,10 @@ provider.onLog((entry) => {
 
 See [`@tepa/provider-core`](../provider-core) for full logging documentation.
 
+## Native Tool Use
+
+This provider supports native tool calling via the OpenAI Responses API. When tool schemas are passed via `options.tools`, they are forwarded as function definitions. The LLM returns structured `function_call` blocks with pre-parsed parameters, eliminating text-based JSON parsing errors.
+
 ### Implementing Custom Providers
 
 Any object implementing the `LLMProvider` interface from `@tepa/types` can be used:

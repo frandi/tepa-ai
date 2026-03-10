@@ -89,7 +89,7 @@ const result = await bus.run("prePlanner", data, cycleMetadata);
 Individual components are exported for advanced usage (most users only need `Tepa`):
 
 - `Planner` — Generates execution plans from prompts
-- `Executor` — Executes plan steps using tools and LLM
+- `Executor` — Executes plan steps using native tool calling and LLM reasoning
 - `Evaluator` — Judges execution results against expected output
 - `Scratchpad` — In-memory key-value store for cross-step state
 

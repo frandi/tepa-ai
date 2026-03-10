@@ -89,7 +89,7 @@ import type { LLMProvider, LLMMessage, LLMRequestOptions, LLMResponse } from "@t
 
 export class MyProvider implements LLMProvider {
   async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse> {
-    // Call your LLM API
+    // Call your LLM API, passing options.tools if provided
     return {
       text: "response text",
       tokensUsed: { input: 100, output: 50 },
@@ -100,3 +100,7 @@ export class MyProvider implements LLMProvider {
 ```
 
 The provider interface is intentionally minimal — one method, clear input/output types.
+
+## Native Tool Use
+
+All built-in providers support **native tool use**. When the executor passes tool schemas via `options.tools`, the provider forwards them to the LLM's native function-calling API. The LLM returns structured `toolUse` blocks with pre-parsed parameters — no manual JSON parsing needed. This eliminates escaping errors that occur when LLMs produce tool parameters as free-form text, especially with large content like file writes.

@@ -125,6 +125,7 @@ interface LLMLogEntry {
     totalCharLength: number;
     promptPreview: string;
     hasSystemPrompt: boolean;
+    hasTools?: boolean;              // true when tool schemas were passed
     maxTokens?: number;
     temperature?: number;
     messages?: LLMMessage[];       // only when includeContent: true
@@ -134,6 +135,7 @@ interface LLMLogEntry {
     text: string;
     tokensUsed: { input: number; output: number };
     finishReason: string;
+    toolUseCount?: number;          // number of tool calls in the response
   };
   error?: {
     message: string;

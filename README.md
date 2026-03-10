@@ -74,7 +74,7 @@ npm install @tepa/types
 
 1. You provide a **prompt** (goal, context, expected output) and register **tools**
 2. The **Planner** analyzes the goal and creates a step-by-step plan
-3. The **Executor** runs each step, invoking tools and capturing results
+3. The **Executor** runs each step using **native tool calling** — tool schemas are passed to the LLM's API, which returns structured parameters directly (no text-based JSON parsing)
 4. The **Evaluator** checks results against expected output
 5. If the evaluator fails, feedback goes back to the Planner for a **revised plan**
 6. The loop continues until pass, max cycles, or token budget exhaustion
@@ -196,6 +196,7 @@ The `demos/` directory contains working examples:
 
 - **[API Client Generation](demos/api-client-gen)** — Generates a typed API client, runs tests, and self-corrects on failure
 - **[Student Progress](demos/student-progress)** — Analyzes CSV grade/attendance data and produces insight reports
+- **[Study Plan](demos/study-plan)** — Human-in-the-loop: user provides a learning goal, approves the plan, and decides whether to accept results or continue
 
 Run a demo:
 

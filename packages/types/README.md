@@ -49,8 +49,9 @@ export const myTool: ToolDefinition = {
 
 - `LLMProvider` — Abstract provider interface (`complete` method)
 - `LLMMessage` — Chat message (role + content)
-- `LLMResponse` — Provider response (text, tokens, finish reason)
-- `LLMRequestOptions` — Request options (model, temperature, system prompt)
+- `LLMResponse` — Provider response (text, tokens, finish reason, tool use blocks)
+- `LLMToolUseBlock` — A structured tool call returned by the LLM (id, name, input)
+- `LLMRequestOptions` — Request options (model, temperature, system prompt, tool schemas)
 
 ### Events
 

@@ -53,3 +53,7 @@ provider.onLog((entry) => {
 ```
 
 See [`@tepa/provider-core`](../provider-core) for full logging documentation.
+
+## Native Tool Use
+
+This provider supports native tool calling via Gemini's function calling API. When tool schemas are passed via `options.tools`, they are forwarded as function declarations. The LLM returns structured `functionCall` parts with pre-parsed parameters, eliminating text-based JSON parsing errors.
