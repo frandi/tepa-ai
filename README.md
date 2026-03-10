@@ -9,7 +9,7 @@ Tepa is a TypeScript framework for building autonomous agent pipelines. It runs 
 ```
 @tepa/types              ← shared interfaces, zero dependencies
     ↑
-    ├── tepa              ← core pipeline engine
+    ├── @tepa/core        ← core pipeline engine
     ├── @tepa/tools       ← built-in tool collection
     ├── @tepa/provider-anthropic  ← Anthropic Claude provider
     ├── @tepa/provider-gemini     ← Google Gemini provider
@@ -18,16 +18,16 @@ Tepa is a TypeScript framework for building autonomous agent pipelines. It runs 
          └── demos/*      ← example applications
 ```
 
-The core engine (`tepa`) and tools (`@tepa/tools`) are **siblings** — they depend on `@tepa/types` but not on each other. This means you can use custom tools without installing `@tepa/tools`, and third-party tool packages only need `@tepa/types`.
+The core engine (`@tepa/core`) and tools (`@tepa/tools`) are **siblings** — they depend on `@tepa/types` but not on each other. This means you can use custom tools without installing `@tepa/tools`, and third-party tool packages only need `@tepa/types`.
 
 ## Quick Start
 
 ```bash
-npm install tepa @tepa/tools @tepa/provider-anthropic
+npm install @tepa/core @tepa/tools @tepa/provider-anthropic
 ```
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import { fileReadTool, fileWriteTool, shellExecuteTool } from "@tepa/tools";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
@@ -50,10 +50,10 @@ console.log(result.feedback); // Summary or failure description
 
 ```bash
 # Full install — core + built-in tools + Anthropic provider
-npm install tepa @tepa/tools @tepa/provider-anthropic
+npm install @tepa/core @tepa/tools @tepa/provider-anthropic
 
 # Minimal — core only, bring your own tools and provider
-npm install tepa
+npm install @tepa/core
 
 # Custom tool author — only needs the type interfaces
 npm install @tepa/types
@@ -63,7 +63,7 @@ npm install @tepa/types
 
 | Package | Description |
 |---------|-------------|
-| [`tepa`](packages/tepa) | Core pipeline engine: Planner, Executor, Evaluator, orchestrator, config, events |
+| [`@tepa/core`](packages/tepa) | Core pipeline engine: Planner, Executor, Evaluator, orchestrator, config, events |
 | [`@tepa/types`](packages/types) | Shared TypeScript interfaces. Zero runtime dependencies |
 | [`@tepa/tools`](packages/tools) | Built-in tool collection + `defineTool` helper + `ToolRegistry` |
 | [`@tepa/provider-anthropic`](packages/provider-anthropic) | Anthropic Claude LLM provider |
@@ -170,7 +170,7 @@ const tepa = new Tepa({
 Prompts can be loaded from YAML or JSON files:
 
 ```typescript
-import { Tepa, parsePromptFile } from "tepa";
+import { Tepa, parsePromptFile } from "@tepa/core";
 
 const prompt = await parsePromptFile("./prompts/task.yaml");
 const result = await tepa.run(prompt);

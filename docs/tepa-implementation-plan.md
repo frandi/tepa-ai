@@ -136,9 +136,9 @@ tepa/
          └── demos/*      ← depend on tepa + @tepa/tools + @tepa/provider-anthropic
 ```
 
-The key insight: `tepa` (core) and `@tepa/tools` are **siblings**, not parent-child. They both depend on `@tepa/types` but not on each other. The core engine knows how to work with tools through the `ToolDefinition` interface, but it doesn't import any specific tool implementation. This means:
+The key insight: `@tepa/core` and `@tepa/tools` are **siblings**, not parent-child. They both depend on `@tepa/types` but not on each other. The core engine knows how to work with tools through the `ToolDefinition` interface, but it doesn't import any specific tool implementation. This means:
 
-- A developer can use `tepa` with only custom tools and never install `@tepa/tools`.
+- A developer can use `@tepa/core` with only custom tools and never install `@tepa/tools`.
 - A third-party tool package depends only on `@tepa/types` for the interface, not on the entire core engine.
 - The `@tepa/provider-anthropic` package is also separate, so future providers (OpenAI, Gemini, Ollama) follow the same pattern without touching core.
 
@@ -147,7 +147,7 @@ The key insight: `tepa` (core) and `@tepa/tools` are **siblings**, not parent-ch
 | Package | npm Name | Description |
 |---------|----------|-------------|
 | `packages/types` | `@tepa/types` | Shared TypeScript interfaces and type definitions. Zero runtime dependencies. |
-| `packages/tepa` | `tepa` | Core pipeline engine: Planner, Executor, Evaluator, orchestrator, config, prompt parsing. |
+| `packages/tepa` | `@tepa/core` | Core pipeline engine: Planner, Executor, Evaluator, orchestrator, config, prompt parsing. |
 | `packages/tools` | `@tepa/tools` | Built-in tool collection + `defineTool` helper + `ToolRegistry` class. |
 | `packages/provider-anthropic` | `@tepa/provider-anthropic` | Anthropic Claude LLM provider implementation. |
 | `demos/api-client-gen` | *(not published)* | Demo: API client generation scenario. |
@@ -157,10 +157,10 @@ The key insight: `tepa` (core) and `@tepa/tools` are **siblings**, not parent-ch
 
 ```bash
 # Typical install — core + built-in tools + Anthropic
-npm install tepa @tepa/tools @tepa/provider-anthropic
+npm install @tepa/core @tepa/tools @tepa/provider-anthropic
 
 # Minimal — core only, custom tools, custom provider
-npm install tepa
+npm install @tepa/core
 
 # Custom tool developer — only needs the types
 npm install @tepa/types

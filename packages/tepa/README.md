@@ -1,17 +1,17 @@
-# tepa
+# @tepa/core
 
 Core pipeline engine for the Tepa autonomous agent framework. Contains the orchestrator, Planner, Executor, Evaluator, event bus, configuration, and prompt parsing.
 
 ## Install
 
 ```bash
-npm install tepa
+npm install @tepa/core
 ```
 
 ## Usage
 
 ```typescript
-import { Tepa } from "tepa";
+import { Tepa } from "@tepa/core";
 import type { LLMProvider, ToolDefinition } from "@tepa/types";
 
 const tepa = new Tepa({
@@ -54,7 +54,7 @@ Runs the full pipeline loop. Returns when the evaluator passes, max cycles are r
 Merges a partial config with sensible defaults:
 
 ```typescript
-import { defineConfig } from "tepa";
+import { defineConfig } from "@tepa/core";
 
 const config = defineConfig({
   limits: { maxCycles: 10 },
@@ -67,7 +67,7 @@ const config = defineConfig({
 Loads a prompt from a YAML or JSON file:
 
 ```typescript
-import { parsePromptFile } from "tepa";
+import { parsePromptFile } from "@tepa/core";
 
 const prompt = await parsePromptFile("./prompts/task.yaml");
 ```
@@ -77,7 +77,7 @@ const prompt = await parsePromptFile("./prompts/task.yaml");
 The internal event execution engine (exposed for advanced usage):
 
 ```typescript
-import { EventBus } from "tepa";
+import { EventBus } from "@tepa/core";
 import type { EventMap } from "@tepa/types";
 
 const bus = new EventBus(events);

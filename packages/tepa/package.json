@@ -1,5 +1,5 @@
 {
-  "name": "tepa",
+  "name": "@tepa/core",
   "version": "0.1.0",
   "description": "Core pipeline engine for the Tepa autonomous agent",
   "license": "MIT",

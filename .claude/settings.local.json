@@ -8,7 +8,8 @@
       "Bash(npm install)",
       "Bash(npm run build)",
       "Bash(npx vitest run)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep -r '\"tepa\"' --include=\"*.json\" --include=\"*.ts\" --include=\"*.js\" --include=\"*.yaml\" --include=\"*.yml\" --exclude-dir=node_modules --exclude-dir=dist 2>/dev/null | head -50)"
     ]
   }
 }

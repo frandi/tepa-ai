@@ -11,7 +11,7 @@
     "@tepa/provider-anthropic": "*",
     "@tepa/tools": "*",
     "dotenv": "^17.3.1",
-    "tepa": "*"
+    "@tepa/core": "*"
   },
   "devDependencies": {
     "tsx": "^4.0.0"

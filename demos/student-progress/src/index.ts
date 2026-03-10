@@ -9,7 +9,7 @@ const demoRoot = path.resolve(__dirname, "..");
 dotenv.config({ path: path.join(demoRoot, ".env.local") });
 dotenv.config({ path: path.join(demoRoot, ".env") });
 
-import { Tepa, parsePromptFile } from "tepa";
+import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import {
   fileReadTool,

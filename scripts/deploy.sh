@@ -40,7 +40,7 @@ NC='\033[0m' # No Color
 ORDERED_PACKAGES=(
   "packages/types"
   "packages/provider-core"
-  "packages/tepa"
+  "packages/tepa"    # @tepa/core
   "packages/tools"
   "packages/provider-anthropic"
   "packages/provider-openai"
