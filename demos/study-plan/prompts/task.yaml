@@ -1,0 +1,28 @@
+goal: >
+  Create a personalized study plan based on the user's learning goal.
+  Write the complete study plan to the file specified in context.outputFile.
+
+context:
+  outputDir: .
+  outputFile: ./study-plan.md
+  userInput: "{{USER_INPUT}}"
+  planFormat: |
+    Structure as Markdown with:
+    - Title and overview
+    - Weekly breakdowns (topics, resources, exercises, time estimates)
+    - Tips for staying on track
+  notes:
+    - Use well-known, reputable resources
+    - Mix of reading, video, and hands-on practice
+    - Realistic time estimates for part-time study
+
+expectedOutput:
+  - path: ./study-plan.md
+    description: A comprehensive personalized study plan
+    criteria:
+      - Clear title reflecting the user's goal
+      - Weekly breakdowns with specific topics
+      - Concrete learning resources (books, courses, websites)
+      - Practice exercises or projects per week
+      - Estimated time commitments
+      - Well-formatted Markdown
