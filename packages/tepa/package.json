@@ -2,6 +2,18 @@
   "name": "tepa",
   "version": "0.1.0",
   "description": "Core pipeline engine for the Tepa autonomous agent",
+  "license": "MIT",
+  "author": "Frandi <frandi.tech@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frandi/tepa-ai.git",
+    "directory": "packages/tepa"
+  },
+  "homepage": "https://github.com/frandi/tepa-ai/tree/main/packages/tepa#readme",
+  "bugs": {
+    "url": "https://github.com/frandi/tepa-ai/issues"
+  },
+  "keywords": ["tepa", "ai", "llm", "agent", "framework", "orchestration", "multi-agent"],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -21,12 +33,20 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@tepa/types": "*",
+    "@tepa/types": "^0.1.0",
     "yaml": "^2.5.0",
     "zod": "^3.23.0"
   },

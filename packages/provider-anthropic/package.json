@@ -2,6 +2,18 @@
   "name": "@tepa/provider-anthropic",
   "version": "0.1.0",
   "description": "Anthropic Claude LLM provider for the Tepa autonomous agent",
+  "license": "MIT",
+  "author": "Frandi <frandi.tech@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frandi/tepa-ai.git",
+    "directory": "packages/provider-anthropic"
+  },
+  "homepage": "https://github.com/frandi/tepa-ai/tree/main/packages/provider-anthropic#readme",
+  "bugs": {
+    "url": "https://github.com/frandi/tepa-ai/issues"
+  },
+  "keywords": ["tepa", "ai", "llm", "agent", "anthropic", "claude", "provider"],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -21,13 +33,21 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@tepa/types": "*",
-    "@tepa/provider-core": "*",
+    "@tepa/types": "^0.1.0",
+    "@tepa/provider-core": "^0.1.0",
     "@anthropic-ai/sdk": "^0.39.0"
   },
   "devDependencies": {

@@ -2,6 +2,18 @@
   "name": "@tepa/types",
   "version": "0.1.0",
   "description": "Shared TypeScript type definitions for the Tepa agent pipeline",
+  "license": "MIT",
+  "author": "Frandi <frandi.tech@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frandi/tepa-ai.git",
+    "directory": "packages/types"
+  },
+  "homepage": "https://github.com/frandi/tepa-ai/tree/main/packages/types#readme",
+  "bugs": {
+    "url": "https://github.com/frandi/tepa-ai/issues"
+  },
+  "keywords": ["tepa", "ai", "llm", "agent", "typescript", "types"],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -19,9 +31,17 @@
     }
   },
   "files": ["dist"],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
