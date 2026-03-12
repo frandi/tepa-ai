@@ -16,15 +16,27 @@ We plan to highlight interesting community tools and providers through our futur
 - **npm** >= 9 (ships with Node 18+)
 - **Git**
 
-### Clone and Install
+### Fork and Clone
+
+1. **Fork** the repository on GitHub by clicking the "Fork" button on [the repo page](https://github.com/frandi/tepa-ai)
+2. **Clone your fork** locally and set up the upstream remote:
 
 ```bash
-git clone https://github.com/anthropics/tepa-ai.git
+git clone https://github.com/<your-username>/tepa-ai.git
 cd tepa-ai
+git remote add upstream https://github.com/frandi/tepa-ai.git
 npm install
 ```
 
 `npm install` at the root installs dependencies for all packages via npm workspaces. No separate install steps are needed for individual packages.
+
+Before starting work, sync your fork with the latest upstream changes:
+
+```bash
+git fetch upstream
+git checkout main
+git merge upstream/main
+```
 
 ### Build
 
@@ -418,20 +430,26 @@ Any class that implements the `LLMProvider` interface (or extends `BaseLLMProvid
 
 PRs to this repository should focus on the core pipeline, existing built-in tools/providers, documentation, and bug fixes. For new tools and providers, prefer publishing them as external packages (see sections above) — submit a PR here only if you believe the addition is essential for the broader community.
 
-1. **One concern per PR.** A bug fix, a core enhancement, and a docs update should be separate PRs.
-2. **Branch from `main`.** Name your branch descriptively: `fix/executor-timeout`, `feat/evaluator-confidence-threshold`, `docs/event-patterns`.
-3. **Write tests.** Bug fixes should include a regression test when practical. Changes to the core pipeline need unit tests.
-4. **Run the full check before pushing:**
+1. **Fork the repo** and clone your fork (see [Fork and Clone](#fork-and-clone) above).
+2. **Create a branch from `main`.** Name it descriptively: `fix/executor-timeout`, `feat/evaluator-confidence-threshold`, `docs/event-patterns`.
+3. **One concern per PR.** A bug fix, a core enhancement, and a docs update should be separate PRs.
+4. **Write tests.** Bug fixes should include a regression test when practical. Changes to the core pipeline need unit tests.
+5. **Run the full check before pushing:**
    ```bash
    npm run build && npm test && npm run lint
    ```
-5. **Write a clear commit message.** Summarize the what and why in the first line. Use the imperative mood.
+6. **Push to your fork and open a PR** against `main` on the upstream repo:
+   ```bash
+   git push origin your-branch-name
+   ```
+   Then open a pull request from your fork on GitHub.
+7. **Write a clear commit message.** Summarize the what and why in the first line. Use the imperative mood.
    ```
    Fix executor skipping steps when upstream returns empty output
    Add confidence threshold option to evaluator config
    Update event system docs with cleanup pattern
    ```
-6. **Keep the PR description concise.** Explain what changed, why, and how to test it. Link related issues if applicable.
+8. **Keep the PR description concise.** Explain what changed, why, and how to test it. Link related issues if applicable.
 
 See [Pull Request Example](contributing/pull-request-example.md) for a filled-in template showing what a good PR looks like.
 

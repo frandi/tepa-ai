@@ -2,23 +2,7 @@
 
 > *From Javanese tepa slira: the practice of self-reflection, measuring oneself against a standard before acting.*
 
-Tepa is a TypeScript framework for building autonomous agent pipelines. It runs a cyclic loop of **Planner → Executor → Evaluator** — planning how to approach a task, executing the plan with tools, evaluating the results, and self-correcting until the goal is achieved or limits are reached.
-
-## Architecture
-
-```
-@tepa/types              ← shared interfaces, zero dependencies
-    ↑
-    ├── @tepa/core        ← core pipeline engine
-    ├── @tepa/tools       ← built-in tool collection
-    ├── @tepa/provider-anthropic  ← Anthropic Claude provider
-    ├── @tepa/provider-gemini     ← Google Gemini provider
-    └── @tepa/provider-openai     ← OpenAI provider
-         ↑
-         └── demos/*      ← example applications
-```
-
-The core engine (`@tepa/core`) and tools (`@tepa/tools`) are **siblings** — they depend on `@tepa/types` but not on each other. This means you can use custom tools without installing `@tepa/tools`, and third-party tool packages only need `@tepa/types`.
+**Tepa is a TypeScript framework for building AI agents that plan, execute, and self-correct.** It runs a cyclic loop of Planner, Executor, and Evaluator — your agent reasons about a goal, acts on it with tools, checks its own work, and retries until it gets it right.
 
 ## Quick Start
 
@@ -42,203 +26,57 @@ const result = await tepa.run({
   expectedOutput: "A file at src/hello.ts that compiles without errors",
 });
 
-console.log(result.status);  // "pass" | "fail" | "terminated"
+console.log(result.status);   // "pass" | "fail" | "terminated"
 console.log(result.feedback); // Summary or failure description
 ```
 
-## Install Patterns
+## How It Works
 
-```bash
-# Full install — core + built-in tools + Anthropic provider
-npm install @tepa/core @tepa/tools @tepa/provider-anthropic
-
-# Minimal — core only, bring your own tools and provider
-npm install @tepa/core
-
-# Custom tool author — only needs the type interfaces
-npm install @tepa/types
-```
+1. You provide a **goal**, **context**, and **expected output**, then register **tools** the agent can use
+2. The **Planner** breaks the goal into steps
+3. The **Executor** carries out each step using native LLM tool calling
+4. The **Evaluator** checks results against expected output
+5. If it fails, feedback loops back to the Planner for a revised approach
+6. The cycle continues until **pass**, **max cycles**, or **token budget exhaustion**
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@tepa/core`](packages/tepa) | Core pipeline engine: Planner, Executor, Evaluator, orchestrator, config, events |
-| [`@tepa/types`](packages/types) | Shared TypeScript interfaces. Zero runtime dependencies |
-| [`@tepa/tools`](packages/tools) | Built-in tool collection + `defineTool` helper + `ToolRegistry` |
-| [`@tepa/provider-anthropic`](packages/provider-anthropic) | Anthropic Claude LLM provider |
-| [`@tepa/provider-gemini`](packages/provider-gemini) | Google Gemini LLM provider |
-| [`@tepa/provider-openai`](packages/provider-openai) | OpenAI LLM provider |
-
-## How It Works
-
-1. You provide a **prompt** (goal, context, expected output) and register **tools**
-2. The **Planner** analyzes the goal and creates a step-by-step plan
-3. The **Executor** runs each step using **native tool calling** — tool schemas are passed to the LLM's API, which returns structured parameters directly (no text-based JSON parsing)
-4. The **Evaluator** checks results against expected output
-5. If the evaluator fails, feedback goes back to the Planner for a **revised plan**
-6. The loop continues until pass, max cycles, or token budget exhaustion
-
-## Configuration
-
-```typescript
-const tepa = new Tepa({
-  tools: [/* ... */],
-  provider: new AnthropicProvider(),
-  config: {
-    model: {
-      planner: "claude-sonnet-4-20250514",
-      executor: "claude-sonnet-4-20250514",
-      evaluator: "claude-sonnet-4-20250514",
-    },
-    limits: {
-      maxCycles: 5,        // max Planner→Executor→Evaluator loops
-      maxTokens: 10_000,   // total token budget across all cycles
-      toolTimeout: 30_000, // per-tool timeout in ms
-    },
-    logging: {
-      level: "standard",   // "minimal" | "standard" | "verbose"
-    },
-  },
-});
+```
+@tepa/types              ← shared interfaces, zero dependencies
+    ↑
+    ├── @tepa/core        ← pipeline engine (Planner → Executor → Evaluator)
+    ├── @tepa/tools       ← built-in tool collection
+    ├── @tepa/provider-anthropic  ← Claude
+    ├── @tepa/provider-gemini     ← Gemini
+    └── @tepa/provider-openai     ← OpenAI
 ```
 
-All config fields have sensible defaults — zero configuration works out of the box.
+Core and tools are **siblings** — they depend on `@tepa/types` but not on each other. You can bring your own tools without installing `@tepa/tools`, and third-party tool packages only need `@tepa/types`.
 
-## Event System
+## Documentation
 
-Hook into the pipeline at any stage to observe, transform, or control the flow:
+Full documentation lives in [`docs/`](./docs/index.md):
 
-```typescript
-const tepa = new Tepa({
-  tools: [/* ... */],
-  provider: new AnthropicProvider(),
-  events: {
-    postPlanner: [
-      (plan, cycle) => {
-        console.log(`Cycle ${cycle.cycleNumber}: ${plan.steps.length} steps planned`);
-        // Return nothing — plan passes through unchanged
-      },
-    ],
-    preExecutor: [
-      async (input, cycle) => {
-        // Pause for human approval
-        await askForApproval(input.plan);
-        return input; // Continue with original input
-      },
-    ],
-    postEvaluator: [
-      {
-        handler: (result) => {
-          sendSlackNotification(result.verdict);
-        },
-        continueOnError: true, // Don't abort if notification fails
-      },
-    ],
-  },
-});
-```
+| | Section | |
+|---|---|---|
+| **Learn** | [Introduction](./docs/01-introduction.md) | What Tepa is and who it's for |
+| | [Getting Started](./docs/02-getting-started.md) | Installation, first example, understanding results |
+| | [How Tepa Works](./docs/03-how-tepa-works.md) | The Plan-Execute-Evaluate cycle in depth |
+| **Build** | [Pipeline in Detail](./docs/04-pipeline-in-detail.md) | Prompt structure, lifecycle events, tool resolution |
+| | [Configuration](./docs/05-configuration.md) | Models, limits, logging |
+| | [Tool System](./docs/06-tool-system.md) | Built-in tools, custom tools, third-party packages |
+| | [Event System](./docs/07-event-system-patterns.md) | Human-in-the-loop, safety filters, monitoring |
+| | [LLM Providers](./docs/08-llm-providers.md) | Anthropic, OpenAI, Gemini, custom providers |
+| **Explore** | [Examples & Demos](./docs/09-examples-and-demos.md) | Runnable demos with walkthroughs |
+| **Reference** | [API Reference](./docs/11-api-reference.md) | Complete API surface |
+| | [Contributing](./docs/10-contributing.md) | Dev setup, conventions, PR guidelines |
 
-Eight event points: `prePlanner`, `postPlanner`, `preExecutor`, `postExecutor`, `preEvaluator`, `postEvaluator`, `preStep`, `postStep`.
+## Contributing
 
-## Custom Tools
+Tepa welcomes contributions! The core repo stays lean on purpose — it ships only the essentials. The best way to contribute is to **publish your own tools and providers as independent npm packages** using `@tepa/types`. No changes to this repo needed.
 
-Any object conforming to `ToolDefinition` works as a tool:
-
-```typescript
-import type { ToolDefinition } from "@tepa/types";
-
-const myTool: ToolDefinition = {
-  name: "database_query",
-  description: "Execute a SQL query",
-  parameters: {
-    query: { type: "string", description: "SQL query", required: true },
-  },
-  execute: async ({ query }) => {
-    // your implementation
-  },
-};
-
-const tepa = new Tepa({
-  tools: [myTool],
-  provider: new AnthropicProvider(),
-});
-```
-
-## Prompt Files
-
-Prompts can be loaded from YAML or JSON files:
-
-```typescript
-import { Tepa, parsePromptFile } from "@tepa/core";
-
-const prompt = await parsePromptFile("./prompts/task.yaml");
-const result = await tepa.run(prompt);
-```
-
-```yaml
-# prompts/task.yaml
-goal: Analyze student grades and produce a report
-context:
-  dataDir: ./data
-  format: csv
-expectedOutput:
-  - path: ./data/report.md
-    description: A markdown report with grade analysis
-    criteria:
-      - Includes class-wide averages
-      - Flags at-risk students
-```
-
-## Demos
-
-The `demos/` directory contains working examples:
-
-- **[API Client Generation](demos/api-client-gen)** — Generates a typed API client, runs tests, and self-corrects on failure
-- **[Student Progress](demos/student-progress)** — Analyzes CSV grade/attendance data and produces insight reports
-- **[Study Plan](demos/study-plan)** — Human-in-the-loop: user provides a learning goal, approves the plan, and decides whether to accept results or continue
-
-Run a demo:
-
-```bash
-cd demos/api-client-gen
-cp .env.example .env.local
-# Edit .env.local and add your ANTHROPIC_API_KEY
-./run.sh
-```
-
-Each demo has its own `.env.example` — copy it to `.env.local` and set your API key. The `run.sh` script cleans previous output before running.
-
-## Using Published Packages
-
-All `@tepa/*` packages are published to npm. You can use them directly without cloning this repo:
-
-```bash
-npm install @tepa/core @tepa/tools @tepa/provider-anthropic
-```
-
-See the [Quick Start](#quick-start) and [Install Patterns](#install-patterns) sections above for usage examples.
-
-## Monorepo Development
-
-If you want to contribute or run the demos from source:
-
-```bash
-# Clone and install all dependencies
-git clone https://github.com/AISyLab/tepa-ai.git
-cd tepa-ai
-npm install
-
-# Build all packages
-npm run build
-
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-```
+For contributions to the core pipeline, built-in tools, documentation, or bug fixes — fork the repo, create a branch, and open a PR. See the full [Contributing Guide](./docs/10-contributing.md) for dev setup, code conventions, and PR guidelines.
 
 ## License
 
-MIT
+MIT — free to use, modify, and distribute in personal and commercial projects. See [LICENSE](./LICENSE) for details.
