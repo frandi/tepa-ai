@@ -73,7 +73,7 @@ describe("extractText", () => {
       { type: "text" as const, text: "Hello" },
       { type: "tool_use" as const, id: "1", name: "test", input: {} },
       { type: "text" as const, text: " world" },
-    ] as any;
+    ] as unknown as Parameters<typeof extractText>[0];
     expect(extractText(content)).toBe("Hello world");
   });
 

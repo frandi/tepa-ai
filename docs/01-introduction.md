@@ -4,7 +4,7 @@
 
 Tepa is a TypeScript framework for building autonomous AI agent pipelines that plan, execute, and self-correct without manual intervention.
 
-The name comes from the Javanese concept *tepa slira* — the practice of self-reflection, measuring oneself against a standard before acting. This philosophy is embedded in the framework's core: every pipeline cycle ends with an evaluation step that measures results against the goal before deciding whether to continue, revise, or complete.
+The name comes from the Javanese concept _tepa slira_ — the practice of self-reflection, measuring oneself against a standard before acting. This philosophy is embedded in the framework's core: every pipeline cycle ends with an evaluation step that measures results against the goal before deciding whether to continue, revise, or complete.
 
 ## The Problem
 
@@ -72,19 +72,19 @@ Tepa is designed for goal-oriented pipelines that run to completion. A few scena
 
 ## Feature Summary
 
-| Feature | Description |
-|---|---|
-| **Plan-Execute-Evaluate loop** | Autonomous multi-cycle pipeline with self-correction on failure |
-| **Multi-provider support** | Anthropic, OpenAI, and Gemini via a unified `LLMProvider` interface |
-| **Native tool calling** | Structured tool schemas passed to LLM APIs — no text parsing |
-| **Built-in tools** | File system, shell execution, HTTP requests, data parsing, web search, scratchpad, and logging |
-| **Event hooks** | 8 lifecycle events for observation, transformation, and control |
-| **Scratchpad** | In-memory key-value store for sharing state across steps and cycles |
-| **Structured prompts** | Goal, context, and expected output — loadable from YAML or JSON files |
-| **Token budget** | Configurable token limits with per-cycle tracking to control LLM costs |
-| **Per-stage model config** | Assign different models to planner, executor, and evaluator |
-| **Sensible defaults** | Zero-config works out of the box; override only what you need |
-| **Provider logging** | Automatic JSONL logging of all LLM calls with custom callback support |
+| Feature                        | Description                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| **Plan-Execute-Evaluate loop** | Autonomous multi-cycle pipeline with self-correction on failure                                |
+| **Multi-provider support**     | Anthropic, OpenAI, and Gemini via a unified `LLMProvider` interface                            |
+| **Native tool calling**        | Structured tool schemas passed to LLM APIs — no text parsing                                   |
+| **Built-in tools**             | File system, shell execution, HTTP requests, data parsing, web search, scratchpad, and logging |
+| **Event hooks**                | 8 lifecycle events for observation, transformation, and control                                |
+| **Scratchpad**                 | In-memory key-value store for sharing state across steps and cycles                            |
+| **Structured prompts**         | Goal, context, and expected output — loadable from YAML or JSON files                          |
+| **Token budget**               | Configurable token limits with per-cycle tracking to control LLM costs                         |
+| **Per-stage model config**     | Assign different models to planner, executor, and evaluator                                    |
+| **Sensible defaults**          | Zero-config works out of the box; override only what you need                                  |
+| **Provider logging**           | Automatic JSONL logging of all LLM calls with custom callback support                          |
 
 ## What's Next
 

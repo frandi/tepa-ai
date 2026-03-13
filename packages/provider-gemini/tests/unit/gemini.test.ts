@@ -25,8 +25,10 @@ import { GoogleGenAI, ApiError } from "@google/genai";
 import { GeminiProvider } from "../../src/gemini.js";
 
 function getMockGenerateContent() {
-  const instance = new GoogleGenAI({ apiKey: "test" }) as any;
-  return instance.models.generateContent as ReturnType<typeof vi.fn>;
+  const instance = new GoogleGenAI({ apiKey: "test" }) as unknown as {
+    models: { generateContent: ReturnType<typeof vi.fn> };
+  };
+  return instance.models.generateContent;
 }
 
 function makeSuccessResponse(
@@ -90,10 +92,7 @@ describe("GeminiProvider", () => {
     it("uses default model when not specified", async () => {
       mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], { model: "" });
 
       const callArgs = mockGenerateContent.mock.calls[0]![0];
       expect(callArgs.model).toBe("gemini-3-flash-preview");
@@ -102,10 +101,9 @@ describe("GeminiProvider", () => {
     it("uses default maxOutputTokens when not specified", async () => {
       mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       const callArgs = mockGenerateContent.mock.calls[0]![0];
       expect(callArgs.config.maxOutputTokens).toBe(64_000);
@@ -114,10 +112,9 @@ describe("GeminiProvider", () => {
     it("omits temperature when not provided", async () => {
       mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       const callArgs = mockGenerateContent.mock.calls[0]![0];
       expect(callArgs.config.temperature).toBeUndefined();
@@ -126,19 +123,16 @@ describe("GeminiProvider", () => {
     it("omits systemInstruction when systemPrompt is not provided", async () => {
       mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       const callArgs = mockGenerateContent.mock.calls[0]![0];
       expect(callArgs.config.systemInstruction).toBeUndefined();
     });
 
     it("returns correctly formatted LLMResponse", async () => {
-      mockGenerateContent.mockResolvedValueOnce(
-        makeSuccessResponse("The answer is 42", 15, 25),
-      );
+      mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("The answer is 42", 15, 25));
 
       const result = await provider.complete(
         [{ role: "user", content: "What is the meaning of life?" }],
@@ -157,10 +151,9 @@ describe("GeminiProvider", () => {
         makeSuccessResponse("Truncated response", 10, 100, "MAX_TOKENS"),
       );
 
-      const result = await provider.complete(
-        [{ role: "user", content: "Tell me a long story" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      const result = await provider.complete([{ role: "user", content: "Tell me a long story" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       expect(result.finishReason).toBe("max_tokens");
     });
@@ -198,10 +191,9 @@ describe("GeminiProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
@@ -219,10 +211,9 @@ describe("GeminiProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
@@ -240,10 +231,9 @@ describe("GeminiProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
@@ -261,10 +251,9 @@ describe("GeminiProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gemini-3-flash-preview" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3-flash-preview",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
@@ -281,10 +270,9 @@ describe("GeminiProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "gemini-3-flash-preview" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "gemini-3-flash-preview",
+        }),
       ).rejects.toThrow();
 
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
@@ -301,10 +289,9 @@ describe("GeminiProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "gemini-3-flash-preview" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "gemini-3-flash-preview",
+        }),
       ).rejects.toThrow();
 
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
@@ -322,10 +309,9 @@ describe("GeminiProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "gemini-3-flash-preview" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "gemini-3-flash-preview",
+        }),
       ).rejects.toThrow();
 
       // 1 initial + 2 retries = 3

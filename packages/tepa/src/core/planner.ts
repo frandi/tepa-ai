@@ -77,9 +77,7 @@ Rules:
  * Build the system prompt for revised planning (with evaluator feedback).
  */
 function buildRevisedPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConfig): string {
-  const toolList = toolSchemas
-    .map((t) => `  - ${t.name}: ${t.description}`)
-    .join("\n");
+  const toolList = toolSchemas.map((t) => `  - ${t.name}: ${t.description}`).join("\n");
 
   return `You are a planning agent revising a previously failed plan.
 
@@ -151,11 +149,15 @@ function buildRevisedPlanUserMessage(
   if (scratchpad) {
     const entries = scratchpad.entries();
     if (Object.keys(entries).length > 0) {
-      parts.push(`--- Scratchpad (persisted state from previous execution) ---\n${JSON.stringify(entries, null, 2)}`);
+      parts.push(
+        `--- Scratchpad (persisted state from previous execution) ---\n${JSON.stringify(entries, null, 2)}`,
+      );
     }
   }
 
-  parts.push(`--- Evaluator Feedback ---\n${feedback}\n\nPlease produce a revised plan that addresses the feedback above.`);
+  parts.push(
+    `--- Evaluator Feedback ---\n${feedback}\n\nPlease produce a revised plan that addresses the feedback above.`,
+  );
 
   return parts.join("\n\n");
 }
@@ -202,7 +204,7 @@ function validatePlanStructure(data: unknown): Plan {
   }
 
   if (!Array.isArray(obj.steps) || obj.steps.length === 0) {
-    throw new Error("Plan must have a non-empty \"steps\" array");
+    throw new Error('Plan must have a non-empty "steps" array');
   }
 
   const stepIds = new Set<string>();
@@ -216,7 +218,7 @@ function validatePlanStructure(data: unknown): Plan {
     const s = step as Record<string, unknown>;
 
     if (typeof s.id !== "string" || s.id.length === 0) {
-      throw new Error("Each step must have a non-empty \"id\" string");
+      throw new Error('Each step must have a non-empty "id" string');
     }
 
     if (stepIds.has(s.id)) {
@@ -239,9 +241,7 @@ function validatePlanStructure(data: unknown): Plan {
     }
 
     if (typeof s.expectedOutcome !== "string" || s.expectedOutcome.length === 0) {
-      throw new Error(
-        `Step "${s.id}" must have a non-empty "expectedOutcome"`,
-      );
+      throw new Error(`Step "${s.id}" must have a non-empty "expectedOutcome"`);
     }
 
     if (!Array.isArray(s.dependencies)) {
@@ -272,9 +272,7 @@ function validatePlanStructure(data: unknown): Plan {
   for (const step of steps) {
     for (const dep of step.dependencies) {
       if (!stepIds.has(dep)) {
-        throw new Error(
-          `Step "${step.id}" references unknown dependency "${dep}"`,
-        );
+        throw new Error(`Step "${step.id}" references unknown dependency "${dep}"`);
       }
     }
   }
@@ -289,16 +287,16 @@ function validatePlanStructure(data: unknown): Plan {
 /**
  * Validate that all tool references in the plan exist in the registry.
  */
-function validateToolReferences(
-  plan: Plan,
-  registry: ToolRegistry,
-): void {
+function validateToolReferences(plan: Plan, registry: ToolRegistry): void {
   for (const step of plan.steps) {
     for (const toolName of step.tools) {
       if (!registry.get(toolName)) {
         throw new TepaCycleError(
           `Plan references unknown tool "${toolName}" in step "${step.id}". ` +
-            `Available tools: ${registry.toSchema().map((t) => t.name).join(", ")}`,
+            `Available tools: ${registry
+              .toSchema()
+              .map((t) => t.name)
+              .join(", ")}`,
         );
       }
     }
@@ -352,7 +350,11 @@ export class Planner {
    * On first call, receives the full prompt.
    * On subsequent calls (self-correction), also receives feedback.
    */
-  async plan(prompt: TepaPrompt, feedback?: string, scratchpad?: Scratchpad): Promise<{ plan: Plan; tokensUsed: number }> {
+  async plan(
+    prompt: TepaPrompt,
+    feedback?: string,
+    scratchpad?: Scratchpad,
+  ): Promise<{ plan: Plan; tokensUsed: number }> {
     const toolSchemas = this.registry.toSchema();
     const hasFeedback = feedback !== undefined && feedback.length > 0;
 
@@ -377,7 +379,7 @@ export class Planner {
     try {
       const plan = this.parseAndValidate(response.text);
       return { plan, tokensUsed: totalTokens };
-    } catch (_firstError) {
+    } catch {
       // Retry once with simplified prompt
       const retryMessages: LLMMessage[] = [
         { role: "user", content: userMessage },

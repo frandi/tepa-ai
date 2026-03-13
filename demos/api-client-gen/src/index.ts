@@ -68,7 +68,9 @@ async function main() {
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
           const model = step.model ? ` [${step.model}]` : "";
-          console.log(`${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`);
+          console.log(
+            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
+          );
           if (result.error) {
             console.log(`${indent}  Error: ${result.error}`);
           }

@@ -25,12 +25,12 @@ import { Tepa } from "@tepa/core";
 new Tepa(options: TepaOptions)
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `options.provider` | [`LLMProvider`](#llmprovider) | LLM provider used by all pipeline components |
-| `options.tools` | [`ToolDefinition[]`](#tooldefinition) | Tools available to the Planner and Executor |
-| `options.config` | `DeepPartial<TepaConfig>` | Optional partial config, merged with defaults |
-| `options.events` | [`EventMap`](#eventmap) | Optional event hook callbacks |
+| Parameter          | Type                                  | Description                                   |
+| ------------------ | ------------------------------------- | --------------------------------------------- |
+| `options.provider` | [`LLMProvider`](#llmprovider)         | LLM provider used by all pipeline components  |
+| `options.tools`    | [`ToolDefinition[]`](#tooldefinition) | Tools available to the Planner and Executor   |
+| `options.config`   | `DeepPartial<TepaConfig>`             | Optional partial config, merged with defaults |
+| `options.events`   | [`EventMap`](#eventmap)               | Optional event hook callbacks                 |
 
 #### `run()`
 
@@ -40,10 +40,10 @@ async run(promptInput: TepaPrompt): Promise<TepaResult>
 
 Executes the full pipeline loop. Returns a structured result — never throws `TepaError` subclasses (they are caught and returned as `{ status: "fail" }`). Other errors propagate.
 
-| Return status | Condition |
-|---|---|
-| `"pass"` | Evaluator returned `verdict: "pass"` |
-| `"fail"` | Max cycles exhausted or unrecoverable `TepaError` |
+| Return status  | Condition                                         |
+| -------------- | ------------------------------------------------- |
+| `"pass"`       | Evaluator returned `verdict: "pass"`              |
+| `"fail"`       | Max cycles exhausted or unrecoverable `TepaError` |
 | `"terminated"` | Token budget exceeded (`TepaTokenBudgetExceeded`) |
 
 ---
@@ -160,6 +160,7 @@ async run<T>(eventName: EventName, data: T, cycle: CycleMetadata): Promise<T>
 Executes all callbacks registered for `eventName`, passing `data` through each handler in sequence. If a handler returns a non-null/non-undefined value, it replaces `data` for subsequent handlers. Returns the final (potentially transformed) data.
 
 Error behavior depends on the registration:
+
 - `EventCallback` (bare function): errors propagate immediately
 - `EventRegistration` with `continueOnError: true`: errors are swallowed, pre-error data is preserved
 
@@ -173,13 +174,13 @@ import { Scratchpad } from "@tepa/core";
 
 In-memory key-value store that persists across execution steps within a pipeline run.
 
-| Method | Signature | Description |
-|---|---|---|
-| `read` | `read(key: string): unknown` | Get a value by key |
-| `has` | `has(key: string): boolean` | Check if a key exists |
-| `write` | `write(key: string, value: unknown): void` | Set a key-value pair |
-| `entries` | `entries(): Record<string, unknown>` | Get all stored entries |
-| `clear` | `clear(): void` | Remove all entries |
+| Method    | Signature                                  | Description            |
+| --------- | ------------------------------------------ | ---------------------- |
+| `read`    | `read(key: string): unknown`               | Get a value by key     |
+| `has`     | `has(key: string): boolean`                | Check if a key exists  |
+| `write`   | `write(key: string, value: unknown): void` | Set a key-value pair   |
+| `entries` | `entries(): Record<string, unknown>`       | Get all stored entries |
+| `clear`   | `clear(): void`                            | Remove all entries     |
 
 ---
 
@@ -191,14 +192,14 @@ import { TokenTracker } from "@tepa/core";
 
 Tracks token usage against a budget.
 
-| Method | Signature | Description |
-|---|---|---|
-| `constructor` | `new TokenTracker(budget: number)` | Create tracker with a token budget |
-| `add` | `add(tokens: number): void` | Add tokens. Throws [`TepaTokenBudgetExceeded`](#tepatokenbudgetexceeded) if budget exceeded |
-| `getUsed` | `getUsed(): number` | Total tokens consumed so far |
-| `getBudget` | `getBudget(): number` | The configured budget |
-| `getRemaining` | `getRemaining(): number` | `Math.max(0, budget - used)` |
-| `isExhausted` | `isExhausted(): boolean` | `true` if `used >= budget` |
+| Method         | Signature                          | Description                                                                                 |
+| -------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `constructor`  | `new TokenTracker(budget: number)` | Create tracker with a token budget                                                          |
+| `add`          | `add(tokens: number): void`        | Add tokens. Throws [`TepaTokenBudgetExceeded`](#tepatokenbudgetexceeded) if budget exceeded |
+| `getUsed`      | `getUsed(): number`                | Total tokens consumed so far                                                                |
+| `getBudget`    | `getBudget(): number`              | The configured budget                                                                       |
+| `getRemaining` | `getRemaining(): number`           | `Math.max(0, budget - used)`                                                                |
+| `isExhausted`  | `isExhausted(): boolean`           | `true` if `used >= budget`                                                                  |
 
 ---
 
@@ -222,11 +223,11 @@ log(entry: Omit<LogEntry, "timestamp">): void
 
 Records an entry and optionally prints to console based on the configured level:
 
-| Level | Console output |
-|---|---|
-| `"minimal"` | None — entries are stored only |
-| `"standard"` | `[cycle N][step X](tool) message` |
-| `"verbose"` | Standard format plus duration and token count |
+| Level        | Console output                                |
+| ------------ | --------------------------------------------- |
+| `"minimal"`  | None — entries are stored only                |
+| `"standard"` | `[cycle N][step X](tool) message`             |
+| `"verbose"`  | Standard format plus duration and token count |
 
 #### `getEntries()`
 
@@ -311,12 +312,12 @@ interface ExecutionContext {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `prompt` | The original prompt driving this pipeline run |
-| `cycle` | Current cycle number (1-based) |
-| `scratchpad` | Shared scratchpad persisting across steps |
-| `previousResults` | Results from previous cycles, if any |
+| Field             | Description                                   |
+| ----------------- | --------------------------------------------- |
+| `prompt`          | The original prompt driving this pipeline run |
+| `cycle`           | Current cycle number (1-based)                |
+| `scratchpad`      | Shared scratchpad persisting across steps     |
+| `previousResults` | Results from previous cycles, if any          |
 
 ---
 
@@ -515,12 +516,12 @@ interface LimitsConfig {
 }
 ```
 
-| Field | Default | Description |
-|---|---|---|
-| `maxCycles` | `5` | Maximum Plan-Execute-Evaluate cycles before returning `"fail"` |
-| `maxTokens` | `64000` | Total token budget across all LLM calls |
-| `toolTimeout` | `30000` | Timeout per tool execution in milliseconds |
-| `retryAttempts` | `1` | Number of retries on parse failures (planner/evaluator) |
+| Field           | Default | Description                                                    |
+| --------------- | ------- | -------------------------------------------------------------- |
+| `maxCycles`     | `5`     | Maximum Plan-Execute-Evaluate cycles before returning `"fail"` |
+| `maxTokens`     | `64000` | Total token budget across all LLM calls                        |
+| `toolTimeout`   | `30000` | Timeout per tool execution in milliseconds                     |
+| `retryAttempts` | `1`     | Number of retries on parse failures (planner/evaluator)        |
 
 #### `LoggingConfig`
 
@@ -555,10 +556,10 @@ interface TepaPrompt {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `goal` | What the pipeline should accomplish |
-| `context` | Arbitrary key-value data available to all pipeline components |
+| Field            | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| `goal`           | What the pipeline should accomplish                                   |
+| `context`        | Arbitrary key-value data available to all pipeline components         |
 | `expectedOutput` | Criteria for the evaluator — a string description or structured array |
 
 #### `ExpectedOutput`
@@ -571,11 +572,11 @@ interface ExpectedOutput {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `path` | Optional file path or artifact location |
-| `description` | What this output should contain |
-| `criteria` | Specific quality checks the evaluator should verify |
+| Field         | Description                                         |
+| ------------- | --------------------------------------------------- |
+| `path`        | Optional file path or artifact location             |
+| `description` | What this output should contain                     |
+| `criteria`    | Specific quality checks the evaluator should verify |
 
 ---
 
@@ -604,14 +605,14 @@ interface PlanStep {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `id` | Unique step identifier |
-| `description` | What this step does |
-| `tools` | Tool names to invoke. Empty array = reasoning step (pure LLM text) |
-| `expectedOutcome` | What success looks like for this step |
-| `dependencies` | IDs of steps that must complete first |
-| `model` | Optional model override for this step. Falls back to `config.model.executor` |
+| Field             | Description                                                                  |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `id`              | Unique step identifier                                                       |
+| `description`     | What this step does                                                          |
+| `tools`           | Tool names to invoke. Empty array = reasoning step (pure LLM text)           |
+| `expectedOutcome` | What success looks like for this step                                        |
+| `dependencies`    | IDs of steps that must complete first                                        |
+| `model`           | Optional model override for this step. Falls back to `config.model.executor` |
 
 ---
 
@@ -646,12 +647,12 @@ interface EvaluationResult {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `verdict` | `"pass"` ends the pipeline; `"fail"` triggers re-planning |
-| `confidence` | `0`–`1` score indicating evaluator certainty |
-| `feedback` | On `"fail"`, guidance fed back to the Planner for re-planning |
-| `summary` | On `"pass"`, human-readable summary of what was accomplished |
+| Field        | Description                                                   |
+| ------------ | ------------------------------------------------------------- |
+| `verdict`    | `"pass"` ends the pipeline; `"fail"` triggers re-planning     |
+| `confidence` | `0`–`1` score indicating evaluator certainty                  |
+| `feedback`   | On `"fail"`, guidance fed back to the Planner for re-planning |
+| `summary`    | On `"pass"`, human-readable summary of what was accomplished  |
 
 ---
 
@@ -710,10 +711,7 @@ The read-only subset of `ToolDefinition` (without `execute`) sent to LLM provide
 
 ```typescript
 interface LLMProvider {
-  complete(
-    messages: LLMMessage[],
-    options: LLMRequestOptions
-  ): Promise<LLMResponse>;
+  complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>;
 }
 ```
 
@@ -754,12 +752,12 @@ interface LLMResponse {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `text` | The text content of the model's response |
-| `tokensUsed` | Input and output token counts |
-| `finishReason` | Why the model stopped generating |
-| `toolUse` | Tool call requests (present when `finishReason` is `"tool_use"`) |
+| Field          | Description                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| `text`         | The text content of the model's response                         |
+| `tokensUsed`   | Input and output token counts                                    |
+| `finishReason` | Why the model stopped generating                                 |
+| `toolUse`      | Tool call requests (present when `finishReason` is `"tool_use"`) |
 
 #### `LLMToolUseBlock`
 
@@ -771,11 +769,11 @@ interface LLMToolUseBlock {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `id` | Provider-assigned ID for correlating tool results |
-| `name` | Name of the tool the LLM wants to call |
-| `input` | Parsed input parameters for the tool |
+| Field   | Description                                       |
+| ------- | ------------------------------------------------- |
+| `id`    | Provider-assigned ID for correlating tool results |
+| `name`  | Name of the tool the LLM wants to call            |
+| `input` | Parsed input parameters for the tool              |
 
 #### `LLMLogEntry`
 
@@ -925,14 +923,14 @@ interface TepaResult {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `status` | Final pipeline outcome |
-| `cycles` | Number of Plan-Execute-Evaluate cycles completed |
-| `tokensUsed` | Total tokens consumed across all LLM calls |
-| `outputs` | Artifacts produced by the pipeline |
-| `logs` | Detailed execution log entries |
-| `feedback` | Evaluator feedback (on fail) or summary (on pass) |
+| Field        | Description                                       |
+| ------------ | ------------------------------------------------- |
+| `status`     | Final pipeline outcome                            |
+| `cycles`     | Number of Plan-Execute-Evaluate cycles completed  |
+| `tokensUsed` | Total tokens consumed across all LLM calls        |
+| `outputs`    | Artifacts produced by the pipeline                |
+| `logs`       | Detailed execution log entries                    |
+| `feedback`   | Evaluator feedback (on fail) or summary (on pass) |
 
 #### `OutputArtifact`
 
@@ -989,12 +987,12 @@ import { ToolRegistryImpl } from "@tepa/tools";
 
 Concrete implementation of the [`ToolRegistry`](#toolregistry) interface.
 
-| Method | Description |
-|---|---|
+| Method           | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
 | `register(tool)` | Register a tool. Throws if `tool.name` is already registered |
-| `get(name)` | Retrieve a tool by name, or `undefined` |
-| `list()` | Return all registered tools |
-| `toSchema()` | Return all tools as `ToolSchema[]` (without `execute`) |
+| `get(name)`      | Retrieve a tool by name, or `undefined`                      |
+| `list()`         | Return all registered tools                                  |
+| `toSchema()`     | Return all tools as `ToolSchema[]` (without `execute`)       |
 
 ---
 
@@ -1025,13 +1023,13 @@ function buildZodSchema(
 
 Converts a `Record<string, ParameterDef>` into a Zod schema. Type mapping:
 
-| `ParameterDef.type` | Zod type |
-|---|---|
-| `"string"` | `z.string()` |
-| `"number"` | `z.number()` |
-| `"boolean"` | `z.boolean()` |
-| `"object"` | `z.record(z.unknown())` |
-| `"array"` | `z.array(z.unknown())` |
+| `ParameterDef.type` | Zod type                |
+| ------------------- | ----------------------- |
+| `"string"`          | `z.string()`            |
+| `"number"`          | `z.number()`            |
+| `"boolean"`         | `z.boolean()`           |
+| `"object"`          | `z.record(z.unknown())` |
+| `"array"`           | `z.array(z.unknown())`  |
 
 If `required` is falsy and no `default` is set, the field becomes `.optional()`. If `default` is defined, `.default(value)` is applied.
 
@@ -1060,100 +1058,100 @@ import {
 
 Reads a file and returns its contents.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | `string` | Yes | — | File path to read |
-| `encoding` | `string` | No | `"utf-8"` | File encoding |
+| Parameter  | Type     | Required | Default   | Description       |
+| ---------- | -------- | -------- | --------- | ----------------- |
+| `path`     | `string` | Yes      | —         | File path to read |
+| `encoding` | `string` | No       | `"utf-8"` | File encoding     |
 
 #### `file_write`
 
 Writes content to a file, creating directories as needed.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | `string` | Yes | — | File path to write |
-| `content` | `string` | Yes | — | Content to write |
+| Parameter | Type     | Required | Default | Description        |
+| --------- | -------- | -------- | ------- | ------------------ |
+| `path`    | `string` | Yes      | —       | File path to write |
+| `content` | `string` | Yes      | —       | Content to write   |
 
 #### `directory_list`
 
 Lists files and directories at a path.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | `string` | Yes | — | Directory path |
-| `maxDepth` | `number` | No | `1` | Maximum recursion depth |
+| Parameter  | Type     | Required | Default | Description             |
+| ---------- | -------- | -------- | ------- | ----------------------- |
+| `path`     | `string` | Yes      | —       | Directory path          |
+| `maxDepth` | `number` | No       | `1`     | Maximum recursion depth |
 
 #### `file_search`
 
 Searches for files matching a glob pattern.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `pattern` | `string` | Yes | — | Glob pattern to match |
-| `cwd` | `string` | No | `"."` | Working directory for the search |
+| Parameter | Type     | Required | Default | Description                      |
+| --------- | -------- | -------- | ------- | -------------------------------- |
+| `pattern` | `string` | Yes      | —       | Glob pattern to match            |
+| `cwd`     | `string` | No       | `"."`   | Working directory for the search |
 
 #### `shell_execute`
 
 Runs a shell command and returns its output.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `command` | `string` | Yes | — | Command to execute |
-| `cwd` | `string` | No | — | Working directory |
-| `timeout` | `number` | No | `30000` | Timeout in milliseconds |
+| Parameter | Type     | Required | Default | Description             |
+| --------- | -------- | -------- | ------- | ----------------------- |
+| `command` | `string` | Yes      | —       | Command to execute      |
+| `cwd`     | `string` | No       | —       | Working directory       |
+| `timeout` | `number` | No       | `30000` | Timeout in milliseconds |
 
 #### `http_request`
 
 Makes an HTTP request and returns the response.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `url` | `string` | Yes | — | Request URL |
-| `method` | `string` | No | `"GET"` | HTTP method |
-| `headers` | `object` | No | — | Request headers |
-| `queryParams` | `object` | No | — | URL query parameters |
-| `body` | `string` | No | — | Request body |
-| `timeout` | `number` | No | `30000` | Timeout in milliseconds |
+| Parameter     | Type     | Required | Default | Description             |
+| ------------- | -------- | -------- | ------- | ----------------------- |
+| `url`         | `string` | Yes      | —       | Request URL             |
+| `method`      | `string` | No       | `"GET"` | HTTP method             |
+| `headers`     | `object` | No       | —       | Request headers         |
+| `queryParams` | `object` | No       | —       | URL query parameters    |
+| `body`        | `string` | No       | —       | Request body            |
+| `timeout`     | `number` | No       | `30000` | Timeout in milliseconds |
 
 #### `web_search`
 
 Performs a web search via an external search API.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `query` | `string` | Yes | — | Search query |
-| `endpoint` | `string` | Yes | — | Search API endpoint URL |
-| `count` | `number` | No | `5` | Number of results to return |
+| Parameter  | Type     | Required | Default | Description                 |
+| ---------- | -------- | -------- | ------- | --------------------------- |
+| `query`    | `string` | Yes      | —       | Search query                |
+| `endpoint` | `string` | Yes      | —       | Search API endpoint URL     |
+| `count`    | `number` | No       | `5`     | Number of results to return |
 
 #### `data_parse`
 
 Parses structured data (CSV, JSON, YAML, etc.).
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `input` | `string` | Yes | — | Data string or file path (if `fromFile` is true) |
-| `format` | `string` | Yes | — | Data format (e.g., `"csv"`, `"json"`, `"yaml"`) |
-| `fromFile` | `boolean` | No | `false` | Whether `input` is a file path |
-| `preview` | `number` | No | — | Limit output to first N records |
+| Parameter  | Type      | Required | Default | Description                                      |
+| ---------- | --------- | -------- | ------- | ------------------------------------------------ |
+| `input`    | `string`  | Yes      | —       | Data string or file path (if `fromFile` is true) |
+| `format`   | `string`  | Yes      | —       | Data format (e.g., `"csv"`, `"json"`, `"yaml"`)  |
+| `fromFile` | `boolean` | No       | `false` | Whether `input` is a file path                   |
+| `preview`  | `number`  | No       | —       | Limit output to first N records                  |
 
 #### `scratchpad`
 
 Reads from or writes to the pipeline's shared scratchpad.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `action` | `string` | Yes | — | `"read"` or `"write"` |
-| `key` | `string` | Yes | — | Scratchpad key |
-| `value` | `string` | No | — | Value to write (required for `"write"` action) |
+| Parameter | Type     | Required | Default | Description                                    |
+| --------- | -------- | -------- | ------- | ---------------------------------------------- |
+| `action`  | `string` | Yes      | —       | `"read"` or `"write"`                          |
+| `key`     | `string` | Yes      | —       | Scratchpad key                                 |
+| `value`   | `string` | No       | —       | Value to write (required for `"write"` action) |
 
 #### `log_observe`
 
 Writes an observation message to the pipeline log.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `message` | `string` | Yes | — | Message to log |
-| `level` | `string` | No | `"info"` | Log level |
+| Parameter | Type     | Required | Default  | Description    |
+| --------- | -------- | -------- | -------- | -------------- |
+| `message` | `string` | Yes      | —        | Message to log |
+| `level`   | `string` | No       | `"info"` | Log level      |
 
 ---
 
@@ -1189,22 +1187,22 @@ new BaseLLMProvider(options?: BaseLLMProviderOptions)
 
 #### Abstract Members (must be implemented by subclasses)
 
-| Member | Signature | Description |
-|---|---|---|
-| `providerName` | `protected abstract readonly providerName: string` | Identifier used in log entries |
-| `doComplete` | `protected abstract doComplete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | The actual API call |
-| `isRetryable` | `protected abstract isRetryable(error: unknown): boolean` | Whether an error should trigger a retry |
-| `isRateLimitError` | `protected abstract isRateLimitError(error: unknown): boolean` | Whether an error is a rate limit (uses longer backoff) |
-| `getRetryAfterMs` | `protected abstract getRetryAfterMs(error: unknown): number \| null` | Extract retry-after from error, or `null` |
+| Member             | Signature                                                                                                 | Description                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `providerName`     | `protected abstract readonly providerName: string`                                                        | Identifier used in log entries                         |
+| `doComplete`       | `protected abstract doComplete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | The actual API call                                    |
+| `isRetryable`      | `protected abstract isRetryable(error: unknown): boolean`                                                 | Whether an error should trigger a retry                |
+| `isRateLimitError` | `protected abstract isRateLimitError(error: unknown): boolean`                                            | Whether an error is a rate limit (uses longer backoff) |
+| `getRetryAfterMs`  | `protected abstract getRetryAfterMs(error: unknown): number \| null`                                      | Extract retry-after from error, or `null`              |
 
 #### Public Methods
 
-| Method | Signature | Description |
-|---|---|---|
-| `complete` | `async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | Call with retry logic. Delegates to `doComplete` |
-| `onLog` | `onLog(callback: LLMLogCallback): void` | Register an additional log listener |
-| `getLogEntries` | `getLogEntries(): LLMLogEntry[]` | Get a copy of accumulated log history |
-| `getLogFilePath` | `getLogFilePath(): string \| undefined` | Path to the JSONL log file, if file logging is enabled |
+| Method           | Signature                                                                                  | Description                                            |
+| ---------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `complete`       | `async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | Call with retry logic. Delegates to `doComplete`       |
+| `onLog`          | `onLog(callback: LLMLogCallback): void`                                                    | Register an additional log listener                    |
+| `getLogEntries`  | `getLogEntries(): LLMLogEntry[]`                                                           | Get a copy of accumulated log history                  |
+| `getLogFilePath` | `getLogFilePath(): string \| undefined`                                                    | Path to the JSONL log file, if file logging is enabled |
 
 #### Retry Behavior
 
@@ -1227,13 +1225,13 @@ interface BaseLLMProviderOptions {
 }
 ```
 
-| Field | Default | Description |
-|---|---|---|
-| `maxRetries` | `3` | Maximum retries on transient/rate-limit errors |
-| `retryBaseDelayMs` | `1000` | Base delay for exponential backoff (ms) |
-| `defaultLog` | `true` | Enable automatic JSONL file logging |
-| `logDir` | `".tepa/logs"` | Directory for log files |
-| `includeContent` | `false` | Include full message content in log entries (privacy control) |
+| Field              | Default        | Description                                                   |
+| ------------------ | -------------- | ------------------------------------------------------------- |
+| `maxRetries`       | `3`            | Maximum retries on transient/rate-limit errors                |
+| `retryBaseDelayMs` | `1000`         | Base delay for exponential backoff (ms)                       |
+| `defaultLog`       | `true`         | Enable automatic JSONL file logging                           |
+| `logDir`           | `".tepa/logs"` | Directory for log files                                       |
+| `includeContent`   | `false`        | Include full message content in log entries (privacy control) |
 
 ---
 
@@ -1270,10 +1268,10 @@ interface FileLogWriter {
 }
 ```
 
-| Field | Description |
-|---|---|
+| Field      | Description                                    |
+| ---------- | ---------------------------------------------- |
 | `callback` | The log callback to pass to `provider.onLog()` |
-| `filePath` | Absolute path to the generated log file |
+| `filePath` | Absolute path to the generated log file        |
 
 ---
 
@@ -1303,8 +1301,8 @@ interface AnthropicProviderOptions extends BaseLLMProviderOptions {
 }
 ```
 
-| Field | Default | Description |
-|---|---|---|
+| Field    | Default                         | Description       |
+| -------- | ------------------------------- | ----------------- |
 | `apiKey` | `process.env.ANTHROPIC_API_KEY` | Anthropic API key |
 
 Default model: `"claude-haiku-4-5"` | Default max tokens: `64000`
@@ -1316,10 +1314,7 @@ Default model: `"claude-haiku-4-5"` | Default max tokens: `64000`
 ```typescript
 import { createProvider } from "@tepa/provider-anthropic";
 
-function createProvider(
-  name: ProviderName,
-  options?: AnthropicProviderOptions
-): LLMProvider;
+function createProvider(name: ProviderName, options?: AnthropicProviderOptions): LLMProvider;
 ```
 
 Factory function. Currently only supports `name: "anthropic"`.
@@ -1356,8 +1351,8 @@ interface OpenAIProviderOptions extends BaseLLMProviderOptions {
 }
 ```
 
-| Field | Default | Description |
-|---|---|---|
+| Field    | Default                      | Description    |
+| -------- | ---------------------------- | -------------- |
 | `apiKey` | `process.env.OPENAI_API_KEY` | OpenAI API key |
 
 Default model: `"gpt-5-mini"` | Default max tokens: `64000`
@@ -1390,8 +1385,8 @@ interface GeminiProviderOptions extends BaseLLMProviderOptions {
 }
 ```
 
-| Field | Default | Description |
-|---|---|---|
+| Field    | Default                                                      | Description    |
+| -------- | ------------------------------------------------------------ | -------------- |
 | `apiKey` | `process.env.GEMINI_API_KEY` or `process.env.GOOGLE_API_KEY` | Gemini API key |
 
 Default model: `"gemini-3-flash-preview"` | Default max tokens: `64000`

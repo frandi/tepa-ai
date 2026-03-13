@@ -6,17 +6,10 @@ import type {
   LLMRequestOptions,
   ToolDefinition,
   TepaPrompt,
-  Plan,
-  EvaluationResult,
   CycleMetadata,
   EventMap,
 } from "@tepa/types";
-import {
-  Tepa,
-  type PlannerInput,
-  type ExecutorInput,
-  type EvaluatorInput,
-} from "../../src/tepa.js";
+import { Tepa } from "../../src/tepa.js";
 
 // --- Helpers ---
 
@@ -106,10 +99,17 @@ describe("Pipeline Integration", () => {
   describe("full pipeline — happy path", () => {
     it("completes single-cycle pass with correct TepaResult shape", async () => {
       const provider = createMockProvider([
-        makeResponse(makePlanJson([
-          { id: "step_1", description: "Read data", tools: ["file_read"] },
-          { id: "step_2", description: "Write report", tools: ["file_write"], dependencies: ["step_1"] },
-        ])),
+        makeResponse(
+          makePlanJson([
+            { id: "step_1", description: "Read data", tools: ["file_read"] },
+            {
+              id: "step_2",
+              description: "Write report",
+              tools: ["file_write"],
+              dependencies: ["step_1"],
+            },
+          ]),
+        ),
         makeToolUseResponse("file_read", { input: "data.csv" }),
         makeToolUseResponse("file_write", { input: "report.md" }),
         makeResponse(makeEvalJson("pass", { summary: "Report generated successfully" })),
@@ -145,11 +145,17 @@ describe("Pipeline Integration", () => {
     it("feeds evaluator feedback to planner on cycle 2", async () => {
       const provider = createMockProvider([
         // Cycle 1
-        makeResponse(makePlanJson([{ id: "step_1", description: "Generate code", tools: ["gen"] }])),
+        makeResponse(
+          makePlanJson([{ id: "step_1", description: "Generate code", tools: ["gen"] }]),
+        ),
         makeToolUseResponse("gen", { input: "v1" }),
-        makeResponse(makeEvalJson("fail", { feedback: "Missing error handling in generated code" })),
+        makeResponse(
+          makeEvalJson("fail", { feedback: "Missing error handling in generated code" }),
+        ),
         // Cycle 2
-        makeResponse(makePlanJson([{ id: "step_1", description: "Fix error handling", tools: ["gen"] }])),
+        makeResponse(
+          makePlanJson([{ id: "step_1", description: "Fix error handling", tools: ["gen"] }]),
+        ),
         makeToolUseResponse("gen", { input: "v2" }),
         makeResponse(makeEvalJson("pass", { summary: "Code with error handling complete" })),
       ]);
@@ -238,12 +244,36 @@ describe("Pipeline Integration", () => {
       const order: string[] = [];
 
       const events: EventMap = {
-        prePlanner: [() => { order.push("prePlanner"); }],
-        postPlanner: [() => { order.push("postPlanner"); }],
-        preExecutor: [() => { order.push("preExecutor"); }],
-        postExecutor: [() => { order.push("postExecutor"); }],
-        preEvaluator: [() => { order.push("preEvaluator"); }],
-        postEvaluator: [() => { order.push("postEvaluator"); }],
+        prePlanner: [
+          () => {
+            order.push("prePlanner");
+          },
+        ],
+        postPlanner: [
+          () => {
+            order.push("postPlanner");
+          },
+        ],
+        preExecutor: [
+          () => {
+            order.push("preExecutor");
+          },
+        ],
+        postExecutor: [
+          () => {
+            order.push("postExecutor");
+          },
+        ],
+        preEvaluator: [
+          () => {
+            order.push("preEvaluator");
+          },
+        ],
+        postEvaluator: [
+          () => {
+            order.push("postEvaluator");
+          },
+        ],
       };
 
       const provider = createMockProvider([
@@ -381,9 +411,11 @@ describe("Pipeline Integration", () => {
       };
 
       const provider = createMockProvider([
-        makeResponse(makePlanJson([
-          { id: "step_1", description: "Query database", tools: ["database_query"] },
-        ])),
+        makeResponse(
+          makePlanJson([
+            { id: "step_1", description: "Query database", tools: ["database_query"] },
+          ]),
+        ),
         makeToolUseResponse("database_query", { query: "SELECT * FROM users", database: "mydb" }),
         makeResponse(makeEvalJson("pass", { summary: "Query results retrieved" })),
       ]);
@@ -411,13 +443,20 @@ describe("Pipeline Integration", () => {
   describe("full pipeline — mixed step types", () => {
     it("handles plans with both tool steps and LLM reasoning steps", async () => {
       const provider = createMockProvider([
-        makeResponse(makePlanJson([
-          { id: "step_1", description: "Read data file", tools: ["file_read"] },
-          { id: "step_2", description: "Analyze patterns", tools: [], dependencies: ["step_1"] },
-          { id: "step_3", description: "Write report", tools: ["file_write"], dependencies: ["step_2"] },
-        ])),
+        makeResponse(
+          makePlanJson([
+            { id: "step_1", description: "Read data file", tools: ["file_read"] },
+            { id: "step_2", description: "Analyze patterns", tools: [], dependencies: ["step_1"] },
+            {
+              id: "step_3",
+              description: "Write report",
+              tools: ["file_write"],
+              dependencies: ["step_2"],
+            },
+          ]),
+        ),
         makeToolUseResponse("file_read", { input: "data.csv" }),
-        makeResponse("The data shows an upward trend in scores"),         // reasoning step
+        makeResponse("The data shows an upward trend in scores"), // reasoning step
         makeToolUseResponse("file_write", { input: "report.md" }),
         makeResponse(makeEvalJson("pass", { summary: "Analysis complete" })),
       ]);

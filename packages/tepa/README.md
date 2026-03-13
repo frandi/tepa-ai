@@ -15,7 +15,9 @@ import { Tepa } from "@tepa/core";
 import type { LLMProvider, ToolDefinition } from "@tepa/types";
 
 const tepa = new Tepa({
-  tools: [/* ToolDefinition objects */],
+  tools: [
+    /* ToolDefinition objects */
+  ],
   provider: myLLMProvider, // implements LLMProvider interface
   config: {
     limits: { maxCycles: 3, maxTokens: 20_000 },
@@ -40,6 +42,7 @@ new Tepa(options: TepaOptions)
 ```
 
 **`TepaOptions`:**
+
 - `tools: ToolDefinition[]` — Tools available to the pipeline
 - `provider: LLMProvider` — LLM provider for all components
 - `config?: DeepPartial<TepaConfig>` — Configuration (merged with defaults)

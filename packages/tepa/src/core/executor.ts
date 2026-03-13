@@ -199,11 +199,7 @@ export class Executor {
   private readonly provider: LLMProvider;
   private readonly model: string;
 
-  constructor(
-    registry: ToolRegistry,
-    provider: LLMProvider,
-    model: string,
-  ) {
+  constructor(registry: ToolRegistry, provider: LLMProvider, model: string) {
     this.registry = registry;
     this.provider = provider;
     this.model = model;
@@ -235,8 +231,8 @@ export class Executor {
       let result: ExecutionResult;
 
       // Check for failed dependencies
-      const failedDep = step.dependencies.find((depId) =>
-        results.find((r) => r.stepId === depId)?.status === "failure",
+      const failedDep = step.dependencies.find(
+        (depId) => results.find((r) => r.stepId === depId)?.status === "failure",
       );
 
       if (failedDep) {
@@ -425,7 +421,4 @@ export class Executor {
 }
 
 // Export utilities for testing
-export {
-  topoSort as _topoSort,
-  filterOutputsByDependencies as _filterOutputsByDependencies,
-};
+export { topoSort as _topoSort, filterOutputsByDependencies as _filterOutputsByDependencies };

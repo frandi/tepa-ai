@@ -47,9 +47,7 @@ describe("validateParams", () => {
     const schema: Record<string, ParameterDef> = {
       flag: { type: "boolean", description: "Flag", required: true },
     };
-    expect(() => validateParams({ flag: "true" }, schema)).toThrow(
-      "Parameter validation failed",
-    );
+    expect(() => validateParams({ flag: "true" }, schema)).toThrow("Parameter validation failed");
     const result = validateParams({ flag: true }, schema);
     expect(result.flag).toBe(true);
   });

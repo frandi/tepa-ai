@@ -1,6 +1,7 @@
 # Tepa Documentation — Outline
 
 ## 1. Introduction
+
 > File: `docs/01-introduction.md`
 
 - Opening hook — what is Tepa and why it exists (etymology: "tepa slira")
@@ -11,6 +12,7 @@
 - High-level feature summary (multi-provider, built-in tools, event hooks, scratchpad, structured prompts)
 
 ## 2. Getting Started
+
 > File: `docs/02-getting-started.md`
 
 - Prerequisites (Node.js, API key)
@@ -21,6 +23,7 @@
 - Next steps pointers (go deeper into concepts, explore demos)
 
 ## 3. How Tepa Works
+
 > File: `docs/03-how-tepa-works.md`
 
 - The Plan-Execute-Evaluate cycle (visual diagram)
@@ -33,13 +36,16 @@
 - Package architecture overview (`@tepa/core`, `@tepa/types`, `@tepa/tools`, `@tepa/provider-*`)
 
 ## 4. The Pipeline in Detail
+
 > File: `docs/04-pipeline-in-detail.md`
 
 ### 4.1 Prompt Structure
+
 - `TepaPrompt` — goal, context, expectedOutput
 - YAML/JSON file loading with `parsePromptFile`
 
 ### 4.2 Planner
+
 - How plans are generated (LLM-driven)
 - `Plan` and `PlanStep` structure (id, description, tools, expectedOutcome, dependencies, model)
 - Dependency rules (direct-only, unique IDs, reasoning steps vs. tool steps)
@@ -47,6 +53,7 @@
 - Parse failure retry (retry-once with simplified prompt)
 
 ### 4.3 Executor
+
 - Topological sorting (Kahn's algorithm, circular dependency detection)
 - Step execution flow (scoped inputs from dependencies, skip on upstream failure)
 - Native tool calling (schema → LLM → `tool_use` block → invoke → capture result)
@@ -55,27 +62,32 @@
 - Automatic scratchpad write (`_execution_summary` after each cycle)
 
 ### 4.4 Evaluator
+
 - Structural checks (artifacts exist, correct format) and qualitative checks (content addresses goal)
 - `EvaluationResult` structure (verdict, confidence, feedback/summary, tokens)
 - Parse failure handling (retry-once, synthetic fail with confidence 0)
 
 ### 4.5 Pipeline Lifecycle Events
+
 - The 8 event points (pre/post for Planner, Executor, Evaluator, Step)
 - Event flow diagram (prePlanner → ... → postEvaluator)
 - What each event receives and can modify (reference table)
 - Brief mention of async/Promise support for pausing (detailed in Section 7)
 
 ### 4.6 Cycles and Termination
+
 - Cycle flow step-by-step (validate → init → loop: plan → execute → evaluate)
 - Termination conditions (pass, max cycles, token budget, unrecoverable error)
 - `TepaResult` structure (status, cycles, tokensUsed, outputs, logs, feedback)
 
 ### 4.7 Tools in the Pipeline Context
+
 - How the Executor resolves tools from the registry
 - How tool schemas are passed to the LLM (native tool use)
 - Brief pointer to Section 6 for full tool system details
 
 ## 5. Configuration
+
 > File: `docs/05-configuration.md`
 
 - `TepaConfig` full structure (`ModelConfig`, `LimitsConfig`, `LoggingConfig`)
@@ -87,20 +99,25 @@
 - Invalid configuration errors (`TepaConfigError`)
 
 ## 6. Tool System
+
 > File: `docs/06-tool-system.md`
 
 ### 6.1 Tool Definition
+
 - `ToolDefinition` interface
 - `ParameterDef` — type, description, required, default
 
 ### 6.2 Creating Tools
+
 - `defineTool` utility (Zod validation at creation time)
 
 ### 6.3 Registering Tools
+
 - Passing tools to the `Tepa` constructor
 - `ToolRegistryImpl` for programmatic use
 
 ### 6.4 Built-in Tools Reference
+
 - File system: `file_read`, `file_write`, `directory_list`, `file_search`
 - Execution: `shell_execute`
 - Network: `http_request`, `web_search`
@@ -108,9 +125,11 @@
 - Pipeline internal: `scratchpad`, `log_observe`
 
 ### 6.5 Creating Third-Party Tools
+
 - npm package contract — export a `ToolDefinition`, import and pass to `Tepa`
 
 ## 7. Event System Patterns
+
 > File: `docs/07-event-system-patterns.md`
 
 - Recap: event registration at initialization (`events` option in `Tepa` constructor)
@@ -127,21 +146,26 @@
 - Pattern: Data cleanup (postExecutor — sanitize results before evaluation)
 
 ## 8. LLM Providers
+
 > File: `docs/08-llm-providers.md`
 
 ### 8.1 Provider Interface
+
 - `LLMProvider`, `LLMMessage`, `LLMRequestOptions`, `LLMResponse`, `LLMToolUseBlock`
 
 ### 8.2 Built-in Providers
+
 - Anthropic (`@tepa/provider-anthropic` — setup, env var, options, default model)
 - OpenAI (`@tepa/provider-openai` — setup, env var, options, Responses API)
 - Gemini (`@tepa/provider-gemini` — setup, env var, options, system instructions)
 
 ### 8.3 Native Tool Use
+
 - How providers forward tool schemas
 - Why structured `tool_use` blocks eliminate parsing errors
 
 ### 8.4 Provider Logging System
+
 - Default file logging (JSONL to `.tepa/logs/`)
 - `LLMLogEntry` structure
 - Custom log listeners (`onLog()`)
@@ -151,25 +175,32 @@
 - Privacy controls (`includeContent`)
 
 ### 8.5 Base Provider
+
 - `BaseLLMProvider` — retry logic, exponential backoff, rate limit handling
 
 ### 8.6 Creating a Custom Provider
+
 - Extending `BaseLLMProvider`
 - Implementing `doComplete`, `isRetryable`, `isRateLimitError`, `getRetryAfterMs`
 
 ## 9. Examples and Demos
+
 > File: `docs/09-examples-and-demos.md`
 
 ### 9.1 API Client Generation
+
 - Fully autonomous, multi-cycle self-correction, code generation + test execution
 
 ### 9.2 Student Progress Analysis
+
 - Data pipeline, CSV parsing, report generation, single-cycle completion
 
 ### 9.3 Study Plan Generator
+
 - Human-in-the-loop, interactive approval gates, verdict override
 
 ## 10. Contributing
+
 > File: `docs/10-contributing.md`
 
 - Development setup (monorepo structure, install, build, test)
@@ -180,6 +211,7 @@
 - Issue reporting
 
 ## 11. API Reference
+
 > File: `docs/11-api-reference.md`
 
 - `Tepa` class (`constructor`, `run`)

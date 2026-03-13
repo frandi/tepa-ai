@@ -119,6 +119,7 @@ tepa-ai/
 Tepa uses strict TypeScript with ESLint and Prettier enforcement.
 
 **TypeScript:**
+
 - Target: ES2022, module resolution: `bundler`
 - `strict: true` — no implicit any, strict null checks, etc.
 - `noUncheckedIndexedAccess: true` — array/object index access returns `T | undefined`
@@ -126,6 +127,7 @@ Tepa uses strict TypeScript with ESLint and Prettier enforcement.
 - Use `.js` extensions in import paths (required for ESM resolution)
 
 **Style:**
+
 - 2-space indentation
 - Double quotes (`"`)
 - Semicolons required
@@ -202,6 +204,7 @@ export const redisCacheTool = defineTool({
 ```
 
 **Key rules:**
+
 - Tool names use `snake_case`
 - Parameter types: `"string"`, `"number"`, `"boolean"`, `"object"`, `"array"`
 - `execute` receives `Record<string, unknown>` — cast parameters to their expected types
@@ -340,8 +343,7 @@ export class MyLLMProvider extends BaseLLMProvider {
 
   // Return true for transient errors that should be retried
   protected isRetryable(error: unknown): boolean {
-    return error instanceof MyLLMServerError
-      || error instanceof MyLLMConnectionError;
+    return error instanceof MyLLMServerError || error instanceof MyLLMConnectionError;
   }
 
   // Return true for 429/rate-limit errors (gets 30x longer backoff)
@@ -380,10 +382,7 @@ Create `src/formatting.ts` to handle the translation between Tepa's normalized t
 Create `src/factory.ts`:
 
 ```typescript
-export function createProvider(
-  identifier: string,
-  options?: MyLLMProviderOptions,
-) {
+export function createProvider(identifier: string, options?: MyLLMProviderOptions) {
   if (identifier !== "myllm") {
     throw new Error(`Unknown provider: ${identifier}`);
   }
@@ -465,5 +464,6 @@ When filing an issue, include:
 For feature requests, describe the use case first, then the proposed solution. This helps the maintainers understand whether the feature fits the framework's scope.
 
 See filled-in examples of each template:
+
 - [Bug Report Example](contributing/bug-report-example.md)
 - [Feature Request Example](contributing/feature-request-example.md)

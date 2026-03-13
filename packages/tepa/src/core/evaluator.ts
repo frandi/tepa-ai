@@ -54,10 +54,8 @@ function buildEvalUserMessage(
 
   const resultsSection = executionResults
     .map((r) => {
-      const outputStr =
-        typeof r.output === "string" ? r.output : JSON.stringify(r.output);
-      const summary =
-        outputStr.length > 500 ? outputStr.slice(0, 500) + "..." : outputStr;
+      const outputStr = typeof r.output === "string" ? r.output : JSON.stringify(r.output);
+      const summary = outputStr.length > 500 ? outputStr.slice(0, 500) + "..." : outputStr;
       return [
         `  Step "${r.stepId}": ${r.status}`,
         `    Output: ${summary}`,
@@ -120,14 +118,8 @@ function parseEvalResult(data: unknown): Omit<EvaluationResult, "tokensUsed"> {
     throw new Error('Evaluation must have a "verdict" of "pass" or "fail"');
   }
 
-  if (
-    typeof obj.confidence !== "number" ||
-    obj.confidence < 0 ||
-    obj.confidence > 1
-  ) {
-    throw new Error(
-      '"confidence" must be a number between 0 and 1',
-    );
+  if (typeof obj.confidence !== "number" || obj.confidence < 0 || obj.confidence > 1) {
+    throw new Error('"confidence" must be a number between 0 and 1');
   }
 
   const result: Omit<EvaluationResult, "tokensUsed"> = {
@@ -205,9 +197,7 @@ export class Evaluator {
     const systemPrompt = buildEvalSystemPrompt();
     const options = { model: this.model, systemPrompt };
 
-    const messages: LLMMessage[] = [
-      { role: "user", content: userContent },
-    ];
+    const messages: LLMMessage[] = [{ role: "user", content: userContent }];
 
     // First attempt
     let response = await this.provider.complete(messages, options);

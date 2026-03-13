@@ -14,12 +14,7 @@ export type { ExecutionResult } from "./execution.js";
 
 export type { EvaluationResult } from "./evaluation.js";
 
-export type {
-  ToolDefinition,
-  ParameterDef,
-  ToolRegistry,
-  ToolSchema,
-} from "./tool.js";
+export type { ToolDefinition, ParameterDef, ToolRegistry, ToolSchema } from "./tool.js";
 
 export type {
   LLMProvider,

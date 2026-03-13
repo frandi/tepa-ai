@@ -41,8 +41,13 @@ export function extractText(response: { text?: string }): string {
 /**
  * Extract tool use blocks from a Gemini response.
  */
-export function extractToolUse(response: any): LLMToolUseBlock[] {
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
+export function extractToolUse(response: Record<string, unknown>): LLMToolUseBlock[] {
+  const resp = response as {
+    candidates?: {
+      content?: { parts?: { functionCall?: { name: string; args?: Record<string, unknown> } }[] };
+    }[];
+  };
+  const parts = resp.candidates?.[0]?.content?.parts ?? [];
   const blocks: LLMToolUseBlock[] = [];
   let index = 0;
 

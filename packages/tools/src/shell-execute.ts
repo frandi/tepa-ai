@@ -32,7 +32,7 @@ export const shellExecuteTool = defineTool({
         resolve({
           stdout: truncate(String(stdout), MAX_OUTPUT_SIZE),
           stderr: truncate(String(stderr), MAX_OUTPUT_SIZE),
-          exitCode: error ? (error as NodeJS.ErrnoException & { code?: number }).code ?? 1 : 0,
+          exitCode: error ? ((error as NodeJS.ErrnoException & { code?: number }).code ?? 1) : 0,
         });
       });
     });

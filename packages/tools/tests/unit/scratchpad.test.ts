@@ -36,8 +36,8 @@ describe("scratchpad tool", () => {
   });
 
   it("should throw on unknown action", async () => {
-    await expect(
-      scratchpadTool.execute({ action: "delete", key: "k" }),
-    ).rejects.toThrow('Unknown action: delete');
+    await expect(scratchpadTool.execute({ action: "delete", key: "k" })).rejects.toThrow(
+      "Unknown action: delete",
+    );
   });
 });

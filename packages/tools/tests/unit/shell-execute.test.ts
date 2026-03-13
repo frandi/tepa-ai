@@ -10,7 +10,7 @@ import { exec } from "node:child_process";
 describe("shell_execute tool", () => {
   it("should capture stdout and stderr on success", async () => {
     vi.mocked(exec).mockImplementation((_cmd, _opts, callback) => {
-      (callback as Function)(null, "output", "");
+      (callback as (...args: unknown[]) => void)(null, "output", "");
       return {} as ReturnType<typeof exec>;
     });
 
@@ -28,7 +28,7 @@ describe("shell_execute tool", () => {
   it("should capture exit code on failure", async () => {
     vi.mocked(exec).mockImplementation((_cmd, _opts, callback) => {
       const error = Object.assign(new Error("failed"), { code: 1 });
-      (callback as Function)(error, "", "error output");
+      (callback as (...args: unknown[]) => void)(error, "", "error output");
       return {} as ReturnType<typeof exec>;
     });
 
@@ -44,7 +44,7 @@ describe("shell_execute tool", () => {
 
   it("should pass timeout option", async () => {
     vi.mocked(exec).mockImplementation((_cmd, _opts, callback) => {
-      (callback as Function)(null, "", "");
+      (callback as (...args: unknown[]) => void)(null, "", "");
       return {} as ReturnType<typeof exec>;
     });
 
@@ -59,16 +59,12 @@ describe("shell_execute tool", () => {
 
   it("should pass cwd option", async () => {
     vi.mocked(exec).mockImplementation((_cmd, _opts, callback) => {
-      (callback as Function)(null, "", "");
+      (callback as (...args: unknown[]) => void)(null, "", "");
       return {} as ReturnType<typeof exec>;
     });
 
     await shellExecuteTool.execute({ command: "ls", cwd: "/tmp" });
 
-    expect(exec).toHaveBeenCalledWith(
-      "ls",
-      { timeout: 30000, cwd: "/tmp" },
-      expect.any(Function),
-    );
+    expect(exec).toHaveBeenCalledWith("ls", { timeout: 30000, cwd: "/tmp" }, expect.any(Function));
   });
 });

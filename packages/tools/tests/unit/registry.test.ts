@@ -37,9 +37,7 @@ describe("ToolRegistryImpl", () => {
     const registry = new ToolRegistryImpl();
     registry.register(makeTool("dup"));
 
-    expect(() => registry.register(makeTool("dup"))).toThrow(
-      'Tool "dup" is already registered',
-    );
+    expect(() => registry.register(makeTool("dup"))).toThrow('Tool "dup" is already registered');
   });
 
   it("should produce schema without execute function", () => {

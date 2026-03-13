@@ -28,7 +28,10 @@ const tepaConfigSchema = z.object({
   logging: loggingConfigSchema,
 });
 
-function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
   const result = { ...target };
 
   for (const key of Object.keys(source)) {

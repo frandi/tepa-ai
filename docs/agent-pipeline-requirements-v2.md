@@ -1,6 +1,6 @@
 # Tepa — Requirements Document v2
 
-> *Tepa* — from Javanese *tepa slira*: the practice of self-reflection, measuring oneself against a standard before acting. An agent that doesn't just execute, but reflects, evaluates, and refines.
+> _Tepa_ — from Javanese _tepa slira_: the practice of self-reflection, measuring oneself against a standard before acting. An agent that doesn't just execute, but reflects, evaluates, and refines.
 
 ## 1. Overview
 
@@ -14,15 +14,15 @@ The framework is **LLM-provider-agnostic**, extensible, and configurable. Develo
 
 Tepa is organized as a monorepo with the following packages:
 
-| Package | Purpose |
-|---------|---------|
-| `@tepa/core` | Pipeline orchestrator (Planner, Executor, Evaluator, Event Bus, Scratchpad) |
-| `@tepa/types` | Shared TypeScript type definitions used across all packages |
-| `@tepa/tools` | Built-in tool implementations, tool registry, and `defineTool` utility |
-| `@tepa/provider-core` | Base class for LLM providers with retry logic and file logging |
-| `@tepa/provider-anthropic` | Anthropic Claude provider |
-| `@tepa/provider-openai` | OpenAI provider |
-| `@tepa/provider-gemini` | Google Gemini provider |
+| Package                    | Purpose                                                                     |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `@tepa/core`               | Pipeline orchestrator (Planner, Executor, Evaluator, Event Bus, Scratchpad) |
+| `@tepa/types`              | Shared TypeScript type definitions used across all packages                 |
+| `@tepa/tools`              | Built-in tool implementations, tool registry, and `defineTool` utility      |
+| `@tepa/provider-core`      | Base class for LLM providers with retry logic and file logging              |
+| `@tepa/provider-anthropic` | Anthropic Claude provider                                                   |
+| `@tepa/provider-openai`    | OpenAI provider                                                             |
+| `@tepa/provider-gemini`    | Google Gemini provider                                                      |
 
 ---
 
@@ -39,7 +39,7 @@ The Planner is the strategic brain of the pipeline. It receives the initial prom
 - Assign appropriate tools to each step based on the available tool registry.
 - Assign an LLM model tier to each step (executor model for simple tool-parameter construction, planner model for complex reasoning).
 - Estimate token usage for the plan.
-- On subsequent cycles, receive evaluator feedback and the current scratchpad state, and produce a *minimal revised plan* — fixing only what failed rather than regenerating the entire plan from scratch.
+- On subsequent cycles, receive evaluator feedback and the current scratchpad state, and produce a _minimal revised plan_ — fixing only what failed rather than regenerating the entire plan from scratch.
 - If the LLM produces unparseable output, retry once with a simplified prompt before raising an error.
 
 **Inputs:**
@@ -61,12 +61,12 @@ Each step in a plan has the following structure:
 
 ```typescript
 interface PlanStep {
-  id: string;              // Unique identifier (e.g., "step_1")
-  description: string;     // What this step does
-  tools: string[];         // Tool names to use (empty array = LLM reasoning step)
+  id: string; // Unique identifier (e.g., "step_1")
+  description: string; // What this step does
+  tools: string[]; // Tool names to use (empty array = LLM reasoning step)
   expectedOutcome: string; // What this step should produce
-  dependencies: string[];  // Step IDs that must complete first (direct only)
-  model?: string;          // Optional model override for this step
+  dependencies: string[]; // Step IDs that must complete first (direct only)
+  model?: string; // Optional model override for this step
 }
 ```
 
@@ -283,16 +283,16 @@ The Event System provides lifecycle hooks around each core component and individ
 
 There are eight event points — a **pre** and **post** event for each core component, plus step-level events within the Executor:
 
-| Event | Fires | Receives | Can Modify |
-|---|---|---|---|
-| `prePlanner` | Before the Planner runs | `{ prompt: TepaPrompt, feedback?: string }` | Planner input |
-| `postPlanner` | After the Planner completes | `Plan` | Plan |
-| `preExecutor` | Before the Executor runs | `{ plan, prompt, cycle, scratchpad, previousResults? }` | Executor input |
-| `postExecutor` | After the Executor completes | `ExecutorOutput` | Executor output |
-| `preEvaluator` | Before the Evaluator runs | `{ prompt, results, scratchpad }` | Evaluator input |
-| `postEvaluator` | After the Evaluator completes | `EvaluationResult` | Evaluation result |
-| `preStep` | Before each step executes | `{ step: PlanStep, cycle: number }` | Step input |
-| `postStep` | After each step completes | `{ step: PlanStep, result: ExecutionResult, cycle: number }` | Step result |
+| Event           | Fires                         | Receives                                                     | Can Modify        |
+| --------------- | ----------------------------- | ------------------------------------------------------------ | ----------------- |
+| `prePlanner`    | Before the Planner runs       | `{ prompt: TepaPrompt, feedback?: string }`                  | Planner input     |
+| `postPlanner`   | After the Planner completes   | `Plan`                                                       | Plan              |
+| `preExecutor`   | Before the Executor runs      | `{ plan, prompt, cycle, scratchpad, previousResults? }`      | Executor input    |
+| `postExecutor`  | After the Executor completes  | `ExecutorOutput`                                             | Executor output   |
+| `preEvaluator`  | Before the Evaluator runs     | `{ prompt, results, scratchpad }`                            | Evaluator input   |
+| `postEvaluator` | After the Evaluator completes | `EvaluationResult`                                           | Evaluation result |
+| `preStep`       | Before each step executes     | `{ step: PlanStep, cycle: number }`                          | Step input        |
+| `postStep`      | After each step completes     | `{ step: PlanStep, result: ExecutionResult, cycle: number }` | Step result       |
 
 The pipeline flow with events:
 
@@ -358,7 +358,7 @@ Callbacks can be registered as either bare functions or `EventRegistration` obje
 ```typescript
 interface EventRegistration<T = unknown> {
   handler: EventCallback<T>;
-  continueOnError?: boolean;  // Default: false
+  continueOnError?: boolean; // Default: false
 }
 ```
 
@@ -367,16 +367,16 @@ interface EventRegistration<T = unknown> {
 
 ### 4.6 Usage Scenarios
 
-| Scenario | Event(s) | Approach |
-|---|---|---|
-| **Human-in-the-loop approval** | `postPlanner` | Callback presents the plan to a human, returns a Promise that resolves on approval. |
-| **Plan safety filter** | `postPlanner` | Callback inspects and removes/modifies steps with restricted tools. |
-| **Input enrichment** | `prePlanner` | Callback fetches additional context and appends it to the prompt. |
-| **Data cleanup** | `postExecutor` | Callback sanitizes or normalizes executor results before evaluation. |
-| **External logging** | `postEvaluator` | Callback sends the verdict to a monitoring system. |
-| **Custom termination** | `postEvaluator` | Callback forces abort based on custom business rules. |
-| **Step-level progress** | `preStep`, `postStep` | Callbacks emit real-time progress updates as each step starts and finishes. |
-| **Step-level filtering** | `preStep` | Callback can inspect or modify individual steps before execution. |
+| Scenario                       | Event(s)              | Approach                                                                            |
+| ------------------------------ | --------------------- | ----------------------------------------------------------------------------------- |
+| **Human-in-the-loop approval** | `postPlanner`         | Callback presents the plan to a human, returns a Promise that resolves on approval. |
+| **Plan safety filter**         | `postPlanner`         | Callback inspects and removes/modifies steps with restricted tools.                 |
+| **Input enrichment**           | `prePlanner`          | Callback fetches additional context and appends it to the prompt.                   |
+| **Data cleanup**               | `postExecutor`        | Callback sanitizes or normalizes executor results before evaluation.                |
+| **External logging**           | `postEvaluator`       | Callback sends the verdict to a monitoring system.                                  |
+| **Custom termination**         | `postEvaluator`       | Callback forces abort based on custom business rules.                               |
+| **Step-level progress**        | `preStep`, `postStep` | Callbacks emit real-time progress updates as each step starts and finishes.         |
+| **Step-level filtering**       | `preStep`             | Callback can inspect or modify individual steps before execution.                   |
 
 ---
 
@@ -431,38 +431,38 @@ The following tools are included in `@tepa/tools`:
 
 **File System**
 
-| Tool | Description |
-|------|-------------|
-| `file_read` | Read the contents of a file at a given path. Supports optional encoding parameter. |
-| `file_write` | Write content to a file at a given path. Creates parent directories if needed. |
+| Tool             | Description                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `file_read`      | Read the contents of a file at a given path. Supports optional encoding parameter.      |
+| `file_write`     | Write content to a file at a given path. Creates parent directories if needed.          |
 | `directory_list` | List files and subdirectories. Supports recursive traversal and configurable max depth. |
-| `file_search` | Find files matching a glob pattern within a directory tree. |
+| `file_search`    | Find files matching a glob pattern within a directory tree.                             |
 
 **Process Execution**
 
-| Tool | Description |
-|------|-------------|
+| Tool            | Description                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `shell_execute` | Run a shell command, capturing stdout, stderr, and exit code. Supports configurable timeout and working directory. |
 
 **Network**
 
-| Tool | Description |
-|------|-------------|
+| Tool           | Description                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `http_request` | Make an HTTP request (GET, POST, PUT, DELETE) with configurable URL, headers, query parameters, body, and timeout. |
-| `web_search` | Perform a web search query via a configurable API endpoint. Returns results with titles, URLs, and snippets. |
+| `web_search`   | Perform a web search query via a configurable API endpoint. Returns results with titles, URLs, and snippets.       |
 
 **Data Processing**
 
-| Tool | Description |
-|------|-------------|
+| Tool         | Description                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
 | `data_parse` | Parse structured data (JSON, CSV, YAML) from a string or file. Returns typed data structures. |
 
 **Pipeline Internal**
 
-| Tool | Description |
-|------|-------------|
-| `scratchpad` | Read or write to the pipeline's in-memory key-value scratchpad. Uses an `action` parameter (`"read"` or `"write"`) with `key` and optional `value`. |
-| `log_observe` | Record an observation or reasoning note to the pipeline's execution log. Supports log levels. |
+| Tool          | Description                                                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scratchpad`  | Read or write to the pipeline's in-memory key-value scratchpad. Uses an `action` parameter (`"read"` or `"write"`) with `key` and optional `value`. |
+| `log_observe` | Record an observation or reasoning note to the pipeline's execution log. Supports log levels.                                                       |
 
 ### 5.4 Third-Party Tools
 
@@ -505,7 +505,7 @@ interface LLMRequestOptions {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
-  tools?: ToolSchema[];     // For native tool use
+  tools?: ToolSchema[]; // For native tool use
 }
 
 interface LLMMessage {
@@ -517,12 +517,12 @@ interface LLMResponse {
   text: string;
   tokensUsed: { input: number; output: number };
   finishReason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use";
-  toolUse?: LLMToolUseBlock[];   // Present when finishReason is "tool_use"
+  toolUse?: LLMToolUseBlock[]; // Present when finishReason is "tool_use"
 }
 
 interface LLMToolUseBlock {
-  id: string;                    // Provider-assigned tool call ID
-  name: string;                  // Tool name
+  id: string; // Provider-assigned tool call ID
+  name: string; // Tool name
   input: Record<string, unknown>; // Parsed parameters
 }
 ```
@@ -540,11 +540,11 @@ All built-in providers extend `BaseLLMProvider`, which provides:
 
 ### 6.3 Built-in Providers
 
-| Provider | Package | Default Model | Notes |
-|----------|---------|---------------|-------|
-| **Anthropic** | `@tepa/provider-anthropic` | `claude-haiku-4-5` | Uses `@anthropic-ai/sdk`. 15-minute timeout. |
-| **OpenAI** | `@tepa/provider-openai` | `gpt-5-mini` | Uses OpenAI SDK Responses API. 15-minute timeout. |
-| **Gemini** | `@tepa/provider-gemini` | `gemini-3-flash-preview` | Uses `@google/genai` SDK. Supports system instructions. |
+| Provider      | Package                    | Default Model            | Notes                                                   |
+| ------------- | -------------------------- | ------------------------ | ------------------------------------------------------- |
+| **Anthropic** | `@tepa/provider-anthropic` | `claude-haiku-4-5`       | Uses `@anthropic-ai/sdk`. 15-minute timeout.            |
+| **OpenAI**    | `@tepa/provider-openai`    | `gpt-5-mini`             | Uses OpenAI SDK Responses API. 15-minute timeout.       |
+| **Gemini**    | `@tepa/provider-gemini`    | `gemini-3-flash-preview` | Uses `@google/genai` SDK. Supports system instructions. |
 
 ---
 
@@ -558,26 +558,26 @@ Configuration governs operational boundaries and behavioral parameters for the p
 interface TepaConfig {
   model: ModelConfig;
   limits: LimitsConfig;
-  tools: string[];          // Reserved for future use
+  tools: string[]; // Reserved for future use
   logging: LoggingConfig;
 }
 
 interface ModelConfig {
-  planner: string;          // Model for planning phase
-  executor: string;         // Default model for step execution
-  evaluator: string;        // Model for evaluation phase
+  planner: string; // Model for planning phase
+  executor: string; // Default model for step execution
+  evaluator: string; // Model for evaluation phase
 }
 
 interface LimitsConfig {
-  maxCycles: number;        // Max pipeline cycles
-  maxTokens: number;        // Total token budget across all cycles
-  toolTimeout: number;      // Default timeout for tool executions (ms)
-  retryAttempts: number;    // Retry count for transient errors
+  maxCycles: number; // Max pipeline cycles
+  maxTokens: number; // Total token budget across all cycles
+  toolTimeout: number; // Default timeout for tool executions (ms)
+  retryAttempts: number; // Retry count for transient errors
 }
 
 interface LoggingConfig {
   level: "minimal" | "standard" | "verbose";
-  output?: string;          // Optional log file path
+  output?: string; // Optional log file path
 }
 ```
 
@@ -607,11 +607,11 @@ Callers provide a `DeepPartial<TepaConfig>` — only overriding fields they want
 
 ### 7.4 Logging Levels
 
-| Level | Behavior |
-|-------|----------|
-| `minimal` | No console output |
+| Level      | Behavior                                                 |
+| ---------- | -------------------------------------------------------- |
+| `minimal`  | No console output                                        |
 | `standard` | Cycle/step/tool info (plan size, success rates, verdict) |
-| `verbose` | Standard + durations and token counts |
+| `verbose`  | Standard + durations and token counts                    |
 
 ### 7.5 Termination Conditions
 
@@ -632,15 +632,15 @@ The prompt is the sole input from the caller. It is a structured `TepaPrompt` ob
 
 ```typescript
 interface TepaPrompt {
-  goal: string;                              // What should be accomplished
-  context: Record<string, unknown>;          // Supporting information (free-form)
+  goal: string; // What should be accomplished
+  context: Record<string, unknown>; // Supporting information (free-form)
   expectedOutput: string | ExpectedOutput[]; // Desired outputs
 }
 
 interface ExpectedOutput {
-  path?: string;           // File path (for file outputs)
-  description: string;     // What should be produced
-  criteria?: string[];     // Acceptance criteria
+  path?: string; // File path (for file outputs)
+  description: string; // What should be produced
+  criteria?: string[]; // Acceptance criteria
 }
 ```
 
@@ -689,14 +689,14 @@ class Scratchpad {
 
 Tepa defines a custom error hierarchy for structured error handling:
 
-| Error Class | Purpose |
-|-------------|---------|
-| `TepaError` | Base class for all pipeline errors |
-| `TepaConfigError` | Configuration validation failures |
-| `TepaPromptError` | Prompt validation failures |
-| `TepaToolError` | Tool-related errors |
-| `TepaCycleError` | Pipeline execution errors (plan parsing, tool references, circular dependencies) |
-| `TepaTokenBudgetExceeded` | Token limit exceeded (carries `tokensUsed` and `tokenBudget`) |
+| Error Class               | Purpose                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `TepaError`               | Base class for all pipeline errors                                               |
+| `TepaConfigError`         | Configuration validation failures                                                |
+| `TepaPromptError`         | Prompt validation failures                                                       |
+| `TepaToolError`           | Tool-related errors                                                              |
+| `TepaCycleError`          | Pipeline execution errors (plan parsing, tool references, circular dependencies) |
+| `TepaTokenBudgetExceeded` | Token limit exceeded (carries `tokensUsed` and `tokenBudget`)                    |
 
 ### 10.1 Token Tracking
 

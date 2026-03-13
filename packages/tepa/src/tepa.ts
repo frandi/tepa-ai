@@ -132,15 +132,8 @@ export class Tepa {
       this.config.model.planner,
       this.config.model,
     );
-    const executor = new Executor(
-      registry,
-      this.provider,
-      this.config.model.executor,
-    );
-    const evaluator = new Evaluator(
-      this.provider,
-      this.config.model.evaluator,
-    );
+    const executor = new Executor(registry, this.provider, this.config.model.executor);
+    const evaluator = new Evaluator(this.provider, this.config.model.evaluator);
 
     const allLogs: LogEntry[] = [];
     let feedback: string | undefined;
@@ -174,7 +167,7 @@ export class Tepa {
           message: `Plan generated with ${planResult.plan.steps.length} steps (${planResult.tokensUsed} tokens)`,
         });
 
-        let plan = await eventBus.run("postPlanner", planResult.plan, cycleMeta);
+        const plan = await eventBus.run("postPlanner", planResult.plan, cycleMeta);
 
         // --- Executor ---
         let executorInput: ExecutorInput = {
@@ -205,20 +198,19 @@ export class Tepa {
           message: `Execution complete: ${executorOutput.results.filter((r) => r.status === "success").length}/${executorOutput.results.length} steps succeeded (${executorOutput.tokensUsed} tokens)`,
         });
 
-        let executorResult = await eventBus.run(
-          "postExecutor",
-          executorOutput,
-          cycleMeta,
-        );
+        const executorResult = await eventBus.run("postExecutor", executorOutput, cycleMeta);
         lastResults = executorResult.results;
 
         // Write execution summary to scratchpad so the planner has context on re-planning
-        scratchpad.write("_execution_summary", lastResults.map((r) => ({
-          stepId: r.stepId,
-          status: r.status,
-          output: r.output,
-          ...(r.error ? { error: r.error } : {}),
-        })));
+        scratchpad.write(
+          "_execution_summary",
+          lastResults.map((r) => ({
+            stepId: r.stepId,
+            status: r.status,
+            output: r.output,
+            ...(r.error ? { error: r.error } : {}),
+          })),
+        );
 
         // --- Evaluator ---
         let evaluatorInput: EvaluatorInput = {
@@ -226,11 +218,7 @@ export class Tepa {
           results: executorResult.results,
           scratchpad,
         };
-        evaluatorInput = await eventBus.run(
-          "preEvaluator",
-          evaluatorInput,
-          cycleMeta,
-        );
+        evaluatorInput = await eventBus.run("preEvaluator", evaluatorInput, cycleMeta);
 
         const evaluation = await evaluator.evaluate(
           evaluatorInput.prompt,
@@ -244,11 +232,7 @@ export class Tepa {
           message: `Evaluation: ${evaluation.verdict} (confidence: ${evaluation.confidence}, ${evaluation.tokensUsed} tokens)`,
         });
 
-        lastEvaluation = await eventBus.run(
-          "postEvaluator",
-          evaluation,
-          cycleMeta,
-        );
+        lastEvaluation = await eventBus.run("postEvaluator", evaluation, cycleMeta);
 
         if (lastEvaluation.verdict === "pass") {
           return {

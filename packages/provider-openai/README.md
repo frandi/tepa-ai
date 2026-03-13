@@ -25,7 +25,9 @@ import { Tepa } from "@tepa/core";
 import { OpenAIProvider } from "@tepa/provider-openai";
 
 const tepa = new Tepa({
-  tools: [/* ... */],
+  tools: [
+    /* ... */
+  ],
   provider: new OpenAIProvider(),
 });
 ```
@@ -34,8 +36,8 @@ const tepa = new Tepa({
 
 ```typescript
 const provider = new OpenAIProvider({
-  apiKey: "sk-...",       // Defaults to OPENAI_API_KEY env var
-  maxRetries: 3,          // Default: 3
+  apiKey: "sk-...", // Defaults to OPENAI_API_KEY env var
+  maxRetries: 3, // Default: 3
   retryBaseDelayMs: 1000, // Base delay for exponential backoff
 });
 ```

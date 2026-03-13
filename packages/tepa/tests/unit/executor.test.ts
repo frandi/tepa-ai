@@ -11,7 +11,12 @@ import type {
   TepaPrompt,
 } from "@tepa/types";
 import type { CycleMetadata } from "@tepa/types";
-import { Executor, type ExecutionContext, _topoSort, _filterOutputsByDependencies } from "../../src/core/executor.js";
+import {
+  Executor,
+  type ExecutionContext,
+  _topoSort,
+  _filterOutputsByDependencies,
+} from "../../src/core/executor.js";
 import { Scratchpad } from "../../src/core/scratchpad.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
@@ -85,11 +90,13 @@ function createMockRegistry(tools: ToolDefinition[]): ToolRegistry {
     get: vi.fn((name: string) => toolMap.get(name)),
     list: vi.fn(() => [...toolMap.values()]),
     toSchema: vi.fn(() =>
-      tools.map((t): ToolSchema => ({
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters,
-      })),
+      tools.map(
+        (t): ToolSchema => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+        }),
+      ),
     ),
   };
 }
@@ -255,9 +262,7 @@ describe("Executor", () => {
         ],
       };
 
-      const provider = createMockProvider([
-        makeToolUseResponse("failing_tool", {}),
-      ]);
+      const provider = createMockProvider([makeToolUseResponse("failing_tool", {})]);
 
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
@@ -283,9 +288,7 @@ describe("Executor", () => {
       };
 
       // LLM returns a text response with no tool_use blocks
-      const provider = createMockProvider([
-        makeResponse("I cannot call the tool"),
-      ]);
+      const provider = createMockProvider([makeResponse("I cannot call the tool")]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
@@ -351,9 +354,7 @@ describe("Executor", () => {
 
       expect(results).toHaveLength(2);
       expect(results[0]!.status).toBe("success");
-      expect(results[0]!.output).toBe(
-        "The project has a src/ directory with utils/ subfolder.",
-      );
+      expect(results[0]!.output).toBe("The project has a src/ directory with utils/ subfolder.");
       expect(results[1]!.status).toBe("success");
     });
 
@@ -381,7 +382,10 @@ describe("Executor", () => {
 
       const provider = createMockProvider([
         makeResponse("Write a greeting function"),
-        makeToolUseResponse("file_write", { path: "/tmp/greet.ts", content: "export function greet() {}" }),
+        makeToolUseResponse("file_write", {
+          path: "/tmp/greet.ts",
+          content: "export function greet() {}",
+        }),
       ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
@@ -482,9 +486,21 @@ describe("Executor", () => {
   describe("topoSort", () => {
     it("sorts steps so dependencies execute first regardless of array order", () => {
       const steps = [
-        { id: "step_2", description: "B", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+        {
+          id: "step_2",
+          description: "B",
+          tools: [],
+          expectedOutcome: "",
+          dependencies: ["step_1"],
+        },
         { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: [] },
-        { id: "step_3", description: "C", tools: [], expectedOutcome: "", dependencies: ["step_2"] },
+        {
+          id: "step_3",
+          description: "C",
+          tools: [],
+          expectedOutcome: "",
+          dependencies: ["step_2"],
+        },
       ];
 
       const sorted = _topoSort(steps);
@@ -495,8 +511,20 @@ describe("Executor", () => {
 
     it("throws TepaCycleError for circular dependencies", () => {
       const steps = [
-        { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: ["step_2"] },
-        { id: "step_2", description: "B", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+        {
+          id: "step_1",
+          description: "A",
+          tools: [],
+          expectedOutcome: "",
+          dependencies: ["step_2"],
+        },
+        {
+          id: "step_2",
+          description: "B",
+          tools: [],
+          expectedOutcome: "",
+          dependencies: ["step_1"],
+        },
       ];
 
       expect(() => _topoSort(steps)).toThrow(TepaCycleError);
@@ -504,7 +532,13 @@ describe("Executor", () => {
 
     it("detects self-dependency as a cycle", () => {
       const steps = [
-        { id: "step_1", description: "A", tools: [], expectedOutcome: "", dependencies: ["step_1"] },
+        {
+          id: "step_1",
+          description: "A",
+          tools: [],
+          expectedOutcome: "",
+          dependencies: ["step_1"],
+        },
       ];
 
       expect(() => _topoSort(steps)).toThrow(TepaCycleError);
@@ -518,7 +552,13 @@ describe("Executor", () => {
         ["step_2", "output2"],
         ["step_3", "output3"],
       ]);
-      const step = { id: "step_4", description: "", tools: [], expectedOutcome: "", dependencies: ["step_2"] };
+      const step = {
+        id: "step_4",
+        description: "",
+        tools: [],
+        expectedOutcome: "",
+        dependencies: ["step_2"],
+      };
 
       const scoped = _filterOutputsByDependencies(step, allOutputs);
       expect(scoped.size).toBe(1);
@@ -528,7 +568,13 @@ describe("Executor", () => {
 
     it("returns empty map for steps with no dependencies", () => {
       const allOutputs = new Map<string, unknown>([["step_1", "output1"]]);
-      const step = { id: "step_2", description: "", tools: [], expectedOutcome: "", dependencies: [] };
+      const step = {
+        id: "step_2",
+        description: "",
+        tools: [],
+        expectedOutcome: "",
+        dependencies: [],
+      };
 
       const scoped = _filterOutputsByDependencies(step, allOutputs);
       expect(scoped.size).toBe(0);
@@ -541,9 +587,27 @@ describe("Executor", () => {
         reasoning: "Three steps, step_3 only depends on step_2",
         estimatedTokens: 300,
         steps: [
-          { id: "step_1", description: "First", tools: [], expectedOutcome: "Result 1", dependencies: [] },
-          { id: "step_2", description: "Second", tools: [], expectedOutcome: "Result 2", dependencies: ["step_1"] },
-          { id: "step_3", description: "Third", tools: [], expectedOutcome: "Result 3", dependencies: ["step_2"] },
+          {
+            id: "step_1",
+            description: "First",
+            tools: [],
+            expectedOutcome: "Result 1",
+            dependencies: [],
+          },
+          {
+            id: "step_2",
+            description: "Second",
+            tools: [],
+            expectedOutcome: "Result 2",
+            dependencies: ["step_1"],
+          },
+          {
+            id: "step_3",
+            description: "Third",
+            tools: [],
+            expectedOutcome: "Result 3",
+            dependencies: ["step_2"],
+          },
         ],
       };
 
@@ -569,15 +633,24 @@ describe("Executor", () => {
         reasoning: "Independent step",
         estimatedTokens: 100,
         steps: [
-          { id: "step_1", description: "First", tools: [], expectedOutcome: "R1", dependencies: [] },
-          { id: "step_2", description: "Second", tools: [], expectedOutcome: "R2", dependencies: [] },
+          {
+            id: "step_1",
+            description: "First",
+            tools: [],
+            expectedOutcome: "R1",
+            dependencies: [],
+          },
+          {
+            id: "step_2",
+            description: "Second",
+            tools: [],
+            expectedOutcome: "R2",
+            dependencies: [],
+          },
         ],
       };
 
-      const provider = createMockProvider([
-        makeResponse("output1"),
-        makeResponse("output2"),
-      ]);
+      const provider = createMockProvider([makeResponse("output1"), makeResponse("output2")]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       await executor.execute(plan, makeContext());
@@ -594,7 +667,9 @@ describe("Executor", () => {
         name: "fail_tool",
         description: "Fails",
         parameters: {},
-        execute: vi.fn(async () => { throw new Error("Boom"); }),
+        execute: vi.fn(async () => {
+          throw new Error("Boom");
+        }),
       };
       const failRegistry = createMockRegistry([failingTool, fileWriteTool]);
 
@@ -602,14 +677,24 @@ describe("Executor", () => {
         reasoning: "step_2 depends on failing step_1",
         estimatedTokens: 200,
         steps: [
-          { id: "step_1", description: "Will fail", tools: ["fail_tool"], expectedOutcome: "N/A", dependencies: [] },
-          { id: "step_2", description: "Depends on step_1", tools: ["file_write"], expectedOutcome: "File created", dependencies: ["step_1"] },
+          {
+            id: "step_1",
+            description: "Will fail",
+            tools: ["fail_tool"],
+            expectedOutcome: "N/A",
+            dependencies: [],
+          },
+          {
+            id: "step_2",
+            description: "Depends on step_1",
+            tools: ["file_write"],
+            expectedOutcome: "File created",
+            dependencies: ["step_1"],
+          },
         ],
       };
 
-      const provider = createMockProvider([
-        makeToolUseResponse("fail_tool", {}),
-      ]);
+      const provider = createMockProvider([makeToolUseResponse("fail_tool", {})]);
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());
 
@@ -629,7 +714,13 @@ describe("Executor", () => {
         reasoning: "Single step",
         estimatedTokens: 100,
         steps: [
-          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "File created", dependencies: [] },
+          {
+            id: "step_1",
+            description: "Write file",
+            tools: ["file_write"],
+            expectedOutcome: "File created",
+            dependencies: [],
+          },
         ],
       };
 
@@ -667,7 +758,13 @@ describe("Executor", () => {
         reasoning: "No events",
         estimatedTokens: 100,
         steps: [
-          { id: "step_1", description: "Write", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+          {
+            id: "step_1",
+            description: "Write",
+            tools: ["file_write"],
+            expectedOutcome: "Done",
+            dependencies: [],
+          },
         ],
       };
 
@@ -757,9 +854,7 @@ describe("Executor", () => {
         ],
       };
 
-      const provider = createMockProvider([
-        makeToolUseResponse("fail_tool", {}),
-      ]);
+      const provider = createMockProvider([makeToolUseResponse("fail_tool", {})]);
       const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
       const { logs } = await executor.execute(plan, makeContext());
 
@@ -774,7 +869,13 @@ describe("Executor", () => {
         reasoning: "Test tool schema passing",
         estimatedTokens: 100,
         steps: [
-          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+          {
+            id: "step_1",
+            description: "Write file",
+            tools: ["file_write"],
+            expectedOutcome: "Done",
+            dependencies: [],
+          },
         ],
       };
 
@@ -798,16 +899,24 @@ describe("Executor", () => {
         reasoning: "Test wrong tool name",
         estimatedTokens: 100,
         steps: [
-          { id: "step_1", description: "Write file", tools: ["file_write"], expectedOutcome: "Done", dependencies: [] },
+          {
+            id: "step_1",
+            description: "Write file",
+            tools: ["file_write"],
+            expectedOutcome: "Done",
+            dependencies: [],
+          },
         ],
       };
 
-      const provider = createMockProvider([{
-        text: "",
-        tokensUsed: { input: 20, output: 30 },
-        finishReason: "tool_use" as const,
-        toolUse: [{ id: "call_1", name: "wrong_tool", input: {} }],
-      }]);
+      const provider = createMockProvider([
+        {
+          text: "",
+          tokensUsed: { input: 20, output: 30 },
+          finishReason: "tool_use" as const,
+          toolUse: [{ id: "call_1", name: "wrong_tool", input: {} }],
+        },
+      ]);
 
       const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
       const { results } = await executor.execute(plan, makeContext());

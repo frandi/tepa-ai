@@ -14,7 +14,10 @@ describe("file_search tool", () => {
     const result = await fileSearchTool.execute({ pattern: "**/*.ts" });
 
     expect(result).toEqual(["src/index.ts", "src/utils.ts"]);
-    expect(glob).toHaveBeenCalledWith("**/*.ts", { cwd: expect.stringMatching(/^\//), nodir: true });
+    expect(glob).toHaveBeenCalledWith("**/*.ts", {
+      cwd: expect.stringMatching(/^\//),
+      nodir: true,
+    });
   });
 
   it("should use custom cwd", async () => {

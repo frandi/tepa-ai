@@ -14,11 +14,11 @@ All providers that extend `BaseLLMProvider` accept these options:
 
 ```typescript
 const provider = new AnthropicProvider({
-  maxRetries: 3,            // retry attempts on transient failures (default: 3)
-  retryBaseDelayMs: 1000,   // base delay for exponential backoff (default: 1000)
-  defaultLog: true,         // enable file logging (default: true)
-  logDir: ".tepa/logs",     // directory for log files (default: ".tepa/logs")
-  includeContent: false,    // include full message content in logs (default: false)
+  maxRetries: 3, // retry attempts on transient failures (default: 3)
+  retryBaseDelayMs: 1000, // base delay for exponential backoff (default: 1000)
+  defaultLog: true, // enable file logging (default: true)
+  logDir: ".tepa/logs", // directory for log files (default: ".tepa/logs")
+  includeContent: false, // include full message content in logs (default: false)
 });
 ```
 
@@ -31,7 +31,28 @@ Every LLM call is automatically logged as a structured `LLMLogEntry` containing 
 By default, logs are written as JSONL to `.tepa/logs/llm-<timestamp>.jsonl`. Each line is a JSON object:
 
 ```jsonl
-{"timestamp":"2026-03-09T10:00:00.000Z","provider":"anthropic","status":"success","durationMs":1200,"attempt":0,"request":{"model":"claude-sonnet-4-20250514","messageCount":3,"totalCharLength":850,"promptPreview":"Generate a project plan...","hasSystemPrompt":true},"response":{"text":"Here is the plan...","tokensUsed":{"input":200,"output":150},"finishReason":"end_turn"}}
+{
+  "timestamp": "2026-03-09T10:00:00.000Z",
+  "provider": "anthropic",
+  "status": "success",
+  "durationMs": 1200,
+  "attempt": 0,
+  "request": {
+    "model": "claude-sonnet-4-20250514",
+    "messageCount": 3,
+    "totalCharLength": 850,
+    "promptPreview": "Generate a project plan...",
+    "hasSystemPrompt": true
+  },
+  "response": {
+    "text": "Here is the plan...",
+    "tokensUsed": {
+      "input": 200,
+      "output": 150
+    },
+    "finishReason": "end_turn"
+  }
+}
 ```
 
 You can customize the log directory or disable file logging entirely:
@@ -96,9 +117,9 @@ provider.onLog(consoleLogCallback);
 
 ### Built-in Log Callbacks
 
-| Export | Description |
-|---|---|
-| `consoleLogCallback` | Prints a human-readable summary to `console.log` |
+| Export                  | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `consoleLogCallback`    | Prints a human-readable summary to `console.log`              |
 | `createFileLogWriter()` | Creates a JSONL file writer (used internally by `defaultLog`) |
 
 ### Accessing Log History
@@ -106,8 +127,8 @@ provider.onLog(consoleLogCallback);
 All log entries are kept in memory and can be retrieved:
 
 ```typescript
-const entries = provider.getLogEntries();    // all entries as an array
-const logFile = provider.getLogFilePath();   // path to JSONL file (if file logging enabled)
+const entries = provider.getLogEntries(); // all entries as an array
+const logFile = provider.getLogFilePath(); // path to JSONL file (if file logging enabled)
 ```
 
 ### LLMLogEntry Shape
@@ -125,17 +146,17 @@ interface LLMLogEntry {
     totalCharLength: number;
     promptPreview: string;
     hasSystemPrompt: boolean;
-    hasTools?: boolean;              // true when tool schemas were passed
+    hasTools?: boolean; // true when tool schemas were passed
     maxTokens?: number;
     temperature?: number;
-    messages?: LLMMessage[];       // only when includeContent: true
-    systemPrompt?: string;         // only when includeContent: true
+    messages?: LLMMessage[]; // only when includeContent: true
+    systemPrompt?: string; // only when includeContent: true
   };
   response?: {
     text: string;
     tokensUsed: { input: number; output: number };
     finishReason: string;
-    toolUseCount?: number;          // number of tool calls in the response
+    toolUseCount?: number; // number of tool calls in the response
   };
   error?: {
     message: string;

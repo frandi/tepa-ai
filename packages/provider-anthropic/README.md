@@ -34,7 +34,9 @@ import { Tepa } from "@tepa/core";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const tepa = new Tepa({
-  tools: [/* ... */],
+  tools: [
+    /* ... */
+  ],
   provider: new AnthropicProvider(),
 });
 ```
@@ -43,9 +45,9 @@ const tepa = new Tepa({
 
 ```typescript
 const provider = new AnthropicProvider({
-  apiKey: "sk-ant-...",        // defaults to ANTHROPIC_API_KEY env var
-  maxRetries: 3,               // retry attempts on transient failures (default: 3)
-  retryBaseDelayMs: 1000,      // base delay for exponential backoff (default: 1000)
+  apiKey: "sk-ant-...", // defaults to ANTHROPIC_API_KEY env var
+  maxRetries: 3, // retry attempts on transient failures (default: 3)
+  retryBaseDelayMs: 1000, // base delay for exponential backoff (default: 1000)
 });
 ```
 
