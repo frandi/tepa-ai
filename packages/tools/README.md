@@ -12,12 +12,7 @@ npm install @tepa/tools
 
 ```typescript
 import { Tepa } from "@tepa/core";
-import {
-  fileReadTool,
-  fileWriteTool,
-  directoryListTool,
-  shellExecuteTool,
-} from "@tepa/tools";
+import { fileReadTool, fileWriteTool, directoryListTool, shellExecuteTool } from "@tepa/tools";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const tepa = new Tepa({
@@ -30,33 +25,33 @@ const tepa = new Tepa({
 
 ### File System
 
-| Tool | Description |
-|------|-------------|
-| `fileReadTool` | Read file contents. Supports optional encoding parameter |
-| `fileWriteTool` | Write content to a file. Creates parent directories if needed |
+| Tool                | Description                                                            |
+| ------------------- | ---------------------------------------------------------------------- |
+| `fileReadTool`      | Read file contents. Supports optional encoding parameter               |
+| `fileWriteTool`     | Write content to a file. Creates parent directories if needed          |
 | `directoryListTool` | List files and directories. Supports recursive traversal and max depth |
-| `fileSearchTool` | Find files matching a glob pattern within a directory |
+| `fileSearchTool`    | Find files matching a glob pattern within a directory                  |
 
 ### Execution
 
-| Tool | Description |
-|------|-------------|
+| Tool               | Description                                                 |
+| ------------------ | ----------------------------------------------------------- |
 | `shellExecuteTool` | Run a shell command. Captures stdout, stderr, and exit code |
-| `httpRequestTool` | Make HTTP requests (GET, POST, PUT, DELETE) |
-| `webSearchTool` | Perform a web search via configurable API endpoint |
+| `httpRequestTool`  | Make HTTP requests (GET, POST, PUT, DELETE)                 |
+| `webSearchTool`    | Perform a web search via configurable API endpoint          |
 
 ### Data Processing
 
-| Tool | Description |
-|------|-------------|
+| Tool            | Description                                                 |
+| --------------- | ----------------------------------------------------------- |
 | `dataParseTool` | Parse structured data (JSON, CSV, YAML) from string or file |
 
 ### Pipeline Internal
 
-| Tool | Description |
-|------|-------------|
+| Tool             | Description                                |
+| ---------------- | ------------------------------------------ |
 | `scratchpadTool` | Read/write to an in-memory key-value store |
-| `logObserveTool` | Record observations to the execution log |
+| `logObserveTool` | Record observations to the execution log   |
 
 ## Custom Tools
 

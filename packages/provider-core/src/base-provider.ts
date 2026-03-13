@@ -79,10 +79,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
     return this._logFilePath;
   }
 
-  async complete(
-    messages: LLMMessage[],
-    options: LLMRequestOptions,
-  ): Promise<LLMResponse> {
+  async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse> {
     const requestInfo = this.buildRequestInfo(messages, options);
     let lastError: unknown;
 

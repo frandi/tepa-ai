@@ -1,8 +1,4 @@
-import type {
-  ToolDefinition,
-  ToolRegistry,
-  ToolSchema,
-} from "@tepa/types";
+import type { ToolDefinition, ToolRegistry, ToolSchema } from "@tepa/types";
 
 export class ToolRegistryImpl implements ToolRegistry {
   private tools = new Map<string, ToolDefinition>();

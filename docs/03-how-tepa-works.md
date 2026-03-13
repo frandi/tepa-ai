@@ -40,10 +40,10 @@ If the verdict is `pass`, the pipeline returns. If `fail`, the evaluator's feedb
 
 The loop terminates when any of these conditions is met:
 
-| Condition | Result status |
-|---|---|
-| Evaluator returns `pass` | `"pass"` |
-| Max cycles exhausted (default: 5) | `"fail"` |
+| Condition                               | Result status  |
+| --------------------------------------- | -------------- |
+| Evaluator returns `pass`                | `"pass"`       |
+| Max cycles exhausted (default: 5)       | `"fail"`       |
 | Token budget exceeded (default: 64,000) | `"terminated"` |
 
 ## Planner
@@ -53,10 +53,12 @@ The Planner's job is to break a goal into a dependency-ordered sequence of steps
 ### What It Receives
 
 On the first cycle, the Planner receives:
+
 - The prompt (goal, context, expected output)
 - The full list of available tools with their parameter definitions
 
 On subsequent cycles (re-planning after failure), it also receives:
+
 - The evaluator's feedback explaining what went wrong
 - The current scratchpad state, including the `_execution_summary` from the previous cycle
 
@@ -72,12 +74,12 @@ interface Plan {
 }
 
 interface PlanStep {
-  id: string;               // e.g., "step_1"
-  description: string;      // what this step does
-  tools: string[];          // tool names to call (empty = reasoning step)
-  expectedOutcome: string;  // what success looks like for this step
-  dependencies: string[];   // IDs of steps that must complete first
-  model?: string;           // optional per-step model override
+  id: string; // e.g., "step_1"
+  description: string; // what this step does
+  tools: string[]; // tool names to call (empty = reasoning step)
+  expectedOutcome: string; // what success looks like for this step
+  dependencies: string[]; // IDs of steps that must complete first
+  model?: string; // optional per-step model override
 }
 ```
 
@@ -162,9 +164,9 @@ The evaluation message includes the goal, expected output, a summary of every st
 ```typescript
 interface EvaluationResult {
   verdict: "pass" | "fail";
-  confidence: number;     // 0.0 – 1.0
-  feedback?: string;      // required on fail — actionable explanation
-  summary?: string;       // optional on pass — brief description of success
+  confidence: number; // 0.0 – 1.0
+  feedback?: string; // required on fail — actionable explanation
+  summary?: string; // optional on pass — brief description of success
   tokensUsed: number;
 }
 ```
@@ -175,7 +177,7 @@ On `fail`, the `feedback` field contains an actionable description of what fell 
 
 The self-correction loop is the core of Tepa's reliability. Here's how state flows from a failed evaluation back to a successful re-plan:
 
-1. The Evaluator returns `verdict: "fail"` with feedback: *"The summary file was created but doesn't describe the src/utils directory."*
+1. The Evaluator returns `verdict: "fail"` with feedback: _"The summary file was created but doesn't describe the src/utils directory."_
 2. The orchestrator writes `_execution_summary` to the scratchpad (containing all step outputs and statuses from this cycle).
 3. On the next cycle, the Planner receives both the evaluator's feedback and the scratchpad.
 4. The Planner sees that most steps succeeded and the file was written — it only needs to re-read the missed directory and update the file. It produces a minimal revised plan.
@@ -193,11 +195,11 @@ The Scratchpad is an in-memory key-value store that persists across all steps an
 
 ```typescript
 class Scratchpad {
-  read(key: string): unknown
-  write(key: string, value: unknown): void
-  has(key: string): boolean
-  entries(): Record<string, unknown>
-  clear(): void
+  read(key: string): unknown;
+  write(key: string, value: unknown): void;
+  has(key: string): boolean;
+  entries(): Record<string, unknown>;
+  clear(): void;
 }
 ```
 
@@ -213,6 +215,7 @@ This persistence is what enables efficient self-correction. The revised Planner 
 ### Scratchpad Visibility
 
 The scratchpad contents are visible to all three components:
+
 - **Planner** (on re-plan cycles) — sees the full scratchpad including `_execution_summary`
 - **Executor** — each step sees the current scratchpad state in its context
 - **Evaluator** — sees the scratchpad when judging execution results
@@ -223,16 +226,16 @@ Eight lifecycle hooks let you observe, transform, or control the pipeline at eve
 
 ### The 8 Events
 
-| Event | Fires | Receives |
-|---|---|---|
-| `prePlanner` | Before the Planner runs | Prompt + feedback (if re-planning) |
-| `postPlanner` | After the Plan is generated | The `Plan` |
-| `preExecutor` | Before the Executor runs | Plan + prompt + cycle info + scratchpad |
-| `postExecutor` | After execution completes | Execution results + logs + token count |
-| `preEvaluator` | Before the Evaluator runs | Prompt + results + scratchpad |
-| `postEvaluator` | After evaluation completes | `EvaluationResult` |
-| `preStep` | Before each individual step | Step definition + cycle number |
-| `postStep` | After each individual step | Step definition + result + cycle number |
+| Event           | Fires                       | Receives                                |
+| --------------- | --------------------------- | --------------------------------------- |
+| `prePlanner`    | Before the Planner runs     | Prompt + feedback (if re-planning)      |
+| `postPlanner`   | After the Plan is generated | The `Plan`                              |
+| `preExecutor`   | Before the Executor runs    | Plan + prompt + cycle info + scratchpad |
+| `postExecutor`  | After execution completes   | Execution results + logs + token count  |
+| `preEvaluator`  | Before the Evaluator runs   | Prompt + results + scratchpad           |
+| `postEvaluator` | After evaluation completes  | `EvaluationResult`                      |
+| `preStep`       | Before each individual step | Step definition + cycle number          |
+| `postStep`      | After each individual step  | Step definition + result + cycle number |
 
 Every callback also receives a `CycleMetadata` object as its second argument:
 

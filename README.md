@@ -1,6 +1,6 @@
 # Tepa
 
-> *From Javanese tepa slira: the practice of self-reflection, measuring oneself against a standard before acting.*
+> _From Javanese tepa slira: the practice of self-reflection, measuring oneself against a standard before acting._
 
 **Tepa is a TypeScript framework for building AI agents that plan, execute, and self-correct.** It runs a cyclic loop of Planner, Executor, and Evaluator — your agent reasons about a goal, acts on it with tools, checks its own work, and retries until it gets it right.
 
@@ -26,7 +26,7 @@ const result = await tepa.run({
   expectedOutput: "A file at src/hello.ts that compiles without errors",
 });
 
-console.log(result.status);   // "pass" | "fail" | "terminated"
+console.log(result.status); // "pass" | "fail" | "terminated"
 console.log(result.feedback); // Summary or failure description
 ```
 
@@ -57,19 +57,19 @@ Core and tools are **siblings** — they depend on `@tepa/types` but not on each
 
 Full documentation lives in [`docs/`](./docs/index.md):
 
-| | Section | |
-|---|---|---|
-| **Learn** | [Introduction](./docs/01-introduction.md) | What Tepa is and who it's for |
-| | [Getting Started](./docs/02-getting-started.md) | Installation, first example, understanding results |
-| | [How Tepa Works](./docs/03-how-tepa-works.md) | The Plan-Execute-Evaluate cycle in depth |
-| **Build** | [Pipeline in Detail](./docs/04-pipeline-in-detail.md) | Prompt structure, lifecycle events, tool resolution |
-| | [Configuration](./docs/05-configuration.md) | Models, limits, logging |
-| | [Tool System](./docs/06-tool-system.md) | Built-in tools, custom tools, third-party packages |
-| | [Event System](./docs/07-event-system-patterns.md) | Human-in-the-loop, safety filters, monitoring |
-| | [LLM Providers](./docs/08-llm-providers.md) | Anthropic, OpenAI, Gemini, custom providers |
-| **Explore** | [Examples & Demos](./docs/09-examples-and-demos.md) | Runnable demos with walkthroughs |
-| **Reference** | [API Reference](./docs/11-api-reference.md) | Complete API surface |
-| | [Contributing](./docs/10-contributing.md) | Dev setup, conventions, PR guidelines |
+|               | Section                                               |                                                     |
+| ------------- | ----------------------------------------------------- | --------------------------------------------------- |
+| **Learn**     | [Introduction](./docs/01-introduction.md)             | What Tepa is and who it's for                       |
+|               | [Getting Started](./docs/02-getting-started.md)       | Installation, first example, understanding results  |
+|               | [How Tepa Works](./docs/03-how-tepa-works.md)         | The Plan-Execute-Evaluate cycle in depth            |
+| **Build**     | [Pipeline in Detail](./docs/04-pipeline-in-detail.md) | Prompt structure, lifecycle events, tool resolution |
+|               | [Configuration](./docs/05-configuration.md)           | Models, limits, logging                             |
+|               | [Tool System](./docs/06-tool-system.md)               | Built-in tools, custom tools, third-party packages  |
+|               | [Event System](./docs/07-event-system-patterns.md)    | Human-in-the-loop, safety filters, monitoring       |
+|               | [LLM Providers](./docs/08-llm-providers.md)           | Anthropic, OpenAI, Gemini, custom providers         |
+| **Explore**   | [Examples & Demos](./docs/09-examples-and-demos.md)   | Runnable demos with walkthroughs                    |
+| **Reference** | [API Reference](./docs/11-api-reference.md)           | Complete API surface                                |
+|               | [Contributing](./docs/10-contributing.md)             | Dev setup, conventions, PR guidelines               |
 
 ## Contributing
 

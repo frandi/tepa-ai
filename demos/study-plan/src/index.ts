@@ -13,12 +13,7 @@ dotenv.config({ path: path.join(demoRoot, ".env") });
 
 import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
-import {
-  fileReadTool,
-  fileWriteTool,
-  directoryListTool,
-  scratchpadTool,
-} from "@tepa/tools";
+import { fileReadTool, fileWriteTool, directoryListTool, scratchpadTool } from "@tepa/tools";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -56,12 +51,7 @@ async function main() {
 
   // Create the Tepa pipeline
   const tepa = new Tepa({
-    tools: [
-      fileReadTool,
-      fileWriteTool,
-      directoryListTool,
-      scratchpadTool,
-    ],
+    tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
     provider: new AnthropicProvider(),
     config: {
       limits: {
@@ -80,7 +70,9 @@ async function main() {
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
           const model = step.model ? ` [${step.model}]` : "";
-          console.log(`${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`);
+          console.log(
+            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
+          );
           if (result.error) {
             console.log(`${indent}  Error: ${result.error}`);
           }
@@ -131,7 +123,9 @@ async function main() {
           // Human-in-the-loop: ask for plan approval
           const answer = await ask("\nDo you approve this plan? (yes/no): ");
           if (answer !== "yes" && answer !== "y") {
-            console.log("  [Note] Plan revision is not yet supported. Continuing with current plan.\n");
+            console.log(
+              "  [Note] Plan revision is not yet supported. Continuing with current plan.\n",
+            );
           }
         },
       ],

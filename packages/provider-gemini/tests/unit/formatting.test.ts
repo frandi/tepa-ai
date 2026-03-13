@@ -6,17 +6,13 @@ describe("toGeminiContents", () => {
   it("converts a single user message", () => {
     const messages: LLMMessage[] = [{ role: "user", content: "Hello" }];
     const result = toGeminiContents(messages);
-    expect(result).toEqual([
-      { role: "user", parts: [{ text: "Hello" }] },
-    ]);
+    expect(result).toEqual([{ role: "user", parts: [{ text: "Hello" }] }]);
   });
 
   it("maps assistant role to model", () => {
     const messages: LLMMessage[] = [{ role: "assistant", content: "Hi there" }];
     const result = toGeminiContents(messages);
-    expect(result).toEqual([
-      { role: "model", parts: [{ text: "Hi there" }] },
-    ]);
+    expect(result).toEqual([{ role: "model", parts: [{ text: "Hi there" }] }]);
   });
 
   it("converts a multi-turn conversation", () => {

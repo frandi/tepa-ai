@@ -1,6 +1,6 @@
 # Tepa — Requirements Document
 
-> *Tepa* — from Javanese *tepa slira*: the practice of self-reflection, measuring oneself against a standard before acting. An agent that doesn't just execute, but reflects, evaluates, and refines.
+> _Tepa_ — from Javanese _tepa slira_: the practice of self-reflection, measuring oneself against a standard before acting. An agent that doesn't just execute, but reflects, evaluates, and refines.
 
 ## 1. Overview
 
@@ -24,7 +24,7 @@ The Planner is the strategic brain of the pipeline. It receives the initial prom
 - Break the goal down into discrete, ordered steps that the Executor can act on.
 - Assign appropriate tools to each step based on the available tool registry.
 - Estimate resource usage (token budget, expected cycles) for the plan.
-- On subsequent cycles, receive evaluator feedback and produce a *minimal revised plan* — fixing only what failed rather than regenerating the entire plan from scratch.
+- On subsequent cycles, receive evaluator feedback and produce a _minimal revised plan_ — fixing only what failed rather than regenerating the entire plan from scratch.
 
 **Inputs:**
 
@@ -190,14 +190,14 @@ The Event System introduces lifecycle hooks around each core component, giving c
 
 There are six event points — a **pre** and **post** event for each core component:
 
-| Event | Fires | Receives | Can Modify |
-|---|---|---|---|
-| `prePlanner` | Before the Planner runs | Planner input (prompt or feedback, tool registry, config, scratchpad) | Planner input |
-| `postPlanner` | After the Planner completes | Planner output (the generated plan) | Planner output |
-| `preExecutor` | Before the Executor runs | Executor input (plan, tool registry, scratchpad) | Executor input |
-| `postExecutor` | After the Executor completes | Executor output (step results, updated scratchpad, resource metrics) | Executor output |
-| `preEvaluator` | Before the Evaluator runs | Evaluator input (executor results, original prompt, scratchpad, resource metrics) | Evaluator input |
-| `postEvaluator` | After the Evaluator completes | Evaluator output (verdict, feedback or final output) | Evaluator output |
+| Event           | Fires                         | Receives                                                                          | Can Modify       |
+| --------------- | ----------------------------- | --------------------------------------------------------------------------------- | ---------------- |
+| `prePlanner`    | Before the Planner runs       | Planner input (prompt or feedback, tool registry, config, scratchpad)             | Planner input    |
+| `postPlanner`   | After the Planner completes   | Planner output (the generated plan)                                               | Planner output   |
+| `preExecutor`   | Before the Executor runs      | Executor input (plan, tool registry, scratchpad)                                  | Executor input   |
+| `postExecutor`  | After the Executor completes  | Executor output (step results, updated scratchpad, resource metrics)              | Executor output  |
+| `preEvaluator`  | Before the Evaluator runs     | Evaluator input (executor results, original prompt, scratchpad, resource metrics) | Evaluator input  |
+| `postEvaluator` | After the Evaluator completes | Evaluator output (verdict, feedback or final output)                              | Evaluator output |
 
 The pipeline flow with events:
 
@@ -254,15 +254,15 @@ When multiple callbacks are registered for the same event, they execute in **reg
 
 The event system is intentionally general-purpose. Example use cases:
 
-| Scenario | Event(s) | Approach |
-|---|---|---|
-| **Human-in-the-loop approval** | `postPlanner` | Callback presents the generated plan to a human, returns a Promise that resolves when the human approves (or rejects to abort). |
-| **Plan safety filter** | `postPlanner` | Callback inspects the plan and removes or modifies steps that invoke restricted tools. |
-| **Input enrichment** | `prePlanner` | Callback fetches additional context from an external system and appends it to the prompt. |
-| **Data cleanup** | `postExecutor` | Callback sanitizes or normalizes executor results before evaluation. |
-| **External logging / alerting** | `postEvaluator` | Callback sends the evaluation verdict to a monitoring system or notifies a Slack channel on failure. |
-| **Custom termination logic** | `postEvaluator` | Callback inspects the verdict and forces an abort based on custom business rules (e.g., "stop after 2 failures on the same step"). |
-| **Progress reporting** | Any pre/post event | Callback emits progress updates to a UI or dashboard at each stage of the pipeline. |
+| Scenario                        | Event(s)           | Approach                                                                                                                           |
+| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Human-in-the-loop approval**  | `postPlanner`      | Callback presents the generated plan to a human, returns a Promise that resolves when the human approves (or rejects to abort).    |
+| **Plan safety filter**          | `postPlanner`      | Callback inspects the plan and removes or modifies steps that invoke restricted tools.                                             |
+| **Input enrichment**            | `prePlanner`       | Callback fetches additional context from an external system and appends it to the prompt.                                          |
+| **Data cleanup**                | `postExecutor`     | Callback sanitizes or normalizes executor results before evaluation.                                                               |
+| **External logging / alerting** | `postEvaluator`    | Callback sends the evaluation verdict to a monitoring system or notifies a Slack channel on failure.                               |
+| **Custom termination logic**    | `postEvaluator`    | Callback inspects the verdict and forces an abort based on custom business rules (e.g., "stop after 2 failures on the same step"). |
+| **Progress reporting**          | Any pre/post event | Callback emits progress updates to a UI or dashboard at each stage of the pipeline.                                                |
 
 ---
 
@@ -402,15 +402,15 @@ Expected Output:
 
 **PLANNER** produces a 7-step plan:
 
-| Step | Action | Tools |
-|------|--------|-------|
-| 1 | Explore project structure and code style | `directory_list`, `file_read` |
-| 2 | Discover API endpoints by making sample requests | `http_request` |
-| 3 | Generate TypeScript type definitions from API responses | `file_write` |
-| 4 | Generate API client module matching project code style | `file_read`, `file_write` |
-| 5 | Generate test file | `file_write` |
-| 6 | Run the test suite | `shell_execute` |
-| 7 | Verify all tests pass | (Evaluator) |
+| Step | Action                                                  | Tools                         |
+| ---- | ------------------------------------------------------- | ----------------------------- |
+| 1    | Explore project structure and code style                | `directory_list`, `file_read` |
+| 2    | Discover API endpoints by making sample requests        | `http_request`                |
+| 3    | Generate TypeScript type definitions from API responses | `file_write`                  |
+| 4    | Generate API client module matching project code style  | `file_read`, `file_write`     |
+| 5    | Generate test file                                      | `file_write`                  |
+| 6    | Run the test suite                                      | `shell_execute`               |
+| 7    | Verify all tests pass                                   | (Evaluator)                   |
 
 **EXECUTOR** carries out each step:
 
@@ -421,25 +421,25 @@ Expected Output:
 - **Step 5**: Generates a test file with 4 test cases using vitest.
 - **Step 6**: Runs `npx vitest run src/api` — **tests fail**. The error indicates that `axios` is not properly initialized: `TypeError: Cannot read properties of undefined (reading 'get')`.
 
-The Executor logs the observation: *"Tests failed — axios instance not initialized. The client class is calling methods on axios directly instead of creating an instance with axios.create()."*
+The Executor logs the observation: _"Tests failed — axios instance not initialized. The client class is calling methods on axios directly instead of creating an instance with axios.create()."_
 
 **EVALUATOR** inspects:
 
 - Files exist: **types.ts** ✓, **jsonplaceholder.ts** ✓, **test file** ✓
 - Tests passing: ✗ — TypeError during execution.
 - Verdict: **FAIL**
-- Feedback: *"The client class does not initialize an axios instance in its constructor. The existing project pattern in src/utils/http.ts uses axios.create() with a baseURL. The client must follow this pattern. Only the client module needs to be fixed — types and tests are fine."*
+- Feedback: _"The client class does not initialize an axios instance in its constructor. The existing project pattern in src/utils/http.ts uses axios.create() with a baseURL. The client must follow this pattern. Only the client module needs to be fixed — types and tests are fine."_
 - Token usage: 3,800 / 10,000
 
 #### Cycle 2 — Self-Correction
 
 **PLANNER** receives the feedback and produces a minimal revised plan:
 
-| Step | Action | Tools |
-|------|--------|-------|
-| 1 | Re-read `src/utils/http.ts` for the exact axios pattern | `file_read` |
-| 2 | Rewrite the client module with proper axios initialization | `file_write` |
-| 3 | Re-run the test suite | `shell_execute` |
+| Step | Action                                                     | Tools           |
+| ---- | ---------------------------------------------------------- | --------------- |
+| 1    | Re-read `src/utils/http.ts` for the exact axios pattern    | `file_read`     |
+| 2    | Rewrite the client module with proper axios initialization | `file_write`    |
+| 3    | Re-run the test suite                                      | `shell_execute` |
 
 **EXECUTOR** carries out the fix:
 
@@ -512,16 +512,16 @@ Expected Output:
 
 **PLANNER** produces an 8-step plan:
 
-| Step | Action | Tools |
-|------|--------|-------|
-| 1 | Read and parse both CSV files | `file_read`, `data_parse` |
-| 2 | Compute class-wide metrics | `shell_execute` |
-| 3 | Compute per-subject trends over time | `shell_execute` |
-| 4 | Compute per-student metrics and flag at-risk students | `shell_execute` |
-| 5 | Analyze attendance-performance correlation | `shell_execute` |
-| 6 | Generate recommendations for flagged students | (LLM reasoning) |
-| 7 | Compile PDF report | `shell_execute`, `file_write` |
-| 8 | Export flagged students CSV | `file_write` |
+| Step | Action                                                | Tools                         |
+| ---- | ----------------------------------------------------- | ----------------------------- |
+| 1    | Read and parse both CSV files                         | `file_read`, `data_parse`     |
+| 2    | Compute class-wide metrics                            | `shell_execute`               |
+| 3    | Compute per-subject trends over time                  | `shell_execute`               |
+| 4    | Compute per-student metrics and flag at-risk students | `shell_execute`               |
+| 5    | Analyze attendance-performance correlation            | `shell_execute`               |
+| 6    | Generate recommendations for flagged students         | (LLM reasoning)               |
+| 7    | Compile PDF report                                    | `shell_execute`, `file_write` |
+| 8    | Export flagged students CSV                           | `file_write`                  |
 
 **EXECUTOR** carries out each step:
 
@@ -529,21 +529,21 @@ Expected Output:
 
 - **Step 2**: Runs a data analysis script. Results: class average 72.4%, median 74.1%, pass rate 82.1%, intervention zone 14.3%, failing 3.6%. Highest subject: Art (81.2%), lowest: Math (65.8%). Stored in scratchpad.
 
-- **Step 3**: Runs subject trend analysis. Identifies Math as declining over the semester (68.2% → 65.8%), English and Art as improving, and Science/History/PE as stable. Logs an observation: *"Math shows consistent decline — this is a systemic issue, not just individual students."*
+- **Step 3**: Runs subject trend analysis. Identifies Math as declining over the semester (68.2% → 65.8%), English and Art as improving, and Science/History/PE as stable. Logs an observation: _"Math shows consistent decline — this is a systemic issue, not just individual students."_
 
 - **Step 4**: Runs per-student analysis. Flags 5 students:
 
-  | Student | Overall | Urgency | Primary Concern |
-  |---------|---------|---------|-----------------|
-  | Liam Chen | 54.2% | High | Multi-subject failure + chronic absence |
-  | Sofia Rodriguez | 58.1% | High | Failing Math and Science |
-  | Jake Thompson | 62.8% | Medium | Isolated Math failure (51%) despite good attendance |
-  | Aisha Patel | 67.4% | Medium | Sharpest decline in class (78.2% → 67.4%) |
-  | Marcus Williams | 69.1% | Low | Math below threshold, rest adequate |
+  | Student         | Overall | Urgency | Primary Concern                                     |
+  | --------------- | ------- | ------- | --------------------------------------------------- |
+  | Liam Chen       | 54.2%   | High    | Multi-subject failure + chronic absence             |
+  | Sofia Rodriguez | 58.1%   | High    | Failing Math and Science                            |
+  | Jake Thompson   | 62.8%   | Medium  | Isolated Math failure (51%) despite good attendance |
+  | Aisha Patel     | 67.4%   | Medium  | Sharpest decline in class (78.2% → 67.4%)           |
+  | Marcus Williams | 69.1%   | Low     | Math below threshold, rest adequate                 |
 
   Also notes Noah Kim as the biggest improvement story (61.0% → 73.5%).
 
-- **Step 5**: Runs attendance-performance correlation analysis. Finds a correlation coefficient of 0.73 (strong positive). Attendance breakdown for flagged students reveals that Liam (68.9%) and Sofia (77.8%) have significant absences, while Jake (91.1%) and Marcus (93.3%) attend regularly — suggesting their Math struggles are comprehension-based, not engagement-based. Aisha's absences are increasing monthly (2 → 3 → 4 → 4), mirroring her grade decline. Logs: *"Aisha's rising absences mirror her grade decline — possible external factor."*
+- **Step 5**: Runs attendance-performance correlation analysis. Finds a correlation coefficient of 0.73 (strong positive). Attendance breakdown for flagged students reveals that Liam (68.9%) and Sofia (77.8%) have significant absences, while Jake (91.1%) and Marcus (93.3%) attend regularly — suggesting their Math struggles are comprehension-based, not engagement-based. Aisha's absences are increasing monthly (2 → 3 → 4 → 4), mirroring her grade decline. Logs: _"Aisha's rising absences mirror her grade decline — possible external factor."_
 
 - **Step 6**: Pure LLM reasoning step (no tool invocation). Generates tailored recommendations per student based on accumulated scratchpad data. Each recommendation set addresses the specific pattern discovered — attendance-driven interventions for Liam and Sofia, comprehension-focused support for Jake and Marcus, and a sensitive counselor-referral approach for Aisha. Also generates a class-wide recommendation to review Math curriculum pacing.
 
@@ -600,13 +600,13 @@ Ready for parent-teacher conferences.
 
 These two simulations validate that the pipeline architecture is domain-agnostic and behaviorally adaptive:
 
-| Characteristic | Scenario A (Code Gen) | Scenario B (Data Analysis) |
-|---|---|---|
-| Cycles needed | 2 (self-corrected) | 1 (first-pass success) |
-| Primary tools | file I/O, HTTP, shell | file I/O, shell, data parse |
-| LLM reasoning steps | 0 (all tool-driven) | 1 (recommendation generation) |
-| Scratchpad usage | Code style reference | Accumulated metrics across steps |
-| Evaluator strategy | Test execution pass/fail | Structural + qualitative checks |
-| Planner adaptation | Surgical 3-step fix in Cycle 2 | N/A (single cycle) |
+| Characteristic      | Scenario A (Code Gen)          | Scenario B (Data Analysis)       |
+| ------------------- | ------------------------------ | -------------------------------- |
+| Cycles needed       | 2 (self-corrected)             | 1 (first-pass success)           |
+| Primary tools       | file I/O, HTTP, shell          | file I/O, shell, data parse      |
+| LLM reasoning steps | 0 (all tool-driven)            | 1 (recommendation generation)    |
+| Scratchpad usage    | Code style reference           | Accumulated metrics across steps |
+| Evaluator strategy  | Test execution pass/fail       | Structural + qualitative checks  |
+| Planner adaptation  | Surgical 3-step fix in Cycle 2 | N/A (single cycle)               |
 
 The same three components, the same tool set, and the same flow — applied to completely different problems — produced appropriate, autonomous behavior in both cases.

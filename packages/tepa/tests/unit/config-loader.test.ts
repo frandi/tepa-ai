@@ -43,7 +43,9 @@ describe("loadConfig", () => {
   it("throws TepaConfigError for unsupported extension", async () => {
     mockReadFile.mockResolvedValue("some content");
     await expect(loadConfig("/path/to/config.toml")).rejects.toThrow(TepaConfigError);
-    await expect(loadConfig("/path/to/config.toml")).rejects.toThrow("Unsupported config file format");
+    await expect(loadConfig("/path/to/config.toml")).rejects.toThrow(
+      "Unsupported config file format",
+    );
   });
 
   it("throws TepaConfigError for invalid JSON", async () => {

@@ -58,8 +58,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicProvider } from "../../src/anthropic.js";
 
 function getMockCreate() {
-  const instance = new Anthropic() as any;
-  return instance.messages.create as ReturnType<typeof vi.fn>;
+  const instance = new Anthropic() as unknown as { messages: { create: ReturnType<typeof vi.fn> } };
+  return instance.messages.create;
 }
 
 function makeSuccessResponse(text: string, inputTokens = 10, outputTokens = 20) {
@@ -114,10 +114,7 @@ describe("AnthropicProvider", () => {
     it("uses default model and max_tokens when not specified", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], { model: "" });
 
       const callArgs = mockCreate.mock.calls[0]![0];
       // When model is empty string, falls through to the empty string
@@ -128,10 +125,9 @@ describe("AnthropicProvider", () => {
     it("omits temperature when not provided", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       const callArgs = mockCreate.mock.calls[0]![0];
       expect(callArgs.temperature).toBeUndefined();
@@ -140,10 +136,9 @@ describe("AnthropicProvider", () => {
     it("omits system when systemPrompt is not provided", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       const callArgs = mockCreate.mock.calls[0]![0];
       expect(callArgs.system).toBeUndefined();
@@ -171,10 +166,9 @@ describe("AnthropicProvider", () => {
         stop_reason: "max_tokens",
       });
 
-      const result = await provider.complete(
-        [{ role: "user", content: "Tell me a long story" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      const result = await provider.complete([{ role: "user", content: "Tell me a long story" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       expect(result.finishReason).toBe("max_tokens");
     });
@@ -198,7 +192,9 @@ describe("AnthropicProvider", () => {
 
   describe("retry logic", () => {
     it("retries on rate limit errors", async () => {
-      const rateLimitError = new (Anthropic as any).RateLimitError();
+      const rateLimitError = new (
+        Anthropic as unknown as Record<string, new () => Error>
+      ).RateLimitError();
       mockCreate
         .mockRejectedValueOnce(rateLimitError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -210,17 +206,18 @@ describe("AnthropicProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockCreate).toHaveBeenCalledTimes(2);
     });
 
     it("retries on internal server errors", async () => {
-      const serverError = new (Anthropic as any).InternalServerError();
+      const serverError = new (
+        Anthropic as unknown as Record<string, new () => Error>
+      ).InternalServerError();
       mockCreate
         .mockRejectedValueOnce(serverError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -231,17 +228,18 @@ describe("AnthropicProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockCreate).toHaveBeenCalledTimes(2);
     });
 
     it("retries on connection errors", async () => {
-      const connError = new (Anthropic as any).APIConnectionError();
+      const connError = new (
+        Anthropic as unknown as Record<string, new () => Error>
+      ).APIConnectionError();
       mockCreate
         .mockRejectedValueOnce(connError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -252,16 +250,17 @@ describe("AnthropicProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "claude-sonnet-4-20250514" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "claude-sonnet-4-20250514",
+      });
 
       expect(result.text).toBe("Success");
     });
 
     it("does not retry on authentication errors", async () => {
-      const authError = new (Anthropic as any).AuthenticationError();
+      const authError = new (
+        Anthropic as unknown as Record<string, new () => Error>
+      ).AuthenticationError();
       mockCreate.mockRejectedValue(authError);
 
       const fastProvider = new AnthropicProvider({
@@ -271,10 +270,9 @@ describe("AnthropicProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "claude-sonnet-4-20250514" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "claude-sonnet-4-20250514",
+        }),
       ).rejects.toThrow();
 
       // Only 1 attempt, no retries
@@ -282,7 +280,9 @@ describe("AnthropicProvider", () => {
     });
 
     it("throws after exhausting all retries", async () => {
-      const rateLimitError = new (Anthropic as any).RateLimitError();
+      const rateLimitError = new (
+        Anthropic as unknown as Record<string, new () => Error>
+      ).RateLimitError();
       mockCreate.mockRejectedValue(rateLimitError);
 
       const fastProvider = new AnthropicProvider({
@@ -293,10 +293,9 @@ describe("AnthropicProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "claude-sonnet-4-20250514" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "claude-sonnet-4-20250514",
+        }),
       ).rejects.toThrow();
 
       // 1 initial + 2 retries = 3

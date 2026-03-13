@@ -11,9 +11,7 @@ interface NormalizedRegistration {
   continueOnError: boolean;
 }
 
-function normalize(
-  entry: EventCallback | EventRegistration,
-): NormalizedRegistration {
+function normalize(entry: EventCallback | EventRegistration): NormalizedRegistration {
   if (typeof entry === "function") {
     return { handler: entry, continueOnError: false };
   }
@@ -37,10 +35,7 @@ export class EventBus {
 
     for (const [name, registrations] of Object.entries(events)) {
       if (!registrations || registrations.length === 0) continue;
-      this.callbacks.set(
-        name as EventName,
-        registrations.map(normalize),
-      );
+      this.callbacks.set(name as EventName, registrations.map(normalize));
     }
   }
 

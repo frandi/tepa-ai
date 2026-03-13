@@ -30,21 +30,21 @@ describe("validatePrompt", () => {
   });
 
   it("throws TepaPromptError when goal is missing", () => {
-    expect(() =>
-      validatePrompt({ context: {}, expectedOutput: "something" }),
-    ).toThrow(TepaPromptError);
+    expect(() => validatePrompt({ context: {}, expectedOutput: "something" })).toThrow(
+      TepaPromptError,
+    );
   });
 
   it("throws TepaPromptError when goal is empty", () => {
-    expect(() =>
-      validatePrompt({ goal: "", context: {}, expectedOutput: "something" }),
-    ).toThrow(TepaPromptError);
+    expect(() => validatePrompt({ goal: "", context: {}, expectedOutput: "something" })).toThrow(
+      TepaPromptError,
+    );
   });
 
   it("throws TepaPromptError when context is missing", () => {
-    expect(() =>
-      validatePrompt({ goal: "do something", expectedOutput: "something" }),
-    ).toThrow(TepaPromptError);
+    expect(() => validatePrompt({ goal: "do something", expectedOutput: "something" })).toThrow(
+      TepaPromptError,
+    );
   });
 
   it("throws TepaPromptError when expectedOutput is missing", () => {
@@ -52,15 +52,15 @@ describe("validatePrompt", () => {
   });
 
   it("throws TepaPromptError when expectedOutput is empty string", () => {
-    expect(() =>
-      validatePrompt({ goal: "do something", context: {}, expectedOutput: "" }),
-    ).toThrow(TepaPromptError);
+    expect(() => validatePrompt({ goal: "do something", context: {}, expectedOutput: "" })).toThrow(
+      TepaPromptError,
+    );
   });
 
   it("throws TepaPromptError when expectedOutput is empty array", () => {
-    expect(() =>
-      validatePrompt({ goal: "do something", context: {}, expectedOutput: [] }),
-    ).toThrow(TepaPromptError);
+    expect(() => validatePrompt({ goal: "do something", context: {}, expectedOutput: [] })).toThrow(
+      TepaPromptError,
+    );
   });
 
   it("throws TepaPromptError when input is not an object", () => {

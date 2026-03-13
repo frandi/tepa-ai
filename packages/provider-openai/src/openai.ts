@@ -1,7 +1,14 @@
 import OpenAI from "openai";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import { toOpenAIInput, toOpenAITools, toFinishReason, extractText, extractToolUse } from "./formatting.js";
+import {
+  toOpenAIInput,
+  toOpenAITools,
+  toFinishReason,
+  extractText,
+  extractToolUse,
+  type ResponseOutput,
+} from "./formatting.js";
 
 const DEFAULT_MODEL = "gpt-5-mini";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -44,7 +51,15 @@ export class OpenAIProvider extends BaseLLMProvider {
       params.tools = toOpenAITools(options.tools);
     }
 
-    const response = await (this.client.responses as any).create(params);
+    const response = await (
+      this.client.responses as unknown as {
+        create: (params: Record<string, unknown>) => Promise<{
+          output: ResponseOutput[];
+          usage: { input_tokens: number; output_tokens: number };
+          status: string;
+        }>;
+      }
+    ).create(params);
 
     const toolUse = extractToolUse(response.output);
     const hasToolUse = toolUse.length > 0;

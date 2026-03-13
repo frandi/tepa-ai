@@ -55,9 +55,9 @@ describe("data_parse tool", () => {
   });
 
   it("should throw on unsupported format", async () => {
-    await expect(
-      dataParseTool.execute({ input: "data", format: "xml" }),
-    ).rejects.toThrow("Unsupported format: xml");
+    await expect(dataParseTool.execute({ input: "data", format: "xml" })).rejects.toThrow(
+      "Unsupported format: xml",
+    );
   });
 
   it("should handle empty CSV", async () => {

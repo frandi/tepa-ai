@@ -67,10 +67,10 @@ interface LLMToolUseBlock {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `id` | Provider-assigned ID for correlating tool calls with results |
-| `name` | Name of the tool the LLM wants to call |
+| Field   | Description                                                    |
+| ------- | -------------------------------------------------------------- |
+| `id`    | Provider-assigned ID for correlating tool calls with results   |
+| `name`  | Name of the tool the LLM wants to call                         |
 | `input` | Parsed input parameters — already an object, not a JSON string |
 
 The `input` field is pre-parsed by the provider. The Executor passes it directly to `tool.execute()` without any JSON parsing step.
@@ -91,31 +91,31 @@ npm install @tepa/provider-anthropic
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const provider = new AnthropicProvider({
-  apiKey: process.env.ANTHROPIC_API_KEY,  // or omit to read from env automatically
+  apiKey: process.env.ANTHROPIC_API_KEY, // or omit to read from env automatically
 });
 ```
 
 **Options:**
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `apiKey` | `string` | `ANTHROPIC_API_KEY` env var | API key for authentication |
-| `maxRetries` | `number` | `3` | Max retries on transient/rate-limit errors |
-| `retryBaseDelayMs` | `number` | `1000` | Base delay for exponential backoff |
-| `defaultLog` | `boolean` | `true` | Enable automatic JSONL file logging |
-| `logDir` | `string` | `".tepa/logs"` | Directory for log files |
-| `includeContent` | `boolean` | `false` | Include full message content in logs |
+| Option             | Type      | Default                     | Description                                |
+| ------------------ | --------- | --------------------------- | ------------------------------------------ |
+| `apiKey`           | `string`  | `ANTHROPIC_API_KEY` env var | API key for authentication                 |
+| `maxRetries`       | `number`  | `3`                         | Max retries on transient/rate-limit errors |
+| `retryBaseDelayMs` | `number`  | `1000`                      | Base delay for exponential backoff         |
+| `defaultLog`       | `boolean` | `true`                      | Enable automatic JSONL file logging        |
+| `logDir`           | `string`  | `".tepa/logs"`              | Directory for log files                    |
+| `includeContent`   | `boolean` | `false`                     | Include full message content in logs       |
 
 **Retryable errors:** Rate limit (429), internal server error (500), connection errors, overloaded (529).
 
 **Finish reason mapping:**
 
-| Anthropic | Tepa |
-|---|---|
-| `"max_tokens"` | `"max_tokens"` |
-| `"stop_sequence"` | `"stop_sequence"` |
-| `"tool_use"` | `"tool_use"` |
-| `"end_turn"` / other | `"end_turn"` |
+| Anthropic            | Tepa              |
+| -------------------- | ----------------- |
+| `"max_tokens"`       | `"max_tokens"`    |
+| `"stop_sequence"`    | `"stop_sequence"` |
+| `"tool_use"`         | `"tool_use"`      |
+| `"end_turn"` / other | `"end_turn"`      |
 
 ### OpenAI
 
@@ -138,14 +138,14 @@ const provider = new OpenAIProvider({
 
 **Options:**
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `apiKey` | `string` | `OPENAI_API_KEY` env var | API key for authentication |
-| `maxRetries` | `number` | `3` | Max retries on transient/rate-limit errors |
-| `retryBaseDelayMs` | `number` | `1000` | Base delay for exponential backoff |
-| `defaultLog` | `boolean` | `true` | Enable automatic JSONL file logging |
-| `logDir` | `string` | `".tepa/logs"` | Directory for log files |
-| `includeContent` | `boolean` | `false` | Include full message content in logs |
+| Option             | Type      | Default                  | Description                                |
+| ------------------ | --------- | ------------------------ | ------------------------------------------ |
+| `apiKey`           | `string`  | `OPENAI_API_KEY` env var | API key for authentication                 |
+| `maxRetries`       | `number`  | `3`                      | Max retries on transient/rate-limit errors |
+| `retryBaseDelayMs` | `number`  | `1000`                   | Base delay for exponential backoff         |
+| `defaultLog`       | `boolean` | `true`                   | Enable automatic JSONL file logging        |
+| `logDir`           | `string`  | `".tepa/logs"`           | Directory for log files                    |
+| `includeContent`   | `boolean` | `false`                  | Include full message content in logs       |
 
 The OpenAI provider uses the **Responses API** (`client.responses.create()`), not the legacy Chat Completions API. System prompts are passed as a system-role input item, and tool calls are extracted from `FunctionCallOutput` items in the response.
 
@@ -153,11 +153,11 @@ The OpenAI provider uses the **Responses API** (`client.responses.create()`), no
 
 **Finish reason mapping:**
 
-| OpenAI | Tepa |
-|---|---|
-| `"incomplete"` | `"max_tokens"` |
-| Tool calls in output | `"tool_use"` |
-| Other / null | `"end_turn"` |
+| OpenAI               | Tepa           |
+| -------------------- | -------------- |
+| `"incomplete"`       | `"max_tokens"` |
+| Tool calls in output | `"tool_use"`   |
+| Other / null         | `"end_turn"`   |
 
 ### Gemini
 
@@ -173,20 +173,20 @@ npm install @tepa/provider-gemini
 import { GeminiProvider } from "@tepa/provider-gemini";
 
 const provider = new GeminiProvider({
-  apiKey: process.env.GEMINI_API_KEY,  // also reads GOOGLE_API_KEY
+  apiKey: process.env.GEMINI_API_KEY, // also reads GOOGLE_API_KEY
 });
 ```
 
 **Options:**
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `apiKey` | `string` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` env var | API key for authentication |
-| `maxRetries` | `number` | `3` | Max retries on transient/rate-limit errors |
-| `retryBaseDelayMs` | `number` | `1000` | Base delay for exponential backoff |
-| `defaultLog` | `boolean` | `true` | Enable automatic JSONL file logging |
-| `logDir` | `string` | `".tepa/logs"` | Directory for log files |
-| `includeContent` | `boolean` | `false` | Include full message content in logs |
+| Option             | Type      | Default                                      | Description                                |
+| ------------------ | --------- | -------------------------------------------- | ------------------------------------------ |
+| `apiKey`           | `string`  | `GEMINI_API_KEY` or `GOOGLE_API_KEY` env var | API key for authentication                 |
+| `maxRetries`       | `number`  | `3`                                          | Max retries on transient/rate-limit errors |
+| `retryBaseDelayMs` | `number`  | `1000`                                       | Base delay for exponential backoff         |
+| `defaultLog`       | `boolean` | `true`                                       | Enable automatic JSONL file logging        |
+| `logDir`           | `string`  | `".tepa/logs"`                               | Directory for log files                    |
+| `includeContent`   | `boolean` | `false`                                      | Include full message content in logs       |
 
 Gemini maps `"assistant"` roles to `"model"` and passes system prompts via the SDK's `systemInstruction` config field. Tool calls are extracted from `functionCall` parts in the response, with synthetic IDs (`gemini-call-0`, `gemini-call-1`, ...) since the Gemini API doesn't assign call IDs.
 
@@ -194,11 +194,11 @@ Gemini maps `"assistant"` roles to `"model"` and passes system prompts via the S
 
 **Finish reason mapping:**
 
-| Gemini | Tepa |
-|---|---|
-| `"MAX_TOKENS"` | `"max_tokens"` |
-| Function calls in response | `"tool_use"` |
-| `"STOP"` / other | `"end_turn"` |
+| Gemini                     | Tepa           |
+| -------------------------- | -------------- |
+| `"MAX_TOKENS"`             | `"max_tokens"` |
+| Function calls in response | `"tool_use"`   |
+| `"STOP"` / other           | `"end_turn"`   |
 
 ## Native Tool Use
 
@@ -242,16 +242,19 @@ Native tool use eliminates all of these. The provider SDK handles serialization 
 Each provider converts `ToolSchema` to its SDK's expected format:
 
 **Anthropic** — `input_schema` with JSON Schema object:
+
 ```json
 { "name": "file_read", "description": "...", "input_schema": { "type": "object", "properties": { ... }, "required": [...] } }
 ```
 
 **OpenAI** — `function` type with `parameters` object:
+
 ```json
 { "type": "function", "name": "file_read", "description": "...", "parameters": { "type": "object", "properties": { ... }, "required": [...] } }
 ```
 
 **Gemini** — `functionDeclarations` array with uppercase types:
+
 ```json
 { "functionDeclarations": [{ "name": "file_read", "description": "...", "parameters": { "type": "OBJECT", "properties": { ... }, "required": [...] } }] }
 ```
@@ -284,21 +287,21 @@ Every log entry captures the full context of an LLM call:
 ```typescript
 interface LLMLogEntry {
   timestamp: string;
-  provider: string;                    // "anthropic", "openai", "gemini"
+  provider: string; // "anthropic", "openai", "gemini"
   status: "success" | "error" | "retry";
   durationMs: number;
-  attempt: number;                     // 0-based attempt number
+  attempt: number; // 0-based attempt number
   request: {
     model: string;
     messageCount: number;
     totalCharLength: number;
-    promptPreview: string;             // First 120 chars of the last message
+    promptPreview: string; // First 120 chars of the last message
     maxTokens?: number;
     temperature?: number;
     hasSystemPrompt: boolean;
     hasTools?: boolean;
-    messages?: LLMMessage[];           // Only if includeContent: true
-    systemPrompt?: string;             // Only if includeContent: true
+    messages?: LLMMessage[]; // Only if includeContent: true
+    systemPrompt?: string; // Only if includeContent: true
   };
   response?: {
     text: string;
@@ -432,11 +435,11 @@ All built-in providers extend `BaseLLMProvider`, which handles retry logic, expo
 
 ```typescript
 interface BaseLLMProviderOptions {
-  maxRetries?: number;           // Default: 3
-  retryBaseDelayMs?: number;     // Default: 1000
-  defaultLog?: boolean;          // Default: true
-  logDir?: string;               // Default: ".tepa/logs"
-  includeContent?: boolean;      // Default: false
+  maxRetries?: number; // Default: 3
+  retryBaseDelayMs?: number; // Default: 1000
+  defaultLog?: boolean; // Default: true
+  logDir?: string; // Default: ".tepa/logs"
+  includeContent?: boolean; // Default: false
 }
 ```
 
@@ -456,9 +459,9 @@ The loop runs from attempt 0 through `maxRetries` (inclusive), so `maxRetries: 3
 
 The backoff delay depends on whether the error is a rate limit:
 
-| Error type | Delay formula |
-|---|---|
-| Transient error | `retryBaseDelayMs * 2^attempt` |
+| Error type       | Delay formula                       |
+| ---------------- | ----------------------------------- |
+| Transient error  | `retryBaseDelayMs * 2^attempt`      |
 | Rate limit error | `retryBaseDelayMs * 30 * 2^attempt` |
 
 If the API returns a `Retry-After` header (detected via `getRetryAfterMs()`), that value takes precedence over the calculated delay.
@@ -466,10 +469,10 @@ If the API returns a `Retry-After` header (detected via `getRetryAfterMs()`), th
 **Example with defaults** (`retryBaseDelayMs: 1000`):
 
 | Attempt | Transient delay | Rate limit delay |
-|---|---|---|
-| 0 | 1s | 30s |
-| 1 | 2s | 60s |
-| 2 | 4s | 120s |
+| ------- | --------------- | ---------------- |
+| 0       | 1s              | 30s              |
+| 1       | 2s              | 60s              |
+| 2       | 4s              | 120s             |
 
 ## Creating a Custom Provider
 

@@ -1,5 +1,11 @@
 // Main
-export { Tepa, type TepaOptions, type PlannerInput, type ExecutorInput, type EvaluatorInput } from "./tepa.js";
+export {
+  Tepa,
+  type TepaOptions,
+  type PlannerInput,
+  type ExecutorInput,
+  type EvaluatorInput,
+} from "./tepa.js";
 
 // Events
 export { EventBus } from "./events/event-bus.js";

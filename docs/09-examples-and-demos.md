@@ -63,20 +63,27 @@ The `expectedOutput` criteria are what the Evaluator checks against. The require
 
 This demo uses six tools:
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read existing project files to discover code style |
-| `file_write` | Write generated code files |
-| `directory_list` | Explore the mock project structure |
-| `file_search` | Find files matching patterns |
-| `shell_execute` | Run `npx vitest run` to verify tests |
-| `http_request` | Probe API endpoints to discover response shapes |
+| Tool             | Purpose                                            |
+| ---------------- | -------------------------------------------------- |
+| `file_read`      | Read existing project files to discover code style |
+| `file_write`     | Write generated code files                         |
+| `directory_list` | Explore the mock project structure                 |
+| `file_search`    | Find files matching patterns                       |
+| `shell_execute`  | Run `npx vitest run` to verify tests               |
+| `http_request`   | Probe API endpoints to discover response shapes    |
 
 ### Configuration
 
 ```typescript
 const tepa = new Tepa({
-  tools: [fileReadTool, fileWriteTool, directoryListTool, fileSearchTool, shellExecuteTool, httpRequestTool],
+  tools: [
+    fileReadTool,
+    fileWriteTool,
+    directoryListTool,
+    fileSearchTool,
+    shellExecuteTool,
+    httpRequestTool,
+  ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
@@ -183,15 +190,15 @@ The CSV files contain realistic data designed to produce meaningful analysis:
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read CSV data files |
-| `file_write` | Write report and flagged students CSV |
-| `directory_list` | Explore the data directory |
-| `data_parse` | Parse CSV into structured data |
-| `shell_execute` | Run data analysis scripts |
-| `scratchpad` | Carry computed metrics across steps |
-| `log_observe` | Record analytical observations |
+| Tool             | Purpose                               |
+| ---------------- | ------------------------------------- |
+| `file_read`      | Read CSV data files                   |
+| `file_write`     | Write report and flagged students CSV |
+| `directory_list` | Explore the data directory            |
+| `data_parse`     | Parse CSV into structured data        |
+| `shell_execute`  | Run data analysis scripts             |
+| `scratchpad`     | Carry computed metrics across steps   |
+| `log_observe`    | Record analytical observations        |
 
 This is the only demo that uses `data_parse` (for CSV processing) and `scratchpad` (for carrying intermediate computed metrics between steps). The scratchpad is essential here — the Executor computes averages and pass rates in one step, then reads them back in a later step that generates recommendations.
 
@@ -199,7 +206,15 @@ This is the only demo that uses `data_parse` (for CSV processing) and `scratchpa
 
 ```typescript
 const tepa = new Tepa({
-  tools: [fileReadTool, fileWriteTool, directoryListTool, dataParseTool, shellExecuteTool, scratchpadTool, logObserveTool],
+  tools: [
+    fileReadTool,
+    fileWriteTool,
+    directoryListTool,
+    dataParseTool,
+    shellExecuteTool,
+    scratchpadTool,
+    logObserveTool,
+  ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
@@ -334,12 +349,12 @@ prompt.context.userInput = userInput;
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read existing files |
-| `file_write` | Write the study plan to `study-plan.md` |
-| `directory_list` | Explore the output directory |
-| `scratchpad` | Carry state across execution steps |
+| Tool             | Purpose                                 |
+| ---------------- | --------------------------------------- |
+| `file_read`      | Read existing files                     |
+| `file_write`     | Write the study plan to `study-plan.md` |
+| `directory_list` | Explore the output directory            |
+| `scratchpad`     | Carry state across execution steps      |
 
 This demo uses the fewest tools — it's primarily an LLM reasoning task with file output. The scratchpad lets the Executor carry research and outline notes from earlier steps into the final writing step.
 

@@ -51,16 +51,16 @@ interface LoggingConfig {
 
 ## Default Values
 
-| Setting | Default | Description |
-|---|---|---|
-| `model.planner` | `"claude-sonnet-4-6"` | Model used to generate and revise plans. |
-| `model.executor` | `"claude-haiku-4-5"` | Model used to execute each plan step. |
-| `model.evaluator` | `"claude-sonnet-4-6"` | Model used to judge execution results. |
-| `limits.maxCycles` | `5` | Maximum Plan-Execute-Evaluate iterations before the pipeline stops. |
-| `limits.maxTokens` | `64_000` | Total token budget across all LLM calls in all cycles. |
-| `limits.toolTimeout` | `30_000` | Timeout for tool execution in milliseconds. |
-| `limits.retryAttempts` | `1` | Number of retry attempts for recoverable failures. |
-| `logging.level` | `"standard"` | Console output verbosity. |
+| Setting                | Default               | Description                                                         |
+| ---------------------- | --------------------- | ------------------------------------------------------------------- |
+| `model.planner`        | `"claude-sonnet-4-6"` | Model used to generate and revise plans.                            |
+| `model.executor`       | `"claude-haiku-4-5"`  | Model used to execute each plan step.                               |
+| `model.evaluator`      | `"claude-sonnet-4-6"` | Model used to judge execution results.                              |
+| `limits.maxCycles`     | `5`                   | Maximum Plan-Execute-Evaluate iterations before the pipeline stops. |
+| `limits.maxTokens`     | `64_000`              | Total token budget across all LLM calls in all cycles.              |
+| `limits.toolTimeout`   | `30_000`              | Timeout for tool execution in milliseconds.                         |
+| `limits.retryAttempts` | `1`                   | Number of retry attempts for recoverable failures.                  |
+| `logging.level`        | `"standard"`          | Console output verbosity.                                           |
 
 These defaults are exported as `DEFAULT_CONFIG` from `@tepa/core` if you need to reference them programmatically.
 
@@ -273,14 +273,14 @@ defineConfig({
 
 The validation rules:
 
-| Field | Rule |
-|---|---|
-| `model.planner`, `model.executor`, `model.evaluator` | Non-empty string |
-| `limits.maxCycles` | Positive integer (> 0) |
-| `limits.maxTokens` | Positive integer (> 0) |
-| `limits.toolTimeout` | Positive integer (> 0) |
-| `limits.retryAttempts` | Non-negative integer (>= 0) |
-| `logging.level` | One of `"minimal"`, `"standard"`, `"verbose"` |
+| Field                                                | Rule                                          |
+| ---------------------------------------------------- | --------------------------------------------- |
+| `model.planner`, `model.executor`, `model.evaluator` | Non-empty string                              |
+| `limits.maxCycles`                                   | Positive integer (> 0)                        |
+| `limits.maxTokens`                                   | Positive integer (> 0)                        |
+| `limits.toolTimeout`                                 | Positive integer (> 0)                        |
+| `limits.retryAttempts`                               | Non-negative integer (>= 0)                   |
+| `logging.level`                                      | One of `"minimal"`, `"standard"`, `"verbose"` |
 
 A `TepaConfigError` is a subclass of `TepaError`, so you can catch it specifically:
 

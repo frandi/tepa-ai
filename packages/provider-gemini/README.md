@@ -25,7 +25,9 @@ import { Tepa } from "@tepa/core";
 import { GeminiProvider } from "@tepa/provider-gemini";
 
 const tepa = new Tepa({
-  tools: [/* ... */],
+  tools: [
+    /* ... */
+  ],
   provider: new GeminiProvider(),
 });
 ```
@@ -34,9 +36,9 @@ const tepa = new Tepa({
 
 ```typescript
 const provider = new GeminiProvider({
-  apiKey: "...",            // Defaults to GEMINI_API_KEY or GOOGLE_API_KEY env var
-  maxRetries: 3,            // Default: 3
-  retryBaseDelayMs: 1000,   // Base delay for exponential backoff
+  apiKey: "...", // Defaults to GEMINI_API_KEY or GOOGLE_API_KEY env var
+  maxRetries: 3, // Default: 3
+  retryBaseDelayMs: 1000, // Base delay for exponential backoff
 });
 ```
 

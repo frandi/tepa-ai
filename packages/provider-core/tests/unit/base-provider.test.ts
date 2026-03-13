@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as fs from "node:fs";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "../../src/base-provider.js";
@@ -15,7 +15,8 @@ vi.mock("node:fs", async () => {
 class TestProvider extends BaseLLMProvider {
   protected readonly providerName = "test";
 
-  doCompleteFn = vi.fn<(messages: LLMMessage[], options: LLMRequestOptions) => Promise<LLMResponse>>();
+  doCompleteFn =
+    vi.fn<(messages: LLMMessage[], options: LLMRequestOptions) => Promise<LLMResponse>>();
   isRetryableFn = vi.fn<(error: unknown) => boolean>().mockReturnValue(false);
   getRetryAfterMsFn = vi.fn<(error: unknown) => number | null>().mockReturnValue(null);
   isRateLimitErrorFn = vi.fn<(error: unknown) => boolean>().mockReturnValue(false);
@@ -24,7 +25,10 @@ class TestProvider extends BaseLLMProvider {
     super(options);
   }
 
-  protected async doComplete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse> {
+  protected async doComplete(
+    messages: LLMMessage[],
+    options: LLMRequestOptions,
+  ): Promise<LLMResponse> {
     return this.doCompleteFn(messages, options);
   }
 
@@ -67,9 +71,7 @@ describe("BaseLLMProvider", () => {
 
     it("retries on retryable errors", async () => {
       const error = new Error("transient");
-      provider.doCompleteFn
-        .mockRejectedValueOnce(error)
-        .mockResolvedValueOnce(testResponse);
+      provider.doCompleteFn.mockRejectedValueOnce(error).mockResolvedValueOnce(testResponse);
       provider.isRetryableFn.mockReturnValue(true);
 
       const result = await provider.complete(testMessages, testOptions);
@@ -114,9 +116,7 @@ describe("BaseLLMProvider", () => {
 
     it("logs retry and then success entries", async () => {
       const error = new Error("transient");
-      provider.doCompleteFn
-        .mockRejectedValueOnce(error)
-        .mockResolvedValueOnce(testResponse);
+      provider.doCompleteFn.mockRejectedValueOnce(error).mockResolvedValueOnce(testResponse);
       provider.isRetryableFn.mockReturnValue(true);
 
       await provider.complete(testMessages, testOptions);
@@ -163,7 +163,12 @@ describe("BaseLLMProvider", () => {
     });
 
     it("includes request metadata in log entries", async () => {
-      await provider.complete(testMessages, { model: "test-model", maxTokens: 100, temperature: 0.5, systemPrompt: "Be helpful" });
+      await provider.complete(testMessages, {
+        model: "test-model",
+        maxTokens: 100,
+        temperature: 0.5,
+        systemPrompt: "Be helpful",
+      });
 
       const entry = provider.getLogEntries()[0]!;
       expect(entry.request.model).toBe("test-model");
@@ -183,7 +188,9 @@ describe("BaseLLMProvider", () => {
       await provider.complete(messages, testOptions);
 
       const entry = provider.getLogEntries()[0]!;
-      expect(entry.request.promptPreview).toBe("Generate a REST API client for the weather service");
+      expect(entry.request.promptPreview).toBe(
+        "Generate a REST API client for the weather service",
+      );
     });
 
     it("truncates long promptPreview with ellipsis", async () => {
@@ -258,9 +265,7 @@ describe("BaseLLMProvider", () => {
   describe("retry delay computation", () => {
     it("uses retry-after when available", async () => {
       const error = new Error("rate limited");
-      provider.doCompleteFn
-        .mockRejectedValueOnce(error)
-        .mockResolvedValueOnce(testResponse);
+      provider.doCompleteFn.mockRejectedValueOnce(error).mockResolvedValueOnce(testResponse);
       provider.isRetryableFn.mockReturnValue(true);
       provider.getRetryAfterMsFn.mockReturnValue(500);
 
@@ -275,9 +280,7 @@ describe("BaseLLMProvider", () => {
     it("uses exponential backoff for non-rate-limit errors", async () => {
       const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 50, maxRetries: 1 });
       const error = new Error("transient");
-      p.doCompleteFn
-        .mockRejectedValueOnce(error)
-        .mockResolvedValueOnce(testResponse);
+      p.doCompleteFn.mockRejectedValueOnce(error).mockResolvedValueOnce(testResponse);
       p.isRetryableFn.mockReturnValue(true);
 
       const start = Date.now();

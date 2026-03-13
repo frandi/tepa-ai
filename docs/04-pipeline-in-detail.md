@@ -16,11 +16,11 @@ interface TepaPrompt {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `goal` | What the pipeline should accomplish. This is sent to the Planner, Executor, and Evaluator — it's the single source of truth for the task. |
-| `context` | Arbitrary key-value data that provides background information. File paths, configuration values, domain knowledge — anything the LLM needs to understand the environment. |
-| `expectedOutput` | What success looks like. Can be a simple string description or a structured array of `ExpectedOutput` objects with paths, descriptions, and evaluation criteria. |
+| Field            | Description                                                                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `goal`           | What the pipeline should accomplish. This is sent to the Planner, Executor, and Evaluator — it's the single source of truth for the task.                                 |
+| `context`        | Arbitrary key-value data that provides background information. File paths, configuration values, domain knowledge — anything the LLM needs to understand the environment. |
+| `expectedOutput` | What success looks like. Can be a simple string description or a structured array of `ExpectedOutput` objects with paths, descriptions, and evaluation criteria.          |
 
 ### `ExpectedOutput`
 
@@ -34,11 +34,11 @@ interface ExpectedOutput {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `path` | Optional file path or identifier for the expected artifact. |
-| `description` | What this output should contain or accomplish. |
-| `criteria` | Optional list of specific evaluation criteria. The Evaluator checks each one when judging the result. |
+| Field         | Description                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `path`        | Optional file path or identifier for the expected artifact.                                           |
+| `description` | What this output should contain or accomplish.                                                        |
+| `criteria`    | Optional list of specific evaluation criteria. The Evaluator checks each one when judging the result. |
 
 A simple string `expectedOutput` works for straightforward goals:
 
@@ -145,12 +145,12 @@ interface Plan {
 }
 
 interface PlanStep {
-  id: string;               // e.g., "step_1"
-  description: string;      // what this step does
-  tools: string[];          // tool names to call (empty = reasoning step)
-  expectedOutcome: string;  // what success looks like for this step
-  dependencies: string[];   // IDs of steps that must complete first
-  model?: string;           // optional per-step model override
+  id: string; // e.g., "step_1"
+  description: string; // what this step does
+  tools: string[]; // tool names to call (empty = reasoning step)
+  expectedOutcome: string; // what success looks like for this step
+  dependencies: string[]; // IDs of steps that must complete first
+  model?: string; // optional per-step model override
 }
 ```
 
@@ -266,26 +266,29 @@ interface ExecutionResult {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `stepId` | The step's ID from the plan. |
-| `status` | `"success"` if the step completed and produced output. `"failure"` if the tool wasn't found, the LLM didn't return a tool call, an exception occurred, or a dependency failed. |
-| `output` | The tool's return value, the LLM's text response (for reasoning steps), or `null` on failure. |
-| `error` | Present only on failure — describes what went wrong. |
-| `tokensUsed` | Tokens consumed by the LLM call(s) for this step. |
-| `durationMs` | Wall-clock time for the step in milliseconds. |
+| Field        | Description                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `stepId`     | The step's ID from the plan.                                                                                                                                                   |
+| `status`     | `"success"` if the step completed and produced output. `"failure"` if the tool wasn't found, the LLM didn't return a tool call, an exception occurred, or a dependency failed. |
+| `output`     | The tool's return value, the LLM's text response (for reasoning steps), or `null` on failure.                                                                                  |
+| `error`      | Present only on failure — describes what went wrong.                                                                                                                           |
+| `tokensUsed` | Tokens consumed by the LLM call(s) for this step.                                                                                                                              |
+| `durationMs` | Wall-clock time for the step in milliseconds.                                                                                                                                  |
 
 ### Automatic Scratchpad Write
 
 After all steps complete, the orchestrator writes `_execution_summary` to the scratchpad — a simplified array of all step results:
 
 ```typescript
-scratchpad.write("_execution_summary", results.map((r) => ({
-  stepId: r.stepId,
-  status: r.status,
-  output: r.output,
-  ...(r.error ? { error: r.error } : {}),
-})));
+scratchpad.write(
+  "_execution_summary",
+  results.map((r) => ({
+    stepId: r.stepId,
+    status: r.status,
+    output: r.output,
+    ...(r.error ? { error: r.error } : {}),
+  })),
+);
 ```
 
 This summary persists across cycles. On the next cycle, the Planner sees it and can build on what already succeeded — enabling efficient self-correction without repeating work.
@@ -314,9 +317,9 @@ The verdict rules are explicit in the system prompt:
 ```typescript
 interface EvaluationResult {
   verdict: "pass" | "fail";
-  confidence: number;     // 0.0 – 1.0
-  feedback?: string;      // required on fail — actionable explanation
-  summary?: string;       // optional on pass — brief description of success
+  confidence: number; // 0.0 – 1.0
+  feedback?: string; // required on fail — actionable explanation
+  summary?: string; // optional on pass — brief description of success
   tokensUsed: number;
 }
 ```
@@ -355,16 +358,16 @@ Eight lifecycle hooks let you observe, transform, or control the pipeline at eve
 
 ### What Each Event Receives and Can Modify
 
-| Event | Data Received | Can Modify |
-|---|---|---|
-| `prePlanner` | `{ prompt, feedback? }` | The prompt sent to the Planner; the feedback text |
-| `postPlanner` | `Plan` | The plan before it reaches the Executor — add, remove, or modify steps |
-| `preExecutor` | `{ plan, prompt, cycle, scratchpad, previousResults? }` | The plan, prompt, and context before execution |
-| `postExecutor` | `{ results, logs, tokensUsed }` | Execution results before they reach the Evaluator |
-| `preEvaluator` | `{ prompt, results, scratchpad }` | The data the Evaluator will assess |
-| `postEvaluator` | `EvaluationResult` | The verdict — can override pass/fail, adjust confidence, or modify feedback |
-| `preStep` | `{ step, cycle }` | The step definition before it executes |
-| `postStep` | `{ step, result, cycle }` | The step's result after execution |
+| Event           | Data Received                                           | Can Modify                                                                  |
+| --------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `prePlanner`    | `{ prompt, feedback? }`                                 | The prompt sent to the Planner; the feedback text                           |
+| `postPlanner`   | `Plan`                                                  | The plan before it reaches the Executor — add, remove, or modify steps      |
+| `preExecutor`   | `{ plan, prompt, cycle, scratchpad, previousResults? }` | The plan, prompt, and context before execution                              |
+| `postExecutor`  | `{ results, logs, tokensUsed }`                         | Execution results before they reach the Evaluator                           |
+| `preEvaluator`  | `{ prompt, results, scratchpad }`                       | The data the Evaluator will assess                                          |
+| `postEvaluator` | `EvaluationResult`                                      | The verdict — can override pass/fail, adjust confidence, or modify feedback |
+| `preStep`       | `{ step, cycle }`                                       | The step definition before it executes                                      |
+| `postStep`      | `{ step, result, cycle }`                               | The step's result after execution                                           |
 
 Every callback also receives a `CycleMetadata` object as its second argument:
 
@@ -418,12 +421,12 @@ Each call to `tepa.run()` follows this sequence:
 
 ### Termination Conditions
 
-| Condition | Result Status | What Happens |
-|---|---|---|
-| Evaluator returns `pass` | `"pass"` | Pipeline returns immediately with the evaluator's summary. |
-| Max cycles exhausted | `"fail"` | The loop ends. The last evaluator feedback is returned. |
-| Token budget exceeded | `"terminated"` | The `TokenTracker` throws a `TepaTokenBudgetExceeded` error mid-cycle. The pipeline catches it and returns with the tokens used. |
-| Unrecoverable error | `"fail"` | Pipeline component errors (planner parse failures after retry, cycle errors) are caught and returned as structured failures rather than crashing. Non-Tepa errors are wrapped in a `TepaError` and re-thrown. |
+| Condition                | Result Status  | What Happens                                                                                                                                                                                                  |
+| ------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evaluator returns `pass` | `"pass"`       | Pipeline returns immediately with the evaluator's summary.                                                                                                                                                    |
+| Max cycles exhausted     | `"fail"`       | The loop ends. The last evaluator feedback is returned.                                                                                                                                                       |
+| Token budget exceeded    | `"terminated"` | The `TokenTracker` throws a `TepaTokenBudgetExceeded` error mid-cycle. The pipeline catches it and returns with the tokens used.                                                                              |
+| Unrecoverable error      | `"fail"`       | Pipeline component errors (planner parse failures after retry, cycle errors) are caught and returned as structured failures rather than crashing. Non-Tepa errors are wrapped in a `TepaError` and re-thrown. |
 
 The `TokenTracker` checks the budget after every LLM call (planner, each executor step, evaluator). If the cumulative token count exceeds the budget at any point, the current cycle is interrupted immediately.
 
@@ -440,14 +443,14 @@ interface TepaResult {
 }
 ```
 
-| Field | Description |
-|---|---|
-| `status` | `"pass"` — goal achieved. `"fail"` — max cycles or unrecoverable error. `"terminated"` — token budget exhausted. |
-| `cycles` | Number of Plan-Execute-Evaluate cycles that ran. |
-| `tokensUsed` | Total tokens consumed across all LLM calls in all cycles. |
-| `outputs` | Artifacts produced by the pipeline (file paths, descriptions, types). |
-| `logs` | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts. |
-| `feedback` | On pass: the evaluator's summary. On fail: the evaluator's feedback or an error message. On termination: the budget-exceeded message. |
+| Field        | Description                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`     | `"pass"` — goal achieved. `"fail"` — max cycles or unrecoverable error. `"terminated"` — token budget exhausted.                      |
+| `cycles`     | Number of Plan-Execute-Evaluate cycles that ran.                                                                                      |
+| `tokensUsed` | Total tokens consumed across all LLM calls in all cycles.                                                                             |
+| `outputs`    | Artifacts produced by the pipeline (file paths, descriptions, types).                                                                 |
+| `logs`       | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts.                             |
+| `feedback`   | On pass: the evaluator's summary. On fail: the evaluator's feedback or an error message. On termination: the budget-exceeded message. |
 
 Supporting types:
 

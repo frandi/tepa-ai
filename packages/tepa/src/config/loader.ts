@@ -22,7 +22,9 @@ export async function loadConfig(filePath: string): Promise<TepaConfig> {
     } else if (ext === ".json") {
       raw = JSON.parse(content);
     } else {
-      throw new TepaConfigError(`Unsupported config file format: ${ext} (use .yaml, .yml, or .json)`);
+      throw new TepaConfigError(
+        `Unsupported config file format: ${ext} (use .yaml, .yml, or .json)`,
+      );
     }
   } catch (err) {
     if (err instanceof TepaConfigError) throw err;

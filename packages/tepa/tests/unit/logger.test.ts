@@ -32,7 +32,14 @@ describe("Logger", () => {
   it("console.logs with extra detail in verbose mode", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     const logger = new Logger({ level: "verbose" });
-    logger.log({ cycle: 1, step: "s1", tool: "file_read", message: "Reading file", durationMs: 42, tokensUsed: 100 });
+    logger.log({
+      cycle: 1,
+      step: "s1",
+      tool: "file_read",
+      message: "Reading file",
+      durationMs: 42,
+      tokensUsed: 100,
+    });
     expect(spy).toHaveBeenCalledOnce();
     const output = spy.mock.calls[0]![0] as string;
     expect(output).toContain("42ms");

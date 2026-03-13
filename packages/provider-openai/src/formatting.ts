@@ -28,10 +28,7 @@ export type ResponseOutput = OutputMessage | FunctionCallOutput | { type: string
 /**
  * Convert Tepa LLMMessage array + optional system prompt to OpenAI Responses API input format.
  */
-export function toOpenAIInput(
-  messages: LLMMessage[],
-  systemPrompt?: string,
-): OpenAIInputMessage[] {
+export function toOpenAIInput(messages: LLMMessage[], systemPrompt?: string): OpenAIInputMessage[] {
   const input: OpenAIInputMessage[] = [];
 
   if (systemPrompt) {

@@ -9,8 +9,8 @@ import type {
   Plan,
   EvaluationResult,
 } from "@tepa/types";
-import { Tepa, type PlannerInput, type EvaluatorInput } from "../../src/tepa.js";
-import { TepaTokenBudgetExceeded, TepaError } from "../../src/utils/errors.js";
+import { Tepa, type EvaluatorInput } from "../../src/tepa.js";
+import { TepaError } from "../../src/utils/errors.js";
 
 // --- Helpers ---
 
@@ -103,7 +103,9 @@ describe("Tepa", () => {
     it("completes in a single cycle when evaluator passes", async () => {
       // LLM calls: planner plan, executor tool_use, evaluator eval
       const provider = createMockProvider([
-        makeResponse(makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }])),
+        makeResponse(
+          makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }]),
+        ),
         makeToolUseResponse("file_write", { input: "hello" }),
         makeResponse(makeEvalJson("pass")),
       ]);
@@ -130,11 +132,17 @@ describe("Tepa", () => {
     it("cycle 1 fails, cycle 2 succeeds with feedback", async () => {
       const provider = createMockProvider([
         // Cycle 1: plan → exec tool_use → eval (fail)
-        makeResponse(makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }])),
+        makeResponse(
+          makePlanJson([{ id: "step_1", description: "Write file", tools: ["file_write"] }]),
+        ),
         makeToolUseResponse("file_write", { input: "v1" }),
         makeResponse(makeEvalJson("fail", { feedback: "Missing header comment" })),
         // Cycle 2: revised plan → exec tool_use → eval (pass)
-        makeResponse(makePlanJson([{ id: "step_1", description: "Write file with header", tools: ["file_write"] }])),
+        makeResponse(
+          makePlanJson([
+            { id: "step_1", description: "Write file with header", tools: ["file_write"] },
+          ]),
+        ),
         makeToolUseResponse("file_write", { input: "v2" }),
         makeResponse(makeEvalJson("pass", { summary: "Fixed with header" })),
       ]);
@@ -249,9 +257,9 @@ describe("Tepa", () => {
 
     it("postPlanner event can transform the plan", async () => {
       const provider = createMockProvider([
-        makeResponse(makePlanJson([
-          { id: "step_1", description: "Original step", tools: ["tool_a"] },
-        ])),
+        makeResponse(
+          makePlanJson([{ id: "step_1", description: "Original step", tools: ["tool_a"] }]),
+        ),
         // Executor will use the injected plan's tool
         makeToolUseResponse("tool_b", { input: "x" }),
         makeResponse(makeEvalJson("pass")),
@@ -541,10 +549,12 @@ describe("Tepa", () => {
   describe("run — logs", () => {
     it("collects execution logs from all cycles", async () => {
       const provider = createMockProvider([
-        makeResponse(makePlanJson([
-          { id: "step_1", description: "A", tools: ["tool_a"] },
-          { id: "step_2", description: "B", tools: ["tool_a"] },
-        ])),
+        makeResponse(
+          makePlanJson([
+            { id: "step_1", description: "A", tools: ["tool_a"] },
+            { id: "step_2", description: "B", tools: ["tool_a"] },
+          ]),
+        ),
         makeToolUseResponse("tool_a", { input: "1" }),
         makeToolUseResponse("tool_a", { input: "2" }),
         makeResponse(makeEvalJson("pass")),

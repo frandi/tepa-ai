@@ -117,27 +117,19 @@ describe("parseEvalResult", () => {
   });
 
   it("rejects invalid verdict", () => {
-    expect(() =>
-      _parseEvalResult({ verdict: "maybe", confidence: 0.5 }),
-    ).toThrow('"verdict"');
+    expect(() => _parseEvalResult({ verdict: "maybe", confidence: 0.5 })).toThrow('"verdict"');
   });
 
   it("rejects confidence out of range", () => {
-    expect(() =>
-      _parseEvalResult({ verdict: "pass", confidence: 1.5 }),
-    ).toThrow('"confidence"');
-    expect(() =>
-      _parseEvalResult({ verdict: "pass", confidence: -0.1 }),
-    ).toThrow('"confidence"');
+    expect(() => _parseEvalResult({ verdict: "pass", confidence: 1.5 })).toThrow('"confidence"');
+    expect(() => _parseEvalResult({ verdict: "pass", confidence: -0.1 })).toThrow('"confidence"');
   });
 
   it("rejects fail without feedback", () => {
-    expect(() =>
-      _parseEvalResult({ verdict: "fail", confidence: 0.5 }),
-    ).toThrow('"feedback"');
-    expect(() =>
-      _parseEvalResult({ verdict: "fail", confidence: 0.5, feedback: "" }),
-    ).toThrow('"feedback"');
+    expect(() => _parseEvalResult({ verdict: "fail", confidence: 0.5 })).toThrow('"feedback"');
+    expect(() => _parseEvalResult({ verdict: "fail", confidence: 0.5, feedback: "" })).toThrow(
+      '"feedback"',
+    );
   });
 
   it("allows pass without summary", () => {
@@ -153,11 +145,7 @@ describe("Evaluator", () => {
       const provider = createMockProvider([makeResponse(makePassJson())]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.verdict).toBe("pass");
       expect(result.confidence).toBe(0.95);
@@ -215,11 +203,7 @@ describe("Evaluator", () => {
       const provider = createMockProvider([makeResponse(makeFailJson())]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        failedResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, failedResults, new Scratchpad());
 
       expect(result.verdict).toBe("fail");
       expect(result.confidence).toBe(0.8);
@@ -229,16 +213,13 @@ describe("Evaluator", () => {
 
     it("returns fail when expected outputs are missing", async () => {
       const missingOutputFeedback = makeFailJson({
-        feedback: "Expected output file /tmp/project/hello.ts was never created. Step step_1 completed but produced no file artifact.",
+        feedback:
+          "Expected output file /tmp/project/hello.ts was never created. Step step_1 completed but produced no file artifact.",
       });
       const provider = createMockProvider([makeResponse(missingOutputFeedback)]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        failedResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, failedResults, new Scratchpad());
 
       expect(result.verdict).toBe("fail");
       expect(result.feedback).toContain("Expected output file");
@@ -247,16 +228,13 @@ describe("Evaluator", () => {
 
     it("feedback references specific steps", async () => {
       const detailedFeedback = makeFailJson({
-        feedback: 'Step "step_1" wrote to wrong path /tmp/wrong.ts instead of /tmp/project/hello.ts. Step "step_2" consequently failed to read the file.',
+        feedback:
+          'Step "step_1" wrote to wrong path /tmp/wrong.ts instead of /tmp/project/hello.ts. Step "step_2" consequently failed to read the file.',
       });
       const provider = createMockProvider([makeResponse(detailedFeedback)]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        failedResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, failedResults, new Scratchpad());
 
       expect(result.feedback).toContain("step_1");
       expect(result.feedback).toContain("step_2");
@@ -272,11 +250,7 @@ describe("Evaluator", () => {
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.verdict).toBe("pass");
       expect(result.confidence).toBe(0.95);
@@ -311,11 +285,7 @@ describe("Evaluator", () => {
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.verdict).toBe("fail");
       expect(result.confidence).toBe(0);
@@ -331,11 +301,7 @@ describe("Evaluator", () => {
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.verdict).toBe("fail");
       expect(result.confidence).toBe(0);
@@ -347,11 +313,7 @@ describe("Evaluator", () => {
       const provider = createMockProvider([makeResponse(wrappedJson)]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.verdict).toBe("pass");
       expect(provider.complete).toHaveBeenCalledTimes(1);
@@ -360,16 +322,10 @@ describe("Evaluator", () => {
 
   describe("evaluate — token tracking", () => {
     it("correctly reports token usage", async () => {
-      const provider = createMockProvider([
-        makeResponse(makePassJson(), 100, 200),
-      ]);
+      const provider = createMockProvider([makeResponse(makePassJson(), 100, 200)]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.tokensUsed).toBe(300);
     });
@@ -381,11 +337,7 @@ describe("Evaluator", () => {
       ]);
       const evaluator = new Evaluator(provider, "claude-sonnet-4-20250514");
 
-      const result = await evaluator.evaluate(
-        samplePrompt,
-        successResults,
-        new Scratchpad(),
-      );
+      const result = await evaluator.evaluate(samplePrompt, successResults, new Scratchpad());
 
       expect(result.tokensUsed).toBe(220); // 110 + 110
     });

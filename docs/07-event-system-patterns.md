@@ -12,7 +12,9 @@ import type { Plan, EvaluationResult, PostStepPayload } from "@tepa/types";
 
 const tepa = new Tepa({
   provider: myProvider,
-  tools: [/* ... */],
+  tools: [
+    /* ... */
+  ],
   events: {
     postPlanner: [
       (data, cycle) => {
@@ -55,18 +57,18 @@ type EventCallback<TData = unknown> = (
 
 ### Parameters
 
-| Parameter | Type | Description |
-|---|---|---|
-| `data` | `TData` | The payload for this event — varies by event point (see table below) |
-| `cycle` | `CycleMetadata` | Metadata about the current pipeline cycle |
+| Parameter | Type            | Description                                                          |
+| --------- | --------------- | -------------------------------------------------------------------- |
+| `data`    | `TData`         | The payload for this event — varies by event point (see table below) |
+| `cycle`   | `CycleMetadata` | Metadata about the current pipeline cycle                            |
 
 ### `CycleMetadata`
 
 ```typescript
 interface CycleMetadata {
-  cycleNumber: number;      // Current cycle (1-based)
-  totalCyclesUsed: number;  // Cycles completed before this one
-  tokensUsed: number;       // Total tokens consumed so far
+  cycleNumber: number; // Current cycle (1-based)
+  totalCyclesUsed: number; // Cycles completed before this one
+  tokensUsed: number; // Total tokens consumed so far
 }
 ```
 
@@ -74,9 +76,9 @@ interface CycleMetadata {
 
 What your callback returns determines what happens next:
 
-| Return value | Effect |
-|---|---|
-| `void` / `undefined` | Data passes through unchanged to the next callback (or back to the pipeline) |
+| Return value                                | Effect                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `void` / `undefined`                        | Data passes through unchanged to the next callback (or back to the pipeline)        |
 | A value (or `Promise` resolving to a value) | Replaces the data — the next callback (or the pipeline) receives the returned value |
 
 This means callbacks can be **observers** (return nothing, just read) or **transformers** (return modified data).
@@ -125,7 +127,7 @@ By default, if a callback throws an error, the error propagates and aborts the p
 ```typescript
 interface EventRegistration<TData = unknown> {
   handler: EventCallback<TData>;
-  continueOnError?: boolean;  // defaults to false
+  continueOnError?: boolean; // defaults to false
 }
 ```
 
@@ -162,16 +164,16 @@ You can mix bare callbacks and `EventRegistration` objects in the same array. Ba
 
 Each event point receives a specific payload. The pipeline uses the (potentially modified) return value.
 
-| Event | Payload Type | Key Fields |
-|---|---|---|
-| `prePlanner` | `PlannerInput` | `prompt: TepaPrompt`, `feedback?: string` |
-| `postPlanner` | `Plan` | `steps: PlanStep[]`, `estimatedTokens`, `reasoning` |
-| `preExecutor` | `ExecutorInput` | `plan: Plan`, `prompt: TepaPrompt`, `cycle`, `scratchpad`, `previousResults?` |
-| `postExecutor` | `ExecutorOutput` | `results: ExecutionResult[]`, `logs: LogEntry[]`, `tokensUsed` |
-| `preEvaluator` | `EvaluatorInput` | `prompt: TepaPrompt`, `results: ExecutionResult[]`, `scratchpad` |
-| `postEvaluator` | `EvaluationResult` | `verdict: "pass" \| "fail"`, `confidence`, `feedback?`, `summary?` |
-| `preStep` | `PreStepPayload` | `step: PlanStep`, `cycle: number` |
-| `postStep` | `PostStepPayload` | `step: PlanStep`, `result: ExecutionResult`, `cycle: number` |
+| Event           | Payload Type       | Key Fields                                                                    |
+| --------------- | ------------------ | ----------------------------------------------------------------------------- |
+| `prePlanner`    | `PlannerInput`     | `prompt: TepaPrompt`, `feedback?: string`                                     |
+| `postPlanner`   | `Plan`             | `steps: PlanStep[]`, `estimatedTokens`, `reasoning`                           |
+| `preExecutor`   | `ExecutorInput`    | `plan: Plan`, `prompt: TepaPrompt`, `cycle`, `scratchpad`, `previousResults?` |
+| `postExecutor`  | `ExecutorOutput`   | `results: ExecutionResult[]`, `logs: LogEntry[]`, `tokensUsed`                |
+| `preEvaluator`  | `EvaluatorInput`   | `prompt: TepaPrompt`, `results: ExecutionResult[]`, `scratchpad`              |
+| `postEvaluator` | `EvaluationResult` | `verdict: "pass" \| "fail"`, `confidence`, `feedback?`, `summary?`            |
+| `preStep`       | `PreStepPayload`   | `step: PlanStep`, `cycle: number`                                             |
+| `postStep`      | `PostStepPayload`  | `step: PlanStep`, `result: ExecutionResult`, `cycle: number`                  |
 
 ## Patterns
 

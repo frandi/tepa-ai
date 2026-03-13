@@ -1,7 +1,13 @@
 import { GoogleGenAI, ApiError } from "@google/genai";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import { toGeminiContents, toGeminiTools, toFinishReason, extractText, extractToolUse } from "./formatting.js";
+import {
+  toGeminiContents,
+  toGeminiTools,
+  toFinishReason,
+  extractText,
+  extractToolUse,
+} from "./formatting.js";
 
 const DEFAULT_MODEL = "gemini-3-flash-preview";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -50,13 +56,15 @@ export class GeminiProvider extends BaseLLMProvider {
       params.tools = toGeminiTools(options.tools);
     }
 
-    const response = await this.client.models.generateContent(params as any);
+    const response = await this.client.models.generateContent(
+      params as unknown as Parameters<typeof this.client.models.generateContent>[0],
+    );
 
     const candidates = response.candidates ?? [];
     const finishReason = candidates[0]?.finishReason ?? null;
     const usage = response.usageMetadata ?? {};
 
-    const toolUse = extractToolUse(response);
+    const toolUse = extractToolUse(response as unknown as Record<string, unknown>);
     const hasToolUse = toolUse.length > 0;
 
     return {

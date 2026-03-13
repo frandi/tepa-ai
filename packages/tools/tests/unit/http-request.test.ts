@@ -57,9 +57,9 @@ describe("http_request tool", () => {
   it("should throw non-network errors immediately without retry", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Invalid URL"));
 
-    await expect(
-      httpRequestTool.execute({ url: "https://example.com" }),
-    ).rejects.toThrow("Invalid URL");
+    await expect(httpRequestTool.execute({ url: "https://example.com" })).rejects.toThrow(
+      "Invalid URL",
+    );
 
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -87,9 +87,9 @@ describe("http_request tool", () => {
   it("should throw after exhausting retries on network errors", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("fetch failed"));
 
-    await expect(
-      httpRequestTool.execute({ url: "https://example.com" }),
-    ).rejects.toThrow("fetch failed");
+    await expect(httpRequestTool.execute({ url: "https://example.com" })).rejects.toThrow(
+      "fetch failed",
+    );
 
     // 1 initial + 3 retries = 4 calls
     expect(fetch).toHaveBeenCalledTimes(4);

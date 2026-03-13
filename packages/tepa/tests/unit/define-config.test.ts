@@ -56,9 +56,9 @@ describe("defineConfig", () => {
   });
 
   it("throws TepaConfigError for invalid logging level", () => {
-    expect(() =>
-      defineConfig({ logging: { level: "debug" as "standard" } }),
-    ).toThrow(TepaConfigError);
+    expect(() => defineConfig({ logging: { level: "debug" as "standard" } })).toThrow(
+      TepaConfigError,
+    );
   });
 
   it("throws TepaConfigError for empty model name", () => {

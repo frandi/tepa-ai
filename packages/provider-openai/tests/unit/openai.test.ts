@@ -54,8 +54,8 @@ import OpenAI from "openai";
 import { OpenAIProvider } from "../../src/openai.js";
 
 function getMockCreate() {
-  const instance = new OpenAI() as any;
-  return instance.responses.create as ReturnType<typeof vi.fn>;
+  const instance = new OpenAI() as unknown as { responses: { create: ReturnType<typeof vi.fn> } };
+  return instance.responses.create;
 }
 
 function makeSuccessResponse(text: string, inputTokens = 10, outputTokens = 20) {
@@ -117,10 +117,7 @@ describe("OpenAIProvider", () => {
     it("uses default model and max_output_tokens when not specified", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], { model: "" });
 
       const callArgs = mockCreate.mock.calls[0]![0];
       expect(callArgs.max_output_tokens).toBe(64_000);
@@ -129,10 +126,7 @@ describe("OpenAIProvider", () => {
     it("omits temperature when not provided", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gpt-4.1" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], { model: "gpt-4.1" });
 
       const callArgs = mockCreate.mock.calls[0]![0];
       expect(callArgs.temperature).toBeUndefined();
@@ -141,14 +135,13 @@ describe("OpenAIProvider", () => {
     it("omits system message when systemPrompt is not provided", async () => {
       mockCreate.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 
-      await provider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gpt-4.1" },
-      );
+      await provider.complete([{ role: "user", content: "Hi" }], { model: "gpt-4.1" });
 
       const callArgs = mockCreate.mock.calls[0]![0];
-      const input = callArgs.input as any[];
-      expect(input.every((m: any) => m.role !== "system")).toBe(true);
+      const input = callArgs.input as unknown[];
+      expect(input.every((m: unknown) => (m as Record<string, unknown>).role !== "system")).toBe(
+        true,
+      );
     });
 
     it("returns correctly formatted LLMResponse", async () => {
@@ -178,10 +171,9 @@ describe("OpenAIProvider", () => {
         status: "incomplete",
       });
 
-      const result = await provider.complete(
-        [{ role: "user", content: "Tell me a long story" }],
-        { model: "gpt-4.1" },
-      );
+      const result = await provider.complete([{ role: "user", content: "Tell me a long story" }], {
+        model: "gpt-4.1",
+      });
 
       expect(result.finishReason).toBe("max_tokens");
     });
@@ -205,7 +197,9 @@ describe("OpenAIProvider", () => {
 
   describe("retry logic", () => {
     it("retries on rate limit errors", async () => {
-      const rateLimitError = new (OpenAI as any).RateLimitError();
+      const rateLimitError = new (
+        OpenAI as unknown as Record<string, new () => Error>
+      ).RateLimitError();
       mockCreate
         .mockRejectedValueOnce(rateLimitError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -216,17 +210,18 @@ describe("OpenAIProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gpt-4.1" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gpt-4.1",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockCreate).toHaveBeenCalledTimes(2);
     });
 
     it("retries on internal server errors", async () => {
-      const serverError = new (OpenAI as any).InternalServerError();
+      const serverError = new (
+        OpenAI as unknown as Record<string, new () => Error>
+      ).InternalServerError();
       mockCreate
         .mockRejectedValueOnce(serverError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -237,17 +232,18 @@ describe("OpenAIProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gpt-4.1" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gpt-4.1",
+      });
 
       expect(result.text).toBe("Success");
       expect(mockCreate).toHaveBeenCalledTimes(2);
     });
 
     it("retries on connection errors", async () => {
-      const connError = new (OpenAI as any).APIConnectionError();
+      const connError = new (
+        OpenAI as unknown as Record<string, new () => Error>
+      ).APIConnectionError();
       mockCreate
         .mockRejectedValueOnce(connError)
         .mockResolvedValueOnce(makeSuccessResponse("Success"));
@@ -258,16 +254,17 @@ describe("OpenAIProvider", () => {
         defaultLog: false,
       });
 
-      const result = await fastProvider.complete(
-        [{ role: "user", content: "Hi" }],
-        { model: "gpt-4.1" },
-      );
+      const result = await fastProvider.complete([{ role: "user", content: "Hi" }], {
+        model: "gpt-4.1",
+      });
 
       expect(result.text).toBe("Success");
     });
 
     it("does not retry on authentication errors", async () => {
-      const authError = new (OpenAI as any).AuthenticationError();
+      const authError = new (
+        OpenAI as unknown as Record<string, new () => Error>
+      ).AuthenticationError();
       mockCreate.mockRejectedValue(authError);
 
       const fastProvider = new OpenAIProvider({
@@ -277,10 +274,7 @@ describe("OpenAIProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "gpt-4.1" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], { model: "gpt-4.1" }),
       ).rejects.toThrow();
 
       // Only 1 attempt, no retries
@@ -288,7 +282,9 @@ describe("OpenAIProvider", () => {
     });
 
     it("throws after exhausting all retries", async () => {
-      const rateLimitError = new (OpenAI as any).RateLimitError();
+      const rateLimitError = new (
+        OpenAI as unknown as Record<string, new () => Error>
+      ).RateLimitError();
       mockCreate.mockRejectedValue(rateLimitError);
 
       const fastProvider = new OpenAIProvider({
@@ -299,10 +295,7 @@ describe("OpenAIProvider", () => {
       });
 
       await expect(
-        fastProvider.complete(
-          [{ role: "user", content: "Hi" }],
-          { model: "gpt-4.1" },
-        ),
+        fastProvider.complete([{ role: "user", content: "Hi" }], { model: "gpt-4.1" }),
       ).rejects.toThrow();
 
       // 1 initial + 2 retries = 3

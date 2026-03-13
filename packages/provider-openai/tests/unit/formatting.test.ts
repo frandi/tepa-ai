@@ -37,9 +37,7 @@ describe("toOpenAIInput", () => {
   });
 
   it("returns only system message for empty input with system prompt", () => {
-    expect(toOpenAIInput([], "Be helpful")).toEqual([
-      { role: "system", content: "Be helpful" },
-    ]);
+    expect(toOpenAIInput([], "Be helpful")).toEqual([{ role: "system", content: "Be helpful" }]);
   });
 });
 

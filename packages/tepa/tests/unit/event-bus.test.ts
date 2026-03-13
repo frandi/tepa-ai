@@ -116,9 +116,7 @@ describe("EventBus", () => {
       };
       const bus = new EventBus(events);
 
-      await expect(bus.run("preEvaluator", "data", baseCycle)).rejects.toThrow(
-        "Abort!",
-      );
+      await expect(bus.run("preEvaluator", "data", baseCycle)).rejects.toThrow("Abort!");
     });
 
     it("throwing callback with continueOnError: true is skipped, data rolls back", async () => {
@@ -153,9 +151,7 @@ describe("EventBus", () => {
       };
       const bus = new EventBus(events);
 
-      await expect(bus.run("prePlanner", "x", baseCycle)).rejects.toThrow(
-        "Async abort",
-      );
+      await expect(bus.run("prePlanner", "x", baseCycle)).rejects.toThrow("Async abort");
     });
 
     it("async callback rejection with continueOnError is skipped", async () => {

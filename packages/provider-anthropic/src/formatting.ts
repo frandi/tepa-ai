@@ -4,9 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 /**
  * Convert Tepa LLMMessage array to Anthropic message format.
  */
-export function toAnthropicMessages(
-  messages: LLMMessage[],
-): Anthropic.MessageParam[] {
+export function toAnthropicMessages(messages: LLMMessage[]): Anthropic.MessageParam[] {
   return messages.map((msg) => ({
     role: msg.role,
     content: msg.content,
