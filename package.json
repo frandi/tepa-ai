@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\""
+    "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md,yaml,yml}\"",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",

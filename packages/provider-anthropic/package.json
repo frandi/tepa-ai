@@ -13,7 +13,15 @@
   "bugs": {
     "url": "https://github.com/frandi/tepa-ai/issues"
   },
-  "keywords": ["tepa", "ai", "llm", "agent", "anthropic", "claude", "provider"],
+  "keywords": [
+    "tepa",
+    "ai",
+    "llm",
+    "agent",
+    "anthropic",
+    "claude",
+    "provider"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -43,7 +51,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tepa/types": "^0.1.0",

@@ -5,7 +5,8 @@
   "description": "Demo: Human-in-the-loop study plan generation using Tepa",
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tepa/provider-anthropic": "*",

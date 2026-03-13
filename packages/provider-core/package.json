@@ -13,7 +13,14 @@
   "bugs": {
     "url": "https://github.com/frandi/tepa-ai/issues"
   },
-  "keywords": ["tepa", "ai", "llm", "agent", "provider", "core"],
+  "keywords": [
+    "tepa",
+    "ai",
+    "llm",
+    "agent",
+    "provider",
+    "core"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,7 +37,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "engines": {
     "node": ">=18"
@@ -41,7 +50,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tepa/types": "^0.1.0"
