@@ -1,6 +1,10 @@
 # Tool System
 
-Tools are how the pipeline interacts with the outside world — reading files, running commands, making HTTP requests, or anything else your task requires. Tepa treats tools as first-class objects: each tool declares its name, parameters, and an async execute function. The Planner sees what tools are available and builds plans around them. The Executor invokes them through native LLM tool calling, so the model returns structured parameters instead of free-form text that needs parsing.
+Tools are how the pipeline interacts with the outside world — reading files, running commands, making HTTP requests, or anything else your task requires. Tepa treats tools as first-class objects: each tool declares its name, description, parameters, and an async execute function. The Planner sees what tools are available and builds plans around them. The Executor invokes them through native LLM tool calling, so the model returns structured parameters instead of free-form text that needs parsing.
+
+This section covers the tool interface, how to register tools, the full built-in tool reference, and how to create custom or third-party tools. For how tool schemas flow through the pipeline internally, see [Pipeline in Detail — Tool Schema Flow](./04-pipeline-in-detail.md#tool-schema-flow).
+
+---
 
 ## Tool Definition
 
@@ -15,16 +19,14 @@ interface ToolDefinition {
 }
 ```
 
-| Field         | Purpose                                                                             |
-| ------------- | ----------------------------------------------------------------------------------- |
-| `name`        | Unique identifier used in plans and tool calls (e.g., `"file_read"`)                |
-| `description` | Tells the LLM what the tool does — this directly affects how well the model uses it |
-| `parameters`  | Schema of accepted inputs, keyed by parameter name                                  |
-| `execute`     | The async function that runs when the tool is invoked                               |
+| Field         | Purpose                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `name`        | Unique identifier used in plans and tool calls. Use `snake_case` (e.g., `"file_read"`). |
+| `description` | Tells the LLM what the tool does — directly affects planning and execution quality.     |
+| `parameters`  | Schema of accepted inputs, keyed by parameter name.                                     |
+| `execute`     | The async function invoked when the tool is called.                                     |
 
 ### `ParameterDef`
-
-Each parameter is described with a `ParameterDef`:
 
 ```typescript
 interface ParameterDef {
@@ -35,14 +37,47 @@ interface ParameterDef {
 }
 ```
 
-| Field         | Purpose                                                               |
-| ------------- | --------------------------------------------------------------------- |
-| `type`        | One of five JSON-compatible types                                     |
-| `description` | Tells the LLM what value to provide — be specific                     |
-| `required`    | Whether the parameter must be supplied. Defaults to `true` if omitted |
-| `default`     | Default value applied when the parameter is not provided              |
+| Field         | Purpose                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| `type`        | One of five JSON-compatible types.                                      |
+| `description` | Tells the LLM what value to provide — be specific (see guidance below). |
+| `required`    | Whether the parameter must be supplied. Defaults to `true` if omitted.  |
+| `default`     | Default value applied when the parameter is not provided.               |
 
-The parameter schema serves double duty: it's validated with Zod at tool creation time, and it's converted to the LLM provider's native tool format at execution time (JSON Schema for Anthropic/OpenAI, function declarations for Gemini).
+The parameter schema serves double duty: validated with Zod at tool creation time, and converted to the LLM provider's native tool format at execution time.
+
+---
+
+## Writing Good Tool Descriptions
+
+The `description` field on both the tool and its parameters is the primary signal the LLM uses when deciding which tool to assign to a step and what values to pass. A vague description produces worse plans and more failed steps. A precise description produces better plans on the first cycle, reducing the need for self-correction.
+
+**Tool description:** Describe what the tool does, what it operates on, and what it returns. Avoid generic verbs like "processes" or "handles."
+
+```typescript
+// ❌ Too vague — the LLM doesn't know when or how to use this
+description: "Processes files";
+
+// ✅ Specific — the LLM knows exactly what this tool does and what to expect back
+description: "Reads the full text contents of a file at the given path and returns them as a UTF-8 string. Use this to load source code, configuration files, data files, or any text-based content before analyzing or transforming it.";
+```
+
+**Parameter descriptions:** Describe what value the LLM should supply, including format, constraints, and examples where the input isn't obvious.
+
+```typescript
+// ❌ Unhelpful — the LLM already knows it's a path
+path: { type: "string", description: "File path" }
+
+// ✅ Specific — tells the LLM what kind of path, relative to what
+path: {
+  type: "string",
+  description: "Absolute or relative file path to read. Relative paths are resolved from the current working directory. Example: './src/index.ts' or '/tmp/output.json'."
+}
+```
+
+**The practical test:** Read your description without looking at the tool name. Could the LLM still understand exactly what to call and when? If not, add more specificity.
+
+---
 
 ## Creating Tools
 
@@ -53,15 +88,25 @@ import { defineTool } from "@tepa/tools";
 
 const myTool = defineTool({
   name: "my_custom_tool",
-  description: "Does something useful",
+  description:
+    "Fetches the current status of a deployment by its ID and returns the status string and last updated timestamp.",
   parameters: {
-    input: { type: "string", description: "Input value", required: true },
-    verbose: { type: "boolean", description: "Verbose output", default: false },
+    deploymentId: {
+      type: "string",
+      description: "The deployment ID to check. Format: 'deploy-{uuid}'.",
+      required: true,
+    },
+    verbose: {
+      type: "boolean",
+      description: "If true, include full deployment logs in the response.",
+      default: false,
+    },
   },
   execute: async (params) => {
-    const input = params.input as string;
+    const deploymentId = params.deploymentId as string;
     const verbose = params.verbose as boolean;
-    return { result: `processed: ${input}` };
+    // Implementation...
+    return { status: "running", updatedAt: new Date().toISOString() };
   },
 });
 ```
@@ -77,16 +122,18 @@ If any check fails, it throws with a message listing every failing field:
 
 ```
 Invalid tool definition: name: Tool name must be non-empty;
-  parameters.input.description: Parameter description must be non-empty
+  parameters.deploymentId.description: Parameter description must be non-empty
 ```
 
-You can also create a `ToolDefinition` object directly without `defineTool` — the interface is the same. `defineTool` just adds the validation layer.
+You can also construct a `ToolDefinition` object directly against the `@tepa/types` interface without using `defineTool` — the interface is identical. `defineTool` just adds the validation layer.
+
+---
 
 ## Registering Tools
 
-### Passing Tools to the `Tepa` Constructor
+### Passing Tools to the Constructor
 
-The simplest way to register tools is to pass them as an array when creating a `Tepa` instance:
+Pass tools as an array when creating a `Tepa` instance. This is the standard approach:
 
 ```typescript
 import { Tepa } from "@tepa/core";
@@ -99,9 +146,9 @@ const tepa = new Tepa({
 });
 ```
 
-Internally, `Tepa` creates a tool registry during `run()` and registers each tool. The registry is then passed to the Planner (for building tool-aware plans) and the Executor (for resolving and invoking tools).
+Internally, `Tepa` registers each tool in an inline `ToolRegistry` at the start of `run()`. The registry is passed to the Planner (for building tool-aware plans) and the Executor (for resolving and invoking tools at execution time).
 
-Only tools you explicitly pass are available. If a plan references a tool that wasn't registered, the Planner validation catches it and raises a `TepaCycleError`:
+Only tools you explicitly pass are available. If a plan references an unregistered tool, plan validation catches it before any step runs and throws a `TepaCycleError`:
 
 ```
 Plan references unknown tool "database_query" in step "step_2".
@@ -110,29 +157,22 @@ Available tools: file_read, file_write, shell_execute
 
 ### `ToolRegistryImpl` for Programmatic Use
 
-If you need to manage tools outside of a pipeline run — for inspection, dynamic registration, or building custom tooling — use `ToolRegistryImpl` directly:
+If you need to inspect or manage tools outside of a pipeline run, use `ToolRegistryImpl` directly:
 
 ```typescript
-import { ToolRegistryImpl, fileReadTool, fileWriteTool } from "@tepa/tools";
+import { ToolRegistryImpl } from "@tepa/tools";
 
 const registry = new ToolRegistryImpl();
 registry.register(fileReadTool);
-registry.register(fileWriteTool);
 
-// Look up a tool by name
-const tool = registry.get("file_read");
-
-// List all registered tools
-const allTools = registry.list();
-
-// Get schemas without execute functions (safe to serialize or send to an LLM)
-const schemas = registry.toSchema();
+const tool = registry.get("file_read"); // Look up by name
+const allTools = registry.list(); // List all registered tools
+const schemas = registry.toSchema(); // Schemas without execute functions (safe to serialize)
 ```
 
-Key behaviors:
+Registering a tool name that already exists throws: `Tool "file_read" is already registered`. See the [API Reference](./11-api-reference.md) for the full `ToolRegistry` interface.
 
-- **Duplicate prevention** — Registering a tool with a name that already exists throws an error: `Tool "file_read" is already registered`.
-- **`toSchema()`** — Returns an array of `ToolSchema` objects (name, description, parameters) without the `execute` function. This is what gets sent to LLM providers.
+---
 
 ## Built-in Tools Reference
 
@@ -148,10 +188,10 @@ npm install @tepa/tools
 
 Read the contents of a file at the given path.
 
-| Parameter  | Type   | Required | Default   | Description                    |
-| ---------- | ------ | -------- | --------- | ------------------------------ |
-| `path`     | string | yes      | —         | Absolute or relative file path |
-| `encoding` | string | no       | `"utf-8"` | File encoding                  |
+| Parameter  | Type   | Required | Default   | Description                             |
+| ---------- | ------ | -------- | --------- | --------------------------------------- |
+| `path`     | string | yes      | —         | Absolute or relative file path to read. |
+| `encoding` | string | no       | `"utf-8"` | File encoding.                          |
 
 **Returns:** File contents as a string.
 
@@ -163,10 +203,10 @@ import { fileReadTool } from "@tepa/tools";
 
 Write content to a file, creating parent directories if needed.
 
-| Parameter | Type   | Required | Default | Description                    |
-| --------- | ------ | -------- | ------- | ------------------------------ |
-| `path`    | string | yes      | —       | Absolute or relative file path |
-| `content` | string | yes      | —       | Content to write               |
+| Parameter | Type   | Required | Default | Description                              |
+| --------- | ------ | -------- | ------- | ---------------------------------------- |
+| `path`    | string | yes      | —       | Absolute or relative file path to write. |
+| `content` | string | yes      | —       | Content to write.                        |
 
 **Returns:** `{ path: string, bytesWritten: number }`
 
@@ -178,12 +218,12 @@ import { fileWriteTool } from "@tepa/tools";
 
 List directory contents with optional recursive depth.
 
-| Parameter  | Type   | Required | Default | Description             |
-| ---------- | ------ | -------- | ------- | ----------------------- |
-| `path`     | string | yes      | —       | Directory path to list  |
-| `maxDepth` | number | no       | `1`     | Maximum recursion depth |
+| Parameter  | Type   | Required | Default | Description              |
+| ---------- | ------ | -------- | ------- | ------------------------ |
+| `path`     | string | yes      | —       | Directory path to list.  |
+| `maxDepth` | number | no       | `1`     | Maximum recursion depth. |
 
-**Returns:** Array of `{ name: string, type: "file" | "directory", children?: [...] }` entries, nested according to depth.
+**Returns:** Array of `{ name, type: "file" | "directory", children? }` entries, nested by depth.
 
 ```typescript
 import { directoryListTool } from "@tepa/tools";
@@ -193,10 +233,10 @@ import { directoryListTool } from "@tepa/tools";
 
 Search for files matching a glob pattern.
 
-| Parameter | Type   | Required | Default | Description                      |
-| --------- | ------ | -------- | ------- | -------------------------------- |
-| `pattern` | string | yes      | —       | Glob pattern (e.g., `**/*.ts`)   |
-| `cwd`     | string | no       | `"."`   | Working directory for the search |
+| Parameter | Type   | Required | Default | Description                       |
+| --------- | ------ | -------- | ------- | --------------------------------- |
+| `pattern` | string | yes      | —       | Glob pattern (e.g., `**/*.ts`).   |
+| `cwd`     | string | no       | `"."`   | Working directory for the search. |
 
 **Returns:** Array of matching file paths.
 
@@ -210,11 +250,11 @@ import { fileSearchTool } from "@tepa/tools";
 
 Execute a shell command and capture stdout, stderr, and exit code.
 
-| Parameter | Type   | Required | Default | Description                       |
-| --------- | ------ | -------- | ------- | --------------------------------- |
-| `command` | string | yes      | —       | Shell command to execute          |
-| `cwd`     | string | no       | —       | Working directory for the command |
-| `timeout` | number | no       | `30000` | Timeout in milliseconds           |
+| Parameter | Type   | Required | Default | Description                        |
+| --------- | ------ | -------- | ------- | ---------------------------------- |
+| `command` | string | yes      | —       | Shell command to execute.          |
+| `cwd`     | string | no       | —       | Working directory for the command. |
+| `timeout` | number | no       | `30000` | Timeout in milliseconds.           |
 
 **Returns:** `{ stdout: string, stderr: string, exitCode: number }`
 
@@ -228,14 +268,14 @@ import { shellExecuteTool } from "@tepa/tools";
 
 Make an HTTP request using fetch.
 
-| Parameter     | Type   | Required | Default | Description                           |
-| ------------- | ------ | -------- | ------- | ------------------------------------- |
-| `url`         | string | yes      | —       | URL to request                        |
-| `method`      | string | no       | `"GET"` | HTTP method                           |
-| `headers`     | object | no       | —       | Request headers                       |
-| `queryParams` | object | no       | —       | Query parameters to append to the URL |
-| `body`        | string | no       | —       | Request body                          |
-| `timeout`     | number | no       | `30000` | Timeout in milliseconds               |
+| Parameter     | Type   | Required | Default | Description                            |
+| ------------- | ------ | -------- | ------- | -------------------------------------- |
+| `url`         | string | yes      | —       | URL to request.                        |
+| `method`      | string | no       | `"GET"` | HTTP method.                           |
+| `headers`     | object | no       | —       | Request headers.                       |
+| `queryParams` | object | no       | —       | Query parameters to append to the URL. |
+| `body`        | string | no       | —       | Request body.                          |
+| `timeout`     | number | no       | `30000` | Timeout in milliseconds.               |
 
 **Returns:** `{ status: number, statusText: string, headers: object, body: string }`
 
@@ -251,11 +291,11 @@ import { httpRequestTool } from "@tepa/tools";
 
 Search the web using a configurable search API endpoint.
 
-| Parameter  | Type   | Required | Default | Description             |
-| ---------- | ------ | -------- | ------- | ----------------------- |
-| `query`    | string | yes      | —       | Search query            |
-| `endpoint` | string | yes      | —       | Search API endpoint URL |
-| `count`    | number | no       | `5`     | Number of results       |
+| Parameter  | Type   | Required | Default | Description                  |
+| ---------- | ------ | -------- | ------- | ---------------------------- |
+| `query`    | string | yes      | —       | Search query.                |
+| `endpoint` | string | yes      | —       | Search API endpoint URL.     |
+| `count`    | number | no       | `5`     | Number of results to return. |
 
 **Returns:** JSON response from the search API.
 
@@ -271,18 +311,18 @@ import { webSearchTool } from "@tepa/tools";
 
 Parse JSON, CSV, or YAML data from a string or file.
 
-| Parameter  | Type    | Required | Default | Description                                 |
-| ---------- | ------- | -------- | ------- | ------------------------------------------- |
-| `input`    | string  | yes      | —       | Data string or file path to parse           |
-| `format`   | string  | yes      | —       | Data format: `"json"`, `"csv"`, or `"yaml"` |
-| `fromFile` | boolean | no       | `false` | If true, treat input as a file path         |
-| `preview`  | number  | no       | —       | Limit output to first N rows/entries        |
+| Parameter  | Type    | Required | Default | Description                            |
+| ---------- | ------- | -------- | ------- | -------------------------------------- |
+| `input`    | string  | yes      | —       | Data string or file path to parse.     |
+| `format`   | string  | yes      | —       | `"json"`, `"csv"`, or `"yaml"`.        |
+| `fromFile` | boolean | no       | `false` | If true, treat `input` as a file path. |
+| `preview`  | number  | no       | —       | Limit output to first N rows/entries.  |
 
-**Returns:** Parsed data — the shape depends on the format:
+**Returns:** Parsed data — shape depends on format:
 
-- **CSV**: `Array<Record<string, string>>` (each row as an object keyed by header)
-- **JSON**: Parsed JSON value
-- **YAML**: Parsed YAML value
+- **CSV:** `Array<Record<string, string>>` — each row as an object keyed by header
+- **JSON:** Parsed JSON value
+- **YAML:** Parsed YAML value
 
 ```typescript
 import { dataParseTool } from "@tepa/tools";
@@ -292,13 +332,13 @@ import { dataParseTool } from "@tepa/tools";
 
 #### `scratchpad`
 
-In-memory key-value store for intermediate data. Data persists for the duration of a single pipeline run.
+In-memory key-value store for sharing intermediate data between steps. Data persists for the duration of a single `run()` call.
 
-| Parameter | Type   | Required | Default | Description                             |
-| --------- | ------ | -------- | ------- | --------------------------------------- |
-| `action`  | string | yes      | —       | `"read"` or `"write"`                   |
-| `key`     | string | yes      | —       | Storage key                             |
-| `value`   | string | no       | —       | Value to store (required for `"write"`) |
+| Parameter | Type   | Required | Default | Description                              |
+| --------- | ------ | -------- | ------- | ---------------------------------------- |
+| `action`  | string | yes      | —       | `"read"` or `"write"`.                   |
+| `key`     | string | yes      | —       | Storage key.                             |
+| `value`   | string | no       | —       | Value to store (required for `"write"`). |
 
 **Returns:**
 
@@ -306,7 +346,7 @@ In-memory key-value store for intermediate data. Data persists for the duration 
 - Read (found): `{ found: true, key: string, value: unknown }`
 - Read (not found): `{ found: false, key: string }`
 
-The scratchpad lets steps share data without depending on each other's outputs directly. The pipeline also writes an `_execution_summary` key automatically after each cycle, which the Planner reads during re-planning.
+The pipeline writes `_execution_summary` to the scratchpad automatically after each cycle. Avoid writing to this key directly — it's reserved for internal use.
 
 ```typescript
 import { scratchpadTool } from "@tepa/tools";
@@ -314,35 +354,47 @@ import { scratchpadTool } from "@tepa/tools";
 
 #### `log_observe`
 
-Record an observation for logging purposes.
+Record an observation to the pipeline logs without producing a primary output.
 
-| Parameter | Type   | Required | Default  | Description                                 |
-| --------- | ------ | -------- | -------- | ------------------------------------------- |
-| `message` | string | yes      | —        | Observation message to record               |
-| `level`   | string | no       | `"info"` | Log level: `"info"`, `"warn"`, or `"error"` |
+| Parameter | Type   | Required | Default  | Description                       |
+| --------- | ------ | -------- | -------- | --------------------------------- |
+| `message` | string | yes      | —        | Observation message to record.    |
+| `level`   | string | no       | `"info"` | `"info"`, `"warn"`, or `"error"`. |
 
 **Returns:** `{ observation: string, level: string, timestamp: string }`
 
-Use this when a step needs to surface a note, warning, or error to the pipeline logs without producing a primary output.
+Use this when a step needs to surface a note, warning, or error to the pipeline logs — for example, flagging a data quality issue discovered during analysis — without that observation becoming the step's primary output.
 
 ```typescript
 import { logObserveTool } from "@tepa/tools";
 ```
 
-## Creating Third-Party Tools
+---
 
-Any npm package can be a Tepa tool. The contract is simple — export a `ToolDefinition` object:
+## Creating Custom and Third-Party Tools
+
+Any npm package can be a Tepa tool. The contract is simple: export a `ToolDefinition` object. No plugin API, no registration hooks — import and pass.
+
+### Minimal Custom Tool
 
 ```typescript
-// tepa-tool-postgres/index.ts
 import type { ToolDefinition } from "@tepa/types";
 
-export const postgresQuery: ToolDefinition = {
+export const postgresQueryTool: ToolDefinition = {
   name: "postgres_query",
-  description: "Execute a read-only SQL query against PostgreSQL",
+  description:
+    "Execute a read-only SQL SELECT query against a PostgreSQL database and return the result rows. Use this to retrieve structured data for analysis or reporting. Does not support INSERT, UPDATE, DELETE, or DDL statements.",
   parameters: {
-    query: { type: "string", description: "SQL query to execute", required: true },
-    database: { type: "string", description: "Database name", required: true },
+    query: {
+      type: "string",
+      description: "SQL SELECT query to execute. Must be a read-only query.",
+      required: true,
+    },
+    database: {
+      type: "string",
+      description: "Name of the database to query.",
+      required: true,
+    },
   },
   execute: async (params) => {
     const query = params.query as string;
@@ -353,23 +405,51 @@ export const postgresQuery: ToolDefinition = {
 };
 ```
 
-Consumers install the package and pass it to `Tepa` alongside built-in tools:
+Use `defineTool` from `@tepa/tools` if you want schema validation at creation time:
+
+```typescript
+import { defineTool } from "@tepa/tools";
+
+export const postgresQueryTool = defineTool({
+  name: "postgres_query",
+  // ...same definition
+});
+```
+
+### Using Custom Tools
+
+Pass custom tools to `Tepa` alongside built-ins — they're treated identically:
 
 ```typescript
 import { Tepa } from "@tepa/core";
 import { fileReadTool, shellExecuteTool } from "@tepa/tools";
-import { postgresQuery } from "tepa-tool-postgres";
+import { postgresQueryTool } from "./tools/postgres.js";
 import { AnthropicProvider } from "@tepa/provider-anthropic";
 
 const tepa = new Tepa({
   provider: new AnthropicProvider(),
-  tools: [fileReadTool, shellExecuteTool, postgresQuery],
+  tools: [fileReadTool, shellExecuteTool, postgresQueryTool],
 });
 ```
 
-No plugin API, no registration hooks — just import and pass. Use `defineTool` from `@tepa/tools` if you want Zod validation at creation time, or construct the `ToolDefinition` object directly against the `@tepa/types` interface.
+### Publishing as an npm Package
+
+To share a tool with the community, publish it as a standalone npm package. Only `@tepa/types` is needed as a dependency — there's no requirement to depend on `@tepa/core` or `@tepa/tools`:
+
+```bash
+mkdir tepa-tool-postgres
+cd tepa-tool-postgres
+npm init -y
+npm install @tepa/types
+npm install -D typescript tsup
+```
+
+Consumers install your package and pass the tool to `Tepa` alongside any other tools. For a complete scaffolding walkthrough — including project structure, build config, test setup, and publish steps — see the [Contributing Guide](./10-contributing.md#how-to-create-a-custom-tool).
+
+---
 
 ## What's Next
 
 - [**Event System Patterns**](./07-event-system-patterns.md) — Human-in-the-loop approval, plan safety filters, progress tracking, and more.
 - [**LLM Providers**](./08-llm-providers.md) — Built-in providers, native tool use, and custom provider implementation.
+- [**Contributing**](./10-contributing.md) — Full scaffolding guide for publishing tools and providers as community packages.

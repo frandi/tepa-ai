@@ -32,9 +32,9 @@ export OPENAI_API_KEY="sk-..."
 export GEMINI_API_KEY="..."
 ```
 
-## Minimal Working Example
+## Your First Pipeline
 
-Here is a complete pipeline in under 15 lines. It reads a directory, analyzes its contents, and writes a summary file — planning the steps, executing them, and verifying the result autonomously.
+The example below reads a directory and writes a summary file. You give Tepa the goal, the tools, and a description of what success looks like — it handles the planning, execution, and verification.
 
 ```typescript
 import { Tepa } from "@tepa/core";
@@ -52,39 +52,39 @@ const result = await tepa.run({
   expectedOutput: "A file at ./summary.md describing the project structure.",
 });
 
-console.log(`Status: ${result.status}`);
-console.log(`Cycles: ${result.cycles}`);
-console.log(`Tokens used: ${result.tokensUsed}`);
-console.log(`Feedback: ${result.feedback}`);
+console.log(result.status); // "pass" — the evaluator confirmed ./summary.md meets the goal
+console.log(result.feedback); // a summary of what was produced, or why it fell short
 ```
 
-That's it. No plan to write, no retry logic to implement, no output to parse. Tepa handles all of it.
+No plan to write. No retry logic to implement. No output to parse. Tepa planned the steps, executed them using the tools you registered, evaluated the result against your `expectedOutput`, and gave you a verdict.
 
-### Using a Different Provider
+### Swapping Providers
 
-Swap the provider — nothing else changes:
+Change the provider — nothing else changes:
 
 ```typescript
 import { OpenAIProvider } from "@tepa/provider-openai";
-
-const tepa = new Tepa({
-  provider: new OpenAIProvider(),
-  tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
-});
-```
-
-```typescript
+// or
 import { GeminiProvider } from "@tepa/provider-gemini";
 
 const tepa = new Tepa({
-  provider: new GeminiProvider(),
+  provider: new OpenAIProvider(), // or new GeminiProvider()
   tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
 });
 ```
 
 ## Understanding the Result
 
-`tepa.run()` returns a `TepaResult` object:
+`tepa.run()` returns a `TepaResult` object. Here's what each field means:
+
+| Field        | Description                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`     | `"pass"` — output met the expected criteria. `"fail"` — max cycles reached without passing. `"terminated"` — token budget exhausted mid-cycle. |
+| `feedback`   | On pass: a summary from the evaluator. On fail: what fell short and why. On termination: the budget-exceeded message.                          |
+| `cycles`     | How many Plan-Execute-Evaluate cycles ran before the pipeline stopped.                                                                         |
+| `tokensUsed` | Total tokens consumed across all LLM calls (planner + executor + evaluator, across all cycles).                                                |
+| `outputs`    | Artifacts produced by the pipeline — file paths, descriptions, types.                                                                          |
+| `logs`       | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts.                                      |
 
 ```typescript
 interface TepaResult {
@@ -97,37 +97,17 @@ interface TepaResult {
 }
 ```
 
-| Field        | Description                                                                                                                                                                            |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`     | `"pass"` — the evaluator judged the output as meeting the goal. `"fail"` — max cycles reached without a passing evaluation. `"terminated"` — the token budget was exhausted mid-cycle. |
-| `cycles`     | How many Plan-Execute-Evaluate cycles ran before the pipeline stopped.                                                                                                                 |
-| `tokensUsed` | Total tokens consumed across all LLM calls (planner + executor + evaluator, across all cycles).                                                                                        |
-| `outputs`    | Artifacts produced by the pipeline (file paths, descriptions, types).                                                                                                                  |
-| `logs`       | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts.                                                                              |
-| `feedback`   | On success, a summary from the evaluator. On failure, the evaluator's feedback explaining what fell short. On termination, the budget-exceeded message.                                |
+## What Happened Under the Hood
 
-## What Just Happened
+When you called `tepa.run()`, Tepa ran a **Plan → Execute → Evaluate** cycle automatically. The Planner broke your goal into steps, the Executor ran each step using your registered tools, and the Evaluator checked the result against your `expectedOutput`. If it had failed, the evaluator's feedback would have fed back into the Planner for a revised approach — automatically, up to the cycle limit.
 
-When you called `tepa.run()`, the framework ran a full **Plan-Execute-Evaluate** cycle behind the scenes:
+All of that happened inside a single `await tepa.run()` call.
 
-1. **Planner** — The LLM received your goal, context, and expected output along with the list of available tools. It produced a structured plan: a sequence of steps, each specifying which tool to call, what parameters to pass, and which steps it depends on.
-
-   For the example above, the plan might look like:
-   - Step 1: Call `directory_list` on `./src` to discover the project structure.
-   - Step 2 _(depends on step 1)_: Call `file_read` on key files to understand their purpose.
-   - Step 3 _(depends on step 2)_: Call `file_write` to create `./summary.md` with the analysis.
-
-2. **Executor** — Steps were sorted by their dependencies and executed in order. For each step, the LLM received the step's description along with the tool schemas and returned a structured `tool_use` block. The framework invoked the tool, captured the result, and fed it into downstream steps.
-
-3. **Evaluator** — After all steps completed, the LLM reviewed the execution results against the expected output. It checked whether `./summary.md` exists and whether its content actually describes the project structure. It returned a verdict — `pass` or `fail` — with a confidence score and feedback.
-
-4. **Self-Correction** _(if needed)_ — If the evaluator returned `fail`, its feedback would have been sent back to the Planner to generate a revised plan. The cycle would repeat until the goal is met, the cycle limit is reached, or the token budget runs out. In the example above, sensible defaults apply: up to 5 cycles and 10,000 tokens.
-
-All of this happened inside a single `await tepa.run()` call.
+Want the full picture? [**How Tepa Works**](./03-how-tepa-works.md) covers the cycle in depth — how the Planner structures steps, how the Executor resolves dependencies, how the Evaluator scores results, and how self-correction works.
 
 ## Next Steps
 
-- [**How Tepa Works**](./03-how-tepa-works.md) — A deeper look at the Plan-Execute-Evaluate cycle, the scratchpad, the event system, and the package architecture.
-- [**Configuration**](./05-configuration.md) — Customize cycle limits, token budgets, per-stage models, and logging levels.
-- [**Tool System**](./06-tool-system.md) — Explore built-in tools and create your own.
-- [**Examples and Demos**](./09-examples-and-demos.md) — See Tepa in action with real-world use cases: code generation, data analysis, and human-in-the-loop workflows.
+- [**How Tepa Works**](./03-how-tepa-works.md) — A deeper look at the Plan-Execute-Evaluate cycle, the scratchpad, the event system, and the package architecture
+- [**Configuration**](./05-configuration.md) — Customize cycle limits, token budgets, per-stage models, and logging levels
+- [**Tool System**](./06-tool-system.md) — Explore built-in tools and create your own
+- [**Examples and Demos**](./09-examples-and-demos.md) — See Tepa in action: code generation, data analysis, and human-in-the-loop workflows
