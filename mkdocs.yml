@@ -1,0 +1,59 @@
+site_name: Tepa
+site_description: A TypeScript framework for building autonomous AI agent pipelines that plan, execute, and self-correct.
+site_url: https://frandi.github.io/tepa-ai/
+repo_url: https://github.com/frandi/tepa-ai
+repo_name: frandi/tepa-ai
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Learn:
+      - Introduction: 01-introduction.md
+      - Getting Started: 02-getting-started.md
+      - How Tepa Works: 03-how-tepa-works.md
+  - Build:
+      - Pipeline in Detail: 04-pipeline-in-detail.md
+      - Configuration: 05-configuration.md
+      - Tool System: 06-tool-system.md
+      - Event System Patterns: 07-event-system-patterns.md
+      - LLM Providers: 08-llm-providers.md
+  - Explore:
+      - Examples & Demos: 09-examples-and-demos.md
+  - Reference:
+      - Contributing: 10-contributing.md
+      - API Reference: 11-api-reference.md
+      - Future Iterations: 12-future-iterations.md
