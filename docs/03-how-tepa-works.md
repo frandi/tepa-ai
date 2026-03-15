@@ -1,22 +1,26 @@
 # How Tepa Works
 
-This section walks through the mechanics of a Tepa pipeline — how the three core components (Planner, Executor, Evaluator) interact in a loop, how state flows between them, how the event system lets you observe and control the process, and how the packages fit together.
+This section builds a mental model of Tepa's core loop — what each component does, why the cycle is structured the way it is, and how state flows from a goal to a verified result. It's the right read after Getting Started, before you start building something non-trivial.
 
-## The Plan-Execute-Evaluate Cycle
+If you're looking for the complete technical reference — full interfaces, event data contracts, prompt structure, termination rules, edge cases — that's in [Pipeline in Detail](./04-pipeline-in-detail.md).
 
-Every call to `tepa.run()` triggers a loop that repeats until the goal is met or a limit is reached:
+---
+
+## The Plan-Execute-Evaluate Loop
+
+Every call to `tepa.run()` triggers a loop. It keeps running until one of three things happens: the agent passes its own evaluation, it runs out of allowed cycles, or it exhausts its token budget.
 
 ```
                     ┌─────────────────────────────────────────────┐
                     │                                             │
                     ▼                                             │
   ┌──────────┐   ┌──────────┐   ┌───────────┐   ┌───────────┐   │
-  │  Prompt   │──▶│ Planner  │──▶│ Executor  │──▶│ Evaluator │   │
+  │  Prompt  │──▶│ Planner  │──▶│ Executor  │──▶│ Evaluator │   │
   └──────────┘   └──────────┘   └───────────┘   └───────────┘   │
                     ▲                                │            │
                     │                                ▼            │
                     │                          ┌───────────┐      │
-                    │                          │  Verdict?  │     │
+                    │                          │  Verdict? │      │
                     │                          └───────────┘      │
                     │                           │         │       │
                     │                         pass       fail     │
@@ -24,232 +28,109 @@ Every call to `tepa.run()` triggers a loop that repeats until the goal is met or
                     │                           ▼         │       │
                     │                        [Done]       │       │
                     │                                     │       │
-                    └─────────── feedback ─────────────────┘       │
+                    └─────────── feedback ────────────────┘       │
                                 + scratchpad                      │
                     ┌─────────────────────────────────────────────┘
                     │  (repeat until pass, max cycles, or token budget)
 ```
 
-Here's what happens inside each cycle:
+The loop terminates on the first condition that fires:
 
-1. **Planner** receives the goal, context, expected output, and the list of available tools. It produces a structured plan — ordered steps with dependencies, tool assignments, and expected outcomes.
-2. **Executor** sorts the steps by their dependencies and runs them in order. For each step, it calls the LLM with the relevant tool schemas. The LLM returns structured tool invocations, and the framework executes the tools and captures their results.
-3. **Evaluator** reviews the execution results against the expected output. It checks both structure (do the required artifacts exist?) and quality (does the content actually address the goal?). It returns a verdict — `pass` or `fail` — with a confidence score and feedback.
-
-If the verdict is `pass`, the pipeline returns. If `fail`, the evaluator's feedback and the current scratchpad state feed back into the Planner for a revised plan, and the next cycle begins.
-
-The loop terminates when any of these conditions is met:
-
-| Condition                               | Result status  |
-| --------------------------------------- | -------------- |
-| Evaluator returns `pass`                | `"pass"`       |
-| Max cycles exhausted (default: 5)       | `"fail"`       |
+| Condition | Result |
+|---|---|
+| Evaluator returns `pass` | `"pass"` |
+| Max cycles exhausted (default: 5) | `"fail"` |
 | Token budget exceeded (default: 64,000) | `"terminated"` |
 
-## Planner
+Here's what happens inside each component.
 
-The Planner's job is to break a goal into a dependency-ordered sequence of steps that the Executor can carry out.
+---
 
-### What It Receives
+## The Planner
 
-On the first cycle, the Planner receives:
+The Planner's job is to turn your goal into a sequence of actionable steps — each with a tool assignment, a declared dependency, and a description of what success looks like for that step.
 
-- The prompt (goal, context, expected output)
-- The full list of available tools with their parameter definitions
+It receives three things: the goal and expected output you provided, the full list of tools available to the agent, and — on retry cycles — the evaluator's feedback from the previous attempt plus a summary of what already succeeded.
 
-On subsequent cycles (re-planning after failure), it also receives:
+What it produces is a **structured plan**: an ordered list of steps with declared dependencies between them. A step can depend on the output of a prior step. A step with no tools assigned is a *reasoning step* — the LLM produces a text analysis rather than invoking a tool, which is useful for distilling or interpreting data before a downstream tool-calling step consumes it.
 
-- The evaluator's feedback explaining what went wrong
-- The current scratchpad state, including the `_execution_summary` from the previous cycle
+**On failure, the Planner doesn't start over — it revises.** It sees exactly what succeeded and what didn't in the previous cycle, and produces a minimal revision: only fix what failed, build on what worked. This keeps self-correction efficient rather than wasteful.
 
-### What It Produces
+---
 
-The Planner calls the LLM and parses the response into a `Plan`:
+## The Executor
 
-```typescript
-interface Plan {
-  steps: PlanStep[];
-  estimatedTokens: number;
-  reasoning: string;
-}
+The Executor takes the plan and runs each step in the correct order, enforcing dependencies so no step runs before the data it needs is ready.
 
-interface PlanStep {
-  id: string; // e.g., "step_1"
-  description: string; // what this step does
-  tools: string[]; // tool names to call (empty = reasoning step)
-  expectedOutcome: string; // what success looks like for this step
-  dependencies: string[]; // IDs of steps that must complete first
-  model?: string; // optional per-step model override
-}
-```
+Before executing anything, it performs a **topological sort** of the plan steps — resolving all declared dependencies into a safe execution order. If a circular dependency exists, it throws immediately before any step runs.
 
-Each step declares which tools it needs and which prior steps it depends on. Dependencies must reference step IDs within the same plan — no forward references, no circular chains.
+Each step then runs in sequence:
 
-A step with an empty `tools` array is a **reasoning step**: the LLM produces a text response without calling any tools. This is useful for analysis, synthesis, or decision-making steps that feed into downstream tool-calling steps.
+- If a step's upstream dependency failed, the step is automatically skipped. Failures cascade — Tepa won't waste tokens running a step whose inputs are already broken.
+- Each step only receives the outputs of its *declared* dependencies — not the full result set. This is enforced by the framework, preventing a step from accidentally consuming data it didn't explicitly ask for.
+- For tool steps, the LLM receives the step description along with the tool's schema and returns a **structured `tool_use` block** — typed parameters, no free-form text, no string parsing. The framework invokes the tool directly with those parameters.
+- For reasoning steps, the LLM produces a text response that becomes that step's output, available to any downstream step that depends on it.
 
-### Re-Planning on Failure
+The key design principle here: **the Executor never guesses.** It only calls tools the Planner explicitly assigned. It only passes data that was explicitly declared as a dependency. There's no implicit state sharing between steps — everything flows through the dependency graph.
 
-When the evaluator returns `fail`, the Planner switches to a revised-plan prompt. Instead of planning from scratch, it's instructed to produce a **minimal revision** — only fixing what failed, while building on what already succeeded. The scratchpad gives it full visibility into prior execution results, so it can avoid repeating work.
+---
 
-### Parse Failure Retry
+## The Evaluator
 
-If the LLM's response can't be parsed as valid JSON, the Planner retries once with a simplified prompt. If parsing fails again, the cycle throws an error.
+After all steps complete, the Evaluator asks the only question that matters: *did the result actually meet the goal?*
 
-## Executor
+It assesses two dimensions simultaneously:
 
-The Executor takes a plan and runs each step, calling tools through the LLM's native tool-use capability.
+- **Structural:** Do the expected outputs exist? Are required files present, in the right format, at the right paths?
+- **Qualitative:** Is the content meaningful and correct? Does it actually address the goal — not just superficially satisfy the form?
 
-### Topological Sorting
+The Evaluator returns a verdict: `pass` or `fail`. On `fail`, it produces **actionable feedback** — specific, referencing which steps fell short and what should change. This feedback is exactly what the Planner receives on the next cycle. It's not a log message; it's a instruction for improvement.
 
-Before executing anything, the Executor sorts the plan steps using Kahn's algorithm (a standard BFS-based topological sort). This produces an execution order that respects all declared dependencies. If a circular dependency is detected, the executor throws an error immediately.
+On `pass`, the evaluator's summary becomes the `feedback` field in the final `TepaResult` — a human-readable confirmation of what was accomplished.
 
-Where multiple steps have no dependency relationship, the original plan order is preserved — giving the Planner some control over execution sequence even among independent steps.
+**This is the part most agent frameworks leave to you.** In Tepa, the evaluation is a first-class step in every cycle, not something you bolt on afterward. `result.status` is a verdict, not a guess.
 
-### Step Execution Flow
+---
 
-For each step in the sorted order:
+## The Scratchpad
 
-1. **Dependency check.** If any step this one depends on has failed, it's immediately marked as failed with a skip message. Failures cascade — a downstream step won't run if its upstream dependency didn't succeed.
-2. **Scoped inputs.** The step only receives the outputs of its declared dependencies, not the full output map. This is enforced by the framework — a step can't accidentally read data from a step it didn't declare a dependency on.
-3. **Execution.** The step runs as either a tool step or a reasoning step (see below).
-4. **Result capture.** The output is stored in the step outputs map and made available to downstream steps that declare this step as a dependency.
+The Scratchpad is an in-memory key-value store that persists across all steps and all cycles within a single `run()` call. It's how state flows through the pipeline without being passed explicitly through every step.
 
-### Tool Steps
+Steps can read and write to it freely using the built-in `scratchpadTool`. After every cycle, the framework automatically writes a `_execution_summary` key — a record of every step's ID, status, output, and any errors. On the next cycle, the Planner reads this summary to understand exactly what happened before.
 
-For steps with tools assigned, the Executor:
+This is what makes self-correction efficient. The Planner doesn't re-examine the world from scratch — it reads the scratchpad and knows which steps succeeded, which failed, and what the evaluator found lacking. It revises accordingly.
 
-1. Looks up each tool in the registry to get its schema.
-2. Builds a message with the step description, goal context, scratchpad state, and the outputs of dependency steps.
-3. Calls the LLM with the tool schema attached. The LLM returns a structured `tool_use` block with pre-parsed parameters — no regex extraction, no JSON parsing from free-form text.
-4. Invokes the tool with those parameters and captures the result.
+Three components see the scratchpad:
 
-If the LLM doesn't return a `tool_use` block (i.e., it responds with text instead of a tool call), the step is marked as failed.
-
-### Reasoning Steps
-
-Steps with an empty `tools` array are reasoning steps. The Executor sends the step description, expected outcome, goal context, scratchpad, and dependency outputs to the LLM, and captures the text response as the step's output. No tools are invoked.
-
-Reasoning steps are useful for intermediate analysis — for example, reviewing data from a previous step and deciding what to do next, or synthesizing information before a downstream tool-calling step.
-
-### Execution Result
-
-Each step produces an `ExecutionResult`:
-
-```typescript
-interface ExecutionResult {
-  stepId: string;
-  status: "success" | "failure";
-  output: unknown;
-  error?: string;
-  tokensUsed: number;
-  durationMs: number;
-}
-```
-
-## Evaluator
-
-After all steps complete, the Evaluator judges whether the execution results meet the goal.
-
-### What It Checks
-
-The Evaluator instructs the LLM to assess two dimensions:
-
-- **Structural checks.** Were expected outputs produced? Do files exist in the right format? Are all required artifacts present?
-- **Qualitative checks.** Is the content meaningful and correct? Are outputs specific and relevant? Does the result actually address the goal?
-
-The evaluation message includes the goal, expected output, a summary of every step's result (status, output, errors), and the current scratchpad state.
-
-### Evaluation Result
-
-```typescript
-interface EvaluationResult {
-  verdict: "pass" | "fail";
-  confidence: number; // 0.0 – 1.0
-  feedback?: string; // required on fail — actionable explanation
-  summary?: string; // optional on pass — brief description of success
-  tokensUsed: number;
-}
-```
-
-On `fail`, the `feedback` field contains an actionable description of what fell short. This feedback is exactly what the Planner receives on the next cycle to guide its revised plan.
-
-### Self-Correction
-
-The self-correction loop is the core of Tepa's reliability. Here's how state flows from a failed evaluation back to a successful re-plan:
-
-1. The Evaluator returns `verdict: "fail"` with feedback: _"The summary file was created but doesn't describe the src/utils directory."_
-2. The orchestrator writes `_execution_summary` to the scratchpad (containing all step outputs and statuses from this cycle).
-3. On the next cycle, the Planner receives both the evaluator's feedback and the scratchpad.
-4. The Planner sees that most steps succeeded and the file was written — it only needs to re-read the missed directory and update the file. It produces a minimal revised plan.
-5. The Executor runs the revised plan, and the Evaluator re-evaluates.
-
-This loop continues until the goal is met, the cycle limit is reached, or the token budget is exhausted.
-
-### Parse Failure Handling
-
-Like the Planner, the Evaluator retries once if the LLM response can't be parsed. If both attempts fail, it returns a synthetic `fail` result with `confidence: 0` and the raw response as feedback — ensuring the pipeline can still self-correct on the next cycle rather than crashing.
-
-## Scratchpad
-
-The Scratchpad is an in-memory key-value store that persists across all steps and cycles within a single `run()` call.
-
-```typescript
-class Scratchpad {
-  read(key: string): unknown;
-  write(key: string, value: unknown): void;
-  has(key: string): boolean;
-  entries(): Record<string, unknown>;
-  clear(): void;
-}
-```
-
-### How State Flows
-
-A single Scratchpad instance is created at the start of `run()` and shared across the entire pipeline:
-
-- **Within a cycle:** Every step can read and write to the scratchpad via the `scratchpad` tool. The Executor includes the current scratchpad contents in each step's context, so downstream steps can see what upstream steps wrote.
-- **Across cycles:** The scratchpad is never cleared between cycles. After each Executor run, the orchestrator writes `_execution_summary` — a simplified array of all step results (step ID, status, output, and error if any). On the next cycle, the Planner sees this summary and can build on what already succeeded.
-
-This persistence is what enables efficient self-correction. The revised Planner doesn't start from a blank slate — it knows exactly what was accomplished, what failed, and what the evaluator found lacking.
-
-### Scratchpad Visibility
-
-The scratchpad contents are visible to all three components:
-
-- **Planner** (on re-plan cycles) — sees the full scratchpad including `_execution_summary`
+- **Planner** (on re-plan cycles) — reads `_execution_summary` to understand prior results
 - **Executor** — each step sees the current scratchpad state in its context
-- **Evaluator** — sees the scratchpad when judging execution results
+- **Evaluator** — reads the scratchpad when judging execution results
 
-## Event System
+---
 
-Eight lifecycle hooks let you observe, transform, or control the pipeline at every stage — without modifying the core.
+## The Event System
 
-### The 8 Events
+Eight lifecycle hooks let you observe, transform, or control the pipeline at any stage — without modifying the core.
 
-| Event           | Fires                       | Receives                                |
-| --------------- | --------------------------- | --------------------------------------- |
-| `prePlanner`    | Before the Planner runs     | Prompt + feedback (if re-planning)      |
-| `postPlanner`   | After the Plan is generated | The `Plan`                              |
-| `preExecutor`   | Before the Executor runs    | Plan + prompt + cycle info + scratchpad |
-| `postExecutor`  | After execution completes   | Execution results + logs + token count  |
-| `preEvaluator`  | Before the Evaluator runs   | Prompt + results + scratchpad           |
-| `postEvaluator` | After evaluation completes  | `EvaluationResult`                      |
-| `preStep`       | Before each individual step | Step definition + cycle number          |
-| `postStep`      | After each individual step  | Step definition + result + cycle number |
-
-Every callback also receives a `CycleMetadata` object as its second argument:
-
-```typescript
-interface CycleMetadata {
-  cycleNumber: number;
-  totalCyclesUsed: number;
-  tokensUsed: number;
-}
+```
+  prePlanner ──▶ Planner ──▶ postPlanner
+                                  │
+                                  ▼
+  preExecutor ──▶ Executor ──▶ postExecutor
+                     │
+                     ├── preStep ──▶ Step ──▶ postStep
+                     ├── preStep ──▶ Step ──▶ postStep
+                     └── preStep ──▶ Step ──▶ postStep
+                                  │
+                                  ▼
+  preEvaluator ──▶ Evaluator ──▶ postEvaluator
+                                  │
+                                  ▼
+                            [pass → Done]
+                            [fail → back to prePlanner]
 ```
 
-### How It Works
-
-Events are registered via the `events` option in the `Tepa` constructor:
+Events are registered in the `Tepa` constructor:
 
 ```typescript
 const tepa = new Tepa({
@@ -258,89 +139,75 @@ const tepa = new Tepa({
   events: {
     postPlanner: [
       (plan, cycle) => {
-        console.log(`Cycle ${cycle.cycleNumber}: Plan has ${plan.steps.length} steps`);
-      }
+        console.log(`Cycle ${cycle.cycleNumber}: ${plan.steps.length} steps planned`);
+      },
     ],
     postStep: [
       (data, cycle) => {
         console.log(`Step ${data.step.id}: ${data.result.status}`);
-      }
+      },
     ],
   },
 });
 ```
 
-Callbacks run in registration order. If a callback returns a value, that value replaces the data for the next callback in the chain — this means callbacks can **transform** pipeline data in-flight (for example, modifying a plan before execution). If a callback returns `void`, the data passes through unchanged.
+Every callback receives the pipeline data for that stage and a `CycleMetadata` object with `cycleNumber`, `totalCyclesUsed`, and `tokensUsed`.
 
-Callbacks can return Promises, which the framework awaits. This enables patterns like human-in-the-loop approval gates — pause execution, present the plan to a user, and resume only after approval.
+Three things callbacks can do:
 
-By default, an error in a callback stops the pipeline. To make a callback fault-tolerant, register it as an `EventRegistration` with `continueOnError: true`:
+**Observe** — read pipeline data, log it, send it to an external system. Return nothing and the data passes through unchanged.
 
-```typescript
-events: {
-  postStep: [
-    {
-      handler: (data) => externalLogger.log(data),
-      continueOnError: true,
-    }
-  ],
-}
-```
+**Transform** — return a modified version of the data and it replaces the original for all subsequent callbacks in the chain. This means you can rewrite a plan before the Executor sees it, or adjust an evaluation verdict before it feeds back to the Planner.
 
-A deeper look at event patterns — including human-in-the-loop workflows, plan safety filters, and custom termination logic — is covered in [Event System Patterns](./07-event-system-patterns.md).
+**Pause** — return a Promise. The framework awaits it. This is how human-in-the-loop workflows work: pause after planning, present the plan to a user for review, resume only after approval.
+
+For deeper patterns — approval gates, safety filters, progress tracking, custom termination logic — see [Event System Patterns](./07-event-system-patterns.md).
+
+---
 
 ## Package Architecture
 
-Tepa is organized as a monorepo with focused packages:
+Tepa is a monorepo where each package has a single responsibility and a clean dependency boundary:
 
 ```
-@tepa/core                Main pipeline: Tepa class, Planner, Executor,
-                          Evaluator, Scratchpad, EventBus, config, utilities
-
-@tepa/types               Shared TypeScript type definitions (no runtime code)
-
-@tepa/tools               Built-in tool implementations: file system, shell,
-                          HTTP, data parsing, web search, scratchpad, logging
-
-@tepa/provider-core       Abstract BaseLLMProvider with retry logic,
-                          exponential backoff, rate limit handling, file logging
-
-@tepa/provider-anthropic  Anthropic Claude provider
-@tepa/provider-openai     OpenAI provider
-@tepa/provider-gemini     Google Gemini provider
+@tepa/types              ← shared interfaces, zero runtime code
+    ↑
+    ├── @tepa/core        ← pipeline engine: Planner, Executor, Evaluator,
+    │                       Scratchpad, EventBus, TokenTracker, config
+    │
+    ├── @tepa/tools       ← built-in tool implementations
+    │
+    └── @tepa/provider-core   ← BaseLLMProvider with retry, backoff,
+            ↑                   rate limit handling, and logging
+            ├── @tepa/provider-anthropic
+            ├── @tepa/provider-openai
+            └── @tepa/provider-gemini
 ```
 
-### How They Fit Together
+The key design principle: **`@tepa/core` has no dependency on any provider or tool package.** You pass providers and tools in at construction time. This is why swapping providers is a one-line change, and why community tools are first-class citizens alongside built-ins — the core doesn't know the difference.
 
-```
-  Your Code
-     │
-     ▼
- ┌──────────┐     ┌──────────────┐     ┌──────────────────┐
- │ @tepa/   │────▶│ @tepa/       │────▶│ @tepa/           │
- │ core     │     │ provider-*   │     │ provider-core    │
- └──────────┘     └──────────────┘     └──────────────────┘
-     │                                          │
-     │            ┌──────────────┐              │
-     ├───────────▶│ @tepa/tools  │              │
-     │            └──────────────┘              │
-     │                   │                      │
-     ▼                   ▼                      ▼
- ┌─────────────────────────────────────────────────────┐
- │                    @tepa/types                       │
- └─────────────────────────────────────────────────────┘
-```
+`@tepa/types` is the shared contract. It contains only TypeScript type definitions — no runtime code. Every other package depends on it, and any external package implementing `ToolDefinition` or extending `BaseLLMProvider` from `@tepa/provider-core` integrates with Tepa without touching the core.
 
-- **`@tepa/core`** is the orchestrator. It depends on `@tepa/types` for shared interfaces but has no dependency on specific providers or tools. You pass providers and tools in at construction time.
-- **`@tepa/provider-*`** packages each implement the `LLMProvider` interface from `@tepa/types`, extending `BaseLLMProvider` from `@tepa/provider-core` for retry logic and logging.
-- **`@tepa/tools`** exports ready-made `ToolDefinition` objects. Each tool is self-contained — you pick the ones you need and pass them to the `Tepa` constructor.
-- **`@tepa/types`** is the shared contract. It contains only TypeScript types — no runtime code. Every other package depends on it.
+---
 
-This separation means you can swap providers, add or remove tools, and extend the pipeline through events — all without touching the core.
+## Putting It Together
+
+When you call `tepa.run()`:
+
+1. Your `goal`, `context`, and `expectedOutput` become the prompt that drives every component.
+2. The Planner reads your tools and produces a dependency-ordered plan.
+3. The Executor resolves the dependency graph and runs each step, passing structured data between them.
+4. The Evaluator judges the result against your `expectedOutput` and either returns a verdict or feeds actionable feedback back to the Planner.
+5. The Scratchpad carries state across steps and cycles so the agent always builds on what it already knows.
+6. Your event callbacks — if any — observe or shape the pipeline at every stage.
+
+All of that, inside a single `await tepa.run()`.
+
+---
 
 ## What's Next
 
-- [**The Pipeline in Detail**](./04-pipeline-in-detail.md) — Deep dive into prompt structure, plan validation, topological sorting, tool resolution, cycle termination, and every configuration option.
-- [**Configuration**](./05-configuration.md) — Customize cycle limits, token budgets, per-stage models, and logging levels.
-- [**Tool System**](./06-tool-system.md) — Explore built-in tools and create your own.
+- [**Pipeline in Detail**](./04-pipeline-in-detail.md) — The complete technical reference: full interfaces, prompt structure, plan validation rules, tool schema flow, event data contracts, and termination edge cases. Read this when you're building something non-trivial.
+- [**Configuration**](./05-configuration.md) — Cycle limits, token budgets, per-stage model assignments, and logging levels.
+- [**Tool System**](./06-tool-system.md) — Built-in tools, custom tool definitions, and third-party packages.
 - [**Event System Patterns**](./07-event-system-patterns.md) — Human-in-the-loop approval, plan safety filters, progress tracking, and more.

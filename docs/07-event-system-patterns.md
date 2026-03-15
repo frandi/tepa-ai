@@ -1,185 +1,62 @@
 # Event System Patterns
 
-Tepa's event system lets you observe, transform, and control the pipeline at eight lifecycle points. You can log progress, enrich inputs, filter plans, pause for human approval, or override verdicts — all without modifying pipeline internals. This section covers the callback contract, execution semantics, and practical patterns.
+Tepa's event system lets you observe, transform, and control the pipeline at eight lifecycle points — without modifying pipeline internals. This section covers the practical patterns: how to use events to build human-in-the-loop workflows, enforce safety constraints, track progress, integrate external systems, and apply custom termination logic.
 
-## Event Registration
+If you're looking for the complete callback contract — event data types, `CycleMetadata`, execution order, and `continueOnError` — that's in [Pipeline in Detail — Pipeline Lifecycle Events](./04-pipeline-in-detail.md#pipeline-lifecycle-events). The conceptual overview of what events are and what callbacks can do is in [How Tepa Works — The Event System](./03-how-tepa-works.md#the-event-system).
 
-Events are registered at initialization through the `events` option in the `Tepa` constructor:
+---
+
+## Quick Reference
+
+Events are registered in the `Tepa` constructor:
 
 ```typescript
-import { Tepa } from "@tepa/core";
-import type { Plan, EvaluationResult, PostStepPayload } from "@tepa/types";
-
 const tepa = new Tepa({
   provider: myProvider,
-  tools: [
-    /* ... */
-  ],
+  tools: [...],
   events: {
-    postPlanner: [
-      (data, cycle) => {
-        const plan = data as Plan;
-        console.log(`Cycle ${cycle.cycleNumber}: plan has ${plan.steps.length} steps`);
-      },
-    ],
-    postStep: [
-      (data) => {
-        const { step, result } = data as PostStepPayload;
-        console.log(`${step.id}: ${result.status}`);
-      },
-    ],
+    postPlanner: [(plan, cycle) => { /* ... */ }],
+    postStep: [(data, cycle) => { /* ... */ }],
   },
 });
 ```
 
-Each key in the `events` object is an `EventName`, and the value is an array of callbacks or registration objects. Internally, Tepa creates an `EventBus` from this map when `run()` is called. The EventBus executes callbacks at the corresponding pipeline stage.
+| Event | Fires | Primary Use |
+|---|---|---|
+| `prePlanner` | Before planning | Enrich prompt context, inject external data |
+| `postPlanner` | After plan is generated | Review, modify, or approve the plan |
+| `preExecutor` | Before execution starts | Modify plan or context before any step runs |
+| `postExecutor` | After all steps complete | Sanitize results before evaluation |
+| `preEvaluator` | Before evaluation | Modify what the Evaluator sees |
+| `postEvaluator` | After evaluation | Override verdict, send metrics, custom termination |
+| `preStep` | Before each step | Per-step logging, pre-execution checks |
+| `postStep` | After each step | Per-step progress tracking, result inspection |
 
-### `EventMap`
+**Three things a callback can do:**
+- **Observe** — return nothing; data passes through unchanged
+- **Transform** — return a modified value; it replaces the data for all subsequent callbacks
+- **Pause** — return a Promise; the framework awaits it before continuing
 
-```typescript
-type EventMap = {
-  [K in EventName]?: Array<EventCallback | EventRegistration>;
-};
-```
-
-Each entry can be a bare callback function or an `EventRegistration` object (which adds error handling options — covered below).
-
-## Callback Contract
-
-Every event callback follows the same signature:
-
-```typescript
-type EventCallback<TData = unknown> = (
-  data: TData,
-  cycle: CycleMetadata,
-) => TData | void | Promise<TData | void>;
-```
-
-### Parameters
-
-| Parameter | Type            | Description                                                          |
-| --------- | --------------- | -------------------------------------------------------------------- |
-| `data`    | `TData`         | The payload for this event — varies by event point (see table below) |
-| `cycle`   | `CycleMetadata` | Metadata about the current pipeline cycle                            |
-
-### `CycleMetadata`
-
-```typescript
-interface CycleMetadata {
-  cycleNumber: number; // Current cycle (1-based)
-  totalCyclesUsed: number; // Cycles completed before this one
-  tokensUsed: number; // Total tokens consumed so far
-}
-```
-
-### Return Semantics
-
-What your callback returns determines what happens next:
-
-| Return value                                | Effect                                                                              |
-| ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `void` / `undefined`                        | Data passes through unchanged to the next callback (or back to the pipeline)        |
-| A value (or `Promise` resolving to a value) | Replaces the data — the next callback (or the pipeline) receives the returned value |
-
-This means callbacks can be **observers** (return nothing, just read) or **transformers** (return modified data).
-
-### Promise Support
-
-Callbacks can be synchronous or async. If a callback returns a `Promise`, the EventBus `await`s it before calling the next callback. This is what makes human-in-the-loop patterns possible — a callback can pause the pipeline by awaiting user input.
-
-```typescript
-postPlanner: [
-  async (data, cycle) => {
-    const plan = data as Plan;
-    // Pipeline pauses here until the user responds
-    const answer = await askUser("Approve this plan? (yes/no)");
-    if (answer === "no") {
-      // Could modify and return a different plan
-    }
-  },
-],
-```
-
-## Execution Order
-
-When multiple callbacks are registered for the same event, they execute sequentially in registration order. Each callback receives the output of the previous one — middleware-style chaining:
-
-```
-callback1(data) → result1
-callback2(result1) → result2
-callback3(result2) → result3  ← returned to pipeline
-```
-
-If a callback returns `void`, the previous data passes through unchanged:
-
-```
-callback1(data) → modifiedData
-callback2(modifiedData) → void        (pass-through)
-callback3(modifiedData) → finalData   ← returned to pipeline
-```
-
-The final value after all callbacks is what the pipeline uses. There is no parallel execution — callbacks are strictly sequential.
-
-## Error Handling in Callbacks
-
-By default, if a callback throws an error, the error propagates and aborts the pipeline. For non-critical callbacks (like logging or monitoring), you can use the `EventRegistration` form with `continueOnError`:
-
-```typescript
-interface EventRegistration<TData = unknown> {
-  handler: EventCallback<TData>;
-  continueOnError?: boolean; // defaults to false
-}
-```
-
-### Default behavior (`continueOnError: false`)
-
-The error propagates. The pipeline aborts with the thrown error.
-
-### With `continueOnError: true`
-
-The error is caught, the data reverts to its state before that callback ran, and execution continues with the next callback. The error is silently swallowed.
+For non-critical callbacks (monitoring, logging), use `continueOnError: true` so a callback failure doesn't abort the pipeline:
 
 ```typescript
 events: {
   postEvaluator: [
-    // Critical: modifies verdict for human-in-the-loop
-    async (data) => { /* ... */ },
-
-    // Non-critical: send metrics to monitoring
     {
-      handler: (data) => {
-        const result = data as EvaluationResult;
-        metrics.record("evaluation", result.verdict);
-        // If this throws, the pipeline continues
-      },
+      handler: (data) => metrics.record(data),
       continueOnError: true,
     },
   ],
 }
 ```
 
-You can mix bare callbacks and `EventRegistration` objects in the same array. Bare callbacks default to `continueOnError: false`.
-
-## Event Data Types
-
-Each event point receives a specific payload. The pipeline uses the (potentially modified) return value.
-
-| Event           | Payload Type       | Key Fields                                                                    |
-| --------------- | ------------------ | ----------------------------------------------------------------------------- |
-| `prePlanner`    | `PlannerInput`     | `prompt: TepaPrompt`, `feedback?: string`                                     |
-| `postPlanner`   | `Plan`             | `steps: PlanStep[]`, `estimatedTokens`, `reasoning`                           |
-| `preExecutor`   | `ExecutorInput`    | `plan: Plan`, `prompt: TepaPrompt`, `cycle`, `scratchpad`, `previousResults?` |
-| `postExecutor`  | `ExecutorOutput`   | `results: ExecutionResult[]`, `logs: LogEntry[]`, `tokensUsed`                |
-| `preEvaluator`  | `EvaluatorInput`   | `prompt: TepaPrompt`, `results: ExecutionResult[]`, `scratchpad`              |
-| `postEvaluator` | `EvaluationResult` | `verdict: "pass" \| "fail"`, `confidence`, `feedback?`, `summary?`            |
-| `preStep`       | `PreStepPayload`   | `step: PlanStep`, `cycle: number`                                             |
-| `postStep`      | `PostStepPayload`  | `step: PlanStep`, `result: ExecutionResult`, `cycle: number`                  |
+---
 
 ## Patterns
 
-### Human-in-the-Loop Approval
+### Human-in-the-Loop Plan Approval
 
-Use `postPlanner` to pause the pipeline and present the generated plan for human review before execution begins. The callback can await interactive input — the pipeline won't proceed until the Promise resolves.
+Pause the pipeline after planning and present the generated plan to a user before any execution begins. The callback awaits user input — the pipeline won't proceed until the Promise resolves.
 
 ```typescript
 import * as readline from "node:readline/promises";
@@ -187,33 +64,47 @@ import type { Plan } from "@tepa/types";
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-events: {
-  postPlanner: [
-    async (data) => {
-      const plan = data as Plan;
+const tepa = new Tepa({
+  provider, tools,
+  events: {
+    postPlanner: [
+      async (data) => {
+        const plan = data as Plan;
 
-      console.log(`\nPlan: ${plan.steps.length} steps`);
-      for (const step of plan.steps) {
-        const tools = step.tools.length > 0 ? step.tools.join(", ") : "reasoning";
-        console.log(`  ${step.id}: ${step.description} (${tools})`);
-      }
+        console.log(`\nPlan: ${plan.steps.length} steps`);
+        for (const step of plan.steps) {
+          const tools = step.tools.length > 0 ? step.tools.join(", ") : "reasoning";
+          console.log(`  ${step.id}: ${step.description} (${tools})`);
+        }
 
-      const answer = await rl.question("\nApprove this plan? (yes/no): ");
-      if (answer.trim().toLowerCase() !== "yes") {
-        // Option A: reject by throwing
-        throw new Error("Plan rejected by user");
+        const answer = await rl.question("\nApprove this plan? (yes/no): ");
+        if (answer.trim().toLowerCase() !== "yes") {
+          throw new Error("Plan rejected by user");
+        }
+        // Returning nothing (void) lets the original plan pass through unchanged
+      },
+    ],
+  },
+});
+```
 
-        // Option B: modify the plan (e.g., remove steps)
-        // return { ...plan, steps: plan.steps.filter(s => !s.tools.includes("shell_execute")) };
-      }
-    },
-  ],
+Throwing rejects the plan and aborts the pipeline. To modify the plan instead of rejecting it — for example, stripping dangerous steps before approval — return a new plan object:
+
+```typescript
+const answer = await rl.question("Approve, or type 'safe' to remove shell steps: ");
+if (answer.trim() === "safe") {
+  return {
+    ...plan,
+    steps: plan.steps.filter(s => !s.tools.includes("shell_execute")),
+  };
 }
 ```
 
-### Human Override on Failure
+---
 
-Use `postEvaluator` to let a user accept results that the Evaluator marked as failed. Returning a modified `EvaluationResult` with `verdict: "pass"` stops the re-planning loop.
+### Human Override on Evaluation Failure
+
+Let a user accept results the Evaluator marked as failed. Returning a modified `EvaluationResult` with `verdict: "pass"` stops the re-planning loop and returns immediately with success.
 
 ```typescript
 import type { EvaluationResult } from "@tepa/types";
@@ -224,25 +115,27 @@ events: {
       const result = data as EvaluationResult;
 
       if (result.verdict === "fail") {
-        console.log(`Evaluation failed (confidence: ${result.confidence})`);
+        console.log(`\nEvaluation failed (confidence: ${result.confidence.toFixed(2)})`);
         if (result.feedback) console.log(`Feedback: ${result.feedback}`);
 
         const answer = await rl.question("Accept results anyway? (yes/no): ");
         if (answer.trim().toLowerCase() === "yes") {
           return { ...result, verdict: "pass" as const };
         }
-        // Otherwise, pipeline continues to the next cycle
       }
+      // Returning nothing lets the original verdict pass through — pipeline continues
     },
   ],
 }
 ```
 
-This is the critical human-in-the-loop pattern: the pipeline checks `lastEvaluation.verdict` after the `postEvaluator` callbacks run. If a callback flips the verdict to `"pass"`, the pipeline terminates successfully.
+The pipeline checks the verdict after all `postEvaluator` callbacks complete. Flipping it to `"pass"` here is treated identically to a genuine evaluator pass — the pipeline returns with `status: "pass"`.
+
+---
 
 ### Plan Safety Filter
 
-Use `postPlanner` to inspect or modify the plan before execution. This lets you enforce constraints that the LLM might not respect — such as banning certain tools or limiting step count.
+Inspect or rewrite the plan before execution to enforce constraints the LLM might not respect — such as banning specific tools, capping step count, or requiring certain steps to appear.
 
 ```typescript
 import type { Plan } from "@tepa/types";
@@ -251,24 +144,37 @@ events: {
   postPlanner: [
     (data) => {
       const plan = data as Plan;
-      const restricted = ["shell_execute"];
+      const restricted = ["shell_execute", "http_request"];
 
-      const filtered = plan.steps.map((step) => ({
-        ...step,
-        tools: step.tools.filter((t) => !restricted.includes(t)),
-      }));
+      const hasForbiddenTools = plan.steps.some(
+        s => s.tools.some(t => restricted.includes(t))
+      );
 
-      return { ...plan, steps: filtered };
+      if (hasForbiddenTools) {
+        // Option A: strip the restricted tools from steps
+        return {
+          ...plan,
+          steps: plan.steps.map(s => ({
+            ...s,
+            tools: s.tools.filter(t => !restricted.includes(t)),
+          })),
+        };
+
+        // Option B: reject the plan entirely
+        // throw new Error(`Plan uses restricted tools: ${restricted.join(", ")}`);
+      }
     },
   ],
 }
 ```
 
-Since the returned value replaces the original plan, the Executor never sees the restricted tools.
+Since the returned value replaces the original plan, the Executor never sees the restricted tools. This pattern is particularly useful in multi-tenant environments or when running Tepa pipelines against untrusted goals.
+
+---
 
 ### Input Enrichment
 
-Use `prePlanner` to fetch external context — from a database, API, or file system — and inject it into the prompt before planning begins.
+Use `prePlanner` to fetch external context — from a database, API, or file system — and inject it into the prompt before planning begins. This keeps your application logic out of the goal string and makes the Planner's context richer.
 
 ```typescript
 import type { PlannerInput } from "@tepa/types";
@@ -278,8 +184,12 @@ events: {
     async (data) => {
       const input = data as PlannerInput;
 
-      // Fetch latest context from an external source
-      const projectStatus = await fetchProjectStatus(input.prompt.context.projectId);
+      const projectStatus = await fetchProjectStatus(
+        input.prompt.context.projectId as string
+      );
+      const teamContext = await fetchTeamContext(
+        input.prompt.context.teamId as string
+      );
 
       return {
         ...input,
@@ -288,6 +198,7 @@ events: {
           context: {
             ...input.prompt.context,
             projectStatus,
+            teamContext,
             enrichedAt: new Date().toISOString(),
           },
         },
@@ -297,9 +208,13 @@ events: {
 }
 ```
 
+This pattern is composable — register multiple `prePlanner` callbacks and each one enriches the context further, with each receiving the output of the previous.
+
+---
+
 ### Step-Level Progress Tracking
 
-Use `preStep` and `postStep` to emit real-time updates as each step begins and completes. This is the most granular level of pipeline observability.
+Use `preStep` and `postStep` for real-time per-step visibility. This is the most granular level of pipeline observability — useful for UIs, progress bars, or detailed audit logs.
 
 ```typescript
 import type { PreStepPayload, PostStepPayload } from "@tepa/types";
@@ -308,52 +223,38 @@ events: {
   preStep: [
     (data) => {
       const { step, cycle } = data as PreStepPayload;
-      console.log(`[cycle ${cycle}] Starting: ${step.id} — ${step.description}`);
+      process.stdout.write(
+        `[cycle ${cycle}] ${step.id}: ${step.description}... `
+      );
     },
   ],
   postStep: [
     (data) => {
       const { step, result } = data as PostStepPayload;
-      const icon = result.status === "success" ? "OK" : "FAIL";
-      console.log(`  ${step.id}: ${icon} (${result.tokensUsed} tokens, ${result.durationMs}ms)`);
+      const status = result.status === "success" ? "✓" : "✗";
+      console.log(
+        `${status} (${result.durationMs}ms, ${result.tokensUsed} tokens)`
+      );
       if (result.error) {
-        console.log(`  Error: ${result.error}`);
+        console.log(`  → ${result.error}`);
       }
     },
   ],
 }
 ```
 
-### Custom Termination Logic
-
-Use `postEvaluator` to abort the pipeline based on business rules, regardless of the Evaluator's verdict. For example, stop early if confidence is too low to justify another cycle.
-
-```typescript
-import type { EvaluationResult } from "@tepa/types";
-
-events: {
-  postEvaluator: [
-    (data, cycle) => {
-      const result = data as EvaluationResult;
-
-      // Give up if confidence is critically low after multiple cycles
-      if (result.verdict === "fail" && result.confidence < 0.2 && cycle.cycleNumber >= 2) {
-        console.log("Confidence too low to justify another cycle. Accepting as-is.");
-        return { ...result, verdict: "pass" as const };
-      }
-
-      // Or abort entirely based on token budget
-      if (cycle.tokensUsed > 100_000 && result.verdict === "fail") {
-        throw new Error("Token budget exhausted with no passing result");
-      }
-    },
-  ],
-}
+Output during a run:
 ```
+[cycle 1] step_1: List files in ./src... ✓ (245ms, 1200 tokens)
+[cycle 1] step_2: Analyze project structure... ✓ (1830ms, 3400 tokens)
+[cycle 1] step_3: Write summary to ./summary.md... ✓ (520ms, 2100 tokens)
+```
+
+---
 
 ### External Logging and Monitoring
 
-Use `postEvaluator` to send pipeline verdicts to external monitoring systems. Mark the callback with `continueOnError` so a monitoring failure doesn't crash the pipeline.
+Use `postEvaluator` to send pipeline verdicts to external monitoring systems. Mark the callback as `continueOnError` so a monitoring failure never aborts the pipeline.
 
 ```typescript
 import type { EvaluationResult } from "@tepa/types";
@@ -363,7 +264,7 @@ events: {
     {
       handler: (data, cycle) => {
         const result = data as EvaluationResult;
-        // Send to your monitoring service
+
         fetch("https://metrics.example.com/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -383,9 +284,53 @@ events: {
 }
 ```
 
-### Data Cleanup
+For provider-level metrics — token usage per LLM call, retry counts, latency per request — use the provider's `onLog()` callback system instead. See [LLM Providers — Provider Logging System](./08-llm-providers.md#provider-logging-system).
 
-Use `postExecutor` to sanitize execution results before they reach the Evaluator. This is useful for stripping sensitive data, normalizing outputs, or filtering noise from step results.
+---
+
+### Custom Termination Logic
+
+Use `postEvaluator` to apply business rules that override the default cycle behaviour — stopping early when confidence is too low, or aborting when cost thresholds are breached.
+
+```typescript
+import type { EvaluationResult } from "@tepa/types";
+
+events: {
+  postEvaluator: [
+    (data, cycle) => {
+      const result = data as EvaluationResult;
+
+      // Stop cycling if confidence is critically low — more cycles won't help
+      if (
+        result.verdict === "fail" &&
+        result.confidence < 0.2 &&
+        cycle.cycleNumber >= 2
+      ) {
+        console.warn(
+          `Confidence too low (${result.confidence}) after ${cycle.cycleNumber} cycles. Stopping.`
+        );
+        // Returning pass terminates the pipeline gracefully
+        return { ...result, verdict: "pass" as const };
+      }
+
+      // Hard abort if token cost is too high without a result
+      if (cycle.tokensUsed > 150_000 && result.verdict === "fail") {
+        throw new Error(
+          `Token budget threshold reached (${cycle.tokensUsed} tokens) without passing.`
+        );
+      }
+    },
+  ],
+}
+```
+
+Note the two termination strategies: returning a modified `verdict: "pass"` terminates the pipeline *gracefully* with `status: "pass"`. Throwing terminates it *abruptly* with `status: "fail"` and the thrown error message as `feedback`. Choose based on whether you want to surface the early stop as success or failure to the caller.
+
+---
+
+### Output Sanitization
+
+Use `postExecutor` to sanitize execution results before they reach the Evaluator — stripping sensitive data, normalizing outputs, or filtering noise from step results.
 
 ```typescript
 import type { ExecutorOutput } from "@tepa/types";
@@ -397,9 +342,10 @@ events: {
 
       const sanitized = output.results.map((r) => ({
         ...r,
-        output: typeof r.output === "string"
-          ? r.output.replace(/api_key=\w+/g, "api_key=***")
-          : r.output,
+        output:
+          typeof r.output === "string"
+            ? r.output.replace(/api_key=\w+/gi, "api_key=***")
+            : r.output,
       }));
 
       return { ...output, results: sanitized };
@@ -408,7 +354,44 @@ events: {
 }
 ```
 
+This pattern is also useful when step outputs contain very large payloads — you can truncate them before the Evaluator sends them to the LLM, reducing token usage in the evaluation phase.
+
+---
+
+### Combining Patterns
+
+Callbacks compose naturally — register multiple handlers for the same event and they run in sequence, each receiving the output of the previous. A common production setup combines several patterns together:
+
+```typescript
+const tepa = new Tepa({
+  provider, tools,
+  events: {
+    prePlanner: [enrichContextFromDatabase],
+
+    postPlanner: [
+      enforceSafetyFilter,       // Transform: strip restricted tools
+      logPlanToAuditTrail,       // Observe: fire and forget
+      presentPlanForApproval,    // Pause: await human input
+    ],
+
+    postStep: [
+      { handler: sendStepMetrics, continueOnError: true }, // Non-critical
+    ],
+
+    postEvaluator: [
+      applyCustomTerminationRules,  // Transform: may flip verdict
+      { handler: sendToMonitoring, continueOnError: true }, // Non-critical
+    ],
+  },
+});
+```
+
+Each callback is a single-responsibility function. The composition is declarative and the order is explicit — making the pipeline's control flow readable at a glance.
+
+---
+
 ## What's Next
 
-- [**LLM Providers**](./08-llm-providers.md) — Built-in providers, native tool use, custom provider implementation, and the provider logging system.
-- [**Examples and Demos**](./09-examples-and-demos.md) — See the event system in action in the study-plan demo (human-in-the-loop) and other examples.
+- [**LLM Providers**](./08-llm-providers.md) — Built-in providers, native tool use, the provider logging system, and custom provider implementation.
+- [**Examples and Demos**](./09-examples-and-demos.md) — See the event system in action in the study-plan demo (human-in-the-loop) and other runnable examples.
+- [**Pipeline in Detail**](./04-pipeline-in-detail.md#pipeline-lifecycle-events) — Complete callback contract: event data types, execution order, `continueOnError` semantics.

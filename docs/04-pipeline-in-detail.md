@@ -1,12 +1,14 @@
-# The Pipeline in Detail
+# Pipeline in Detail
 
-[How Tepa Works](./03-how-tepa-works.md) introduced the Plan-Execute-Evaluate cycle at a conceptual level. This section goes deeper — into the prompt structure that drives the pipeline, the internal mechanics of each component, the event system that lets you hook into every stage, and the rules that govern cycle termination.
+This is the complete technical reference for the Tepa pipeline. It assumes you've read [How Tepa Works](./03-how-tepa-works.md) and are now building something — writing custom events, designing multi-output prompts, debugging a cycle, or integrating Tepa into a larger system.
+
+Conceptual explanations of what each component does and why the loop is structured the way it is live in How Tepa Works. This document covers the exact interfaces, validation rules, data contracts, and edge cases you need when the conceptual model isn't enough.
+
+---
 
 ## Prompt Structure
 
 Every pipeline run starts with a `TepaPrompt` — the input that tells Tepa what to accomplish.
-
-### `TepaPrompt`
 
 ```typescript
 interface TepaPrompt {
@@ -16,15 +18,15 @@ interface TepaPrompt {
 }
 ```
 
-| Field            | Description                                                                                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `goal`           | What the pipeline should accomplish. This is sent to the Planner, Executor, and Evaluator — it's the single source of truth for the task.                                 |
-| `context`        | Arbitrary key-value data that provides background information. File paths, configuration values, domain knowledge — anything the LLM needs to understand the environment. |
-| `expectedOutput` | What success looks like. Can be a simple string description or a structured array of `ExpectedOutput` objects with paths, descriptions, and evaluation criteria.          |
+| Field | Description |
+|---|---|
+| `goal` | What the pipeline should accomplish. Sent to the Planner, Executor, and Evaluator — the single source of truth for the task. |
+| `context` | Arbitrary key-value data providing background information: file paths, configuration values, domain knowledge — anything the LLM needs to understand the environment. |
+| `expectedOutput` | What success looks like. A simple string works for straightforward goals. Use the structured `ExpectedOutput[]` form when the evaluator needs to check specific artifacts with explicit criteria. |
 
-### `ExpectedOutput`
+### Structured `expectedOutput`
 
-When you need the Evaluator to check specific artifacts, use the structured form:
+When your goal has multiple deliverables, or when you need the Evaluator to check specific artifacts against explicit criteria, use the structured form:
 
 ```typescript
 interface ExpectedOutput {
@@ -33,12 +35,6 @@ interface ExpectedOutput {
   criteria?: string[];
 }
 ```
-
-| Field         | Description                                                                                           |
-| ------------- | ----------------------------------------------------------------------------------------------------- |
-| `path`        | Optional file path or identifier for the expected artifact.                                           |
-| `description` | What this output should contain or accomplish.                                                        |
-| `criteria`    | Optional list of specific evaluation criteria. The Evaluator checks each one when judging the result. |
 
 A simple string `expectedOutput` works for straightforward goals:
 
@@ -50,7 +46,7 @@ await tepa.run({
 });
 ```
 
-For goals with multiple deliverables, the structured form gives the Evaluator explicit checkpoints:
+The structured form gives the Evaluator explicit checkpoints per artifact:
 
 ```typescript
 await tepa.run({
@@ -69,11 +65,13 @@ await tepa.run({
     {
       path: "src/api/types.ts",
       description: "TypeScript type definitions for API response shapes",
-      criteria: ["Post, User, and Comment interfaces"],
+      criteria: ["Post, User, and Comment interfaces defined"],
     },
   ],
 });
 ```
+
+Each `criteria` entry becomes an explicit checklist item the Evaluator assesses independently. A failed criterion produces specific, targeted feedback to the Planner — not a vague "output fell short."
 
 ### Loading Prompts from Files
 
@@ -86,9 +84,9 @@ const prompt = await parsePromptFile("./prompts/task.yaml");
 const result = await tepa.run(prompt);
 ```
 
-It supports `.yaml`, `.yml`, and `.json` extensions. The loaded data is validated against the `TepaPrompt` schema using Zod — missing fields, empty goals, or malformed `expectedOutput` values throw a `TepaPromptError` with a descriptive message.
+Supported extensions: `.yaml`, `.yml`, `.json`. The loaded data is validated against the `TepaPrompt` schema using Zod — missing fields, empty goals, or malformed `expectedOutput` values throw a `TepaPromptError` with a descriptive message.
 
-Here's what a YAML prompt file looks like:
+YAML prompt file example:
 
 ```yaml
 goal: >
@@ -118,24 +116,11 @@ expectedOutput:
 
 Externalizing prompts from code makes it easy to version, share, and iterate on task definitions without touching application logic.
 
+---
+
 ## Planner
 
-The Planner turns a goal into a structured execution plan.
-
-### How Plans Are Generated
-
-The Planner calls the LLM with a system prompt that includes:
-
-1. The full list of available tools with their parameter definitions (names, types, descriptions, required flags).
-2. Instructions for producing a valid `Plan` JSON object.
-3. The available models (executor default and planner model) so the LLM can assign per-step model overrides.
-4. Rules governing dependency structure, tool references, and plan minimality.
-
-The user message contains the goal, context, and expected output from the `TepaPrompt`.
-
-The LLM responds with a JSON object, which is parsed and validated.
-
-### `Plan` and `PlanStep` Structure
+### `Plan` and `PlanStep` Interfaces
 
 ```typescript
 interface Plan {
@@ -145,115 +130,110 @@ interface Plan {
 }
 
 interface PlanStep {
-  id: string; // e.g., "step_1"
-  description: string; // what this step does
-  tools: string[]; // tool names to call (empty = reasoning step)
+  id: string;           // e.g., "step_1" — unique within the plan
+  description: string;  // what this step does
+  tools: string[];      // tool names to call; empty array = reasoning step
   expectedOutcome: string; // what success looks like for this step
-  dependencies: string[]; // IDs of steps that must complete first
-  model?: string; // optional per-step model override
+  dependencies: string[];  // IDs of steps that must complete first
+  model?: string;       // optional per-step model override
 }
 ```
 
-The `reasoning` field captures the LLM's explanation for why it structured the plan this way. The `estimatedTokens` field is the LLM's estimate of how many tokens the plan will consume during execution.
+`reasoning` captures the LLM's explanation for why it structured the plan this way — useful when debugging unexpected step sequences. `estimatedTokens` is the LLM's token estimate for the execution phase.
 
 ### Dependency Rules
 
-The Planner is instructed to follow these rules when declaring dependencies:
+The Planner is instructed to follow these rules when declaring dependencies. Violations are caught during plan validation before any step runs:
 
-- **Direct dependencies only.** If step_3 depends on step_2 which depends on step_1, step_3 should list only `["step_2"]` — not `["step_1", "step_2"]` — unless it directly needs step_1's output. The Executor enforces this: a step only receives the outputs of its declared dependencies.
-- **Unique IDs.** Every step ID must be unique within the plan. Duplicates are rejected during validation.
+- **Direct dependencies only.** If step_3 depends on step_2 which depends on step_1, step_3 should list only `["step_2"]` unless it directly needs step_1's output. The Executor enforces scoped inputs: a step only receives the outputs of its declared dependencies.
+- **Unique IDs.** Every step ID must be unique within the plan. Duplicates are rejected.
 - **Valid references.** Every dependency must reference a step ID that exists in the same plan. Forward references to nonexistent steps are rejected.
-- **Reasoning steps vs. tool steps.** A step with an empty `tools` array is a reasoning step — the LLM produces text without calling tools. The Planner is instructed to use reasoning steps as data-distillation boundaries: summarize or extract key findings from raw data before downstream steps consume it.
-- **Per-step model overrides.** Each step can optionally specify a `model` field. The Planner is given the available models and instructed to use the more capable model for complex reasoning and the default executor model for simple tool parameter construction.
+- **No circular chains.** The Executor detects circular dependencies via topological sort and throws before any step runs.
 
-### Re-Planning on Failure
+### Reasoning Steps vs. Tool Steps
 
-When the Evaluator returns `fail`, the Planner switches to a revised-plan prompt. Instead of the full tool-listing system prompt, it receives a streamlined version:
+A step with an empty `tools` array is a reasoning step — the LLM produces a text response without invoking any tools. Use reasoning steps as data-distillation boundaries: summarize or extract key findings from raw tool output before downstream steps consume it. The Planner is instructed to use them this way.
 
-- The system prompt instructs it to produce a **minimal revision** — only fix what failed, reuse what succeeded.
-- The user message includes the original goal and expected output, the current scratchpad state (including `_execution_summary` from the previous cycle), and the evaluator's feedback.
-- The revised plan must be self-contained: all dependency references must point to step IDs within the revised plan, not the original.
+### Per-Step Model Overrides
 
-This focused approach keeps re-planning efficient. The Planner doesn't start from scratch — it knows exactly what worked and what didn't.
-
-### Parse Failure Retry
-
-If the LLM's response can't be parsed as valid JSON, the Planner retries once. The retry sends the original conversation plus the unparseable response back to the LLM with a simplified prompt asking for only a JSON object — no markdown, no code fences.
-
-If parsing fails again, the cycle throws a `TepaCycleError`. The pipeline catches this and returns a structured failure result rather than crashing.
+Each step can optionally specify a `model` field to override the executor's default model for that step alone. The Planner is given the list of available configured models and instructed to assign the more capable model to complex reasoning steps and the default to simpler tool-parameter-construction steps. This lets you balance quality and cost within a single plan.
 
 ### Plan Validation
 
-After parsing, the plan goes through structural and semantic validation:
+After the LLM response is parsed, the plan goes through structural and semantic validation before reaching the Executor:
 
-1. **Structural checks.** The `reasoning` field must be a string. `estimatedTokens` must be a non-negative number. The `steps` array must be non-empty. Every step must have a non-empty `id`, `description`, and `expectedOutcome`. The `tools` and `dependencies` arrays must contain only strings.
-2. **Uniqueness.** Duplicate step IDs are rejected.
-3. **Dependency integrity.** Every referenced dependency must exist as a step ID in the plan.
-4. **Tool reference validation.** Every tool name in every step is checked against the tool registry. If a step references a tool that doesn't exist, the planner throws a `TepaCycleError` listing the unknown tool and the available alternatives.
+1. `reasoning` must be a non-empty string; `estimatedTokens` must be a non-negative number.
+2. `steps` must be a non-empty array.
+3. Every step must have a non-empty `id`, `description`, and `expectedOutcome`. `tools` and `dependencies` must contain only strings.
+4. Step IDs must be unique across the plan.
+5. Every dependency reference must resolve to an existing step ID in the same plan.
+6. Every tool name referenced in any step is checked against the tool registry. Unknown tool names throw a `TepaCycleError` listing the unrecognised tool and the available alternatives.
+
+### Re-Planning on Failure
+
+When the Evaluator returns `fail`, the Planner switches to a revised-plan prompt:
+
+- The system prompt instructs it to produce a **minimal revision** — fix only what failed, reuse what succeeded.
+- The user message includes the original goal and expected output, the current scratchpad state (including `_execution_summary` from the previous cycle), and the evaluator's actionable feedback.
+- The revised plan must be fully self-contained: all dependency references must point to step IDs within the revised plan, not the previous one.
+
+### Parse Failure Retry
+
+If the LLM response can't be parsed as valid JSON, the Planner retries once. The retry sends the original conversation plus the unparseable response with a simplified prompt asking for a JSON object only — no markdown, no code fences. If parsing fails again, the cycle throws a `TepaCycleError`. The pipeline catches this and returns a structured failure rather than crashing.
+
+---
 
 ## Executor
 
-The Executor takes a validated plan and runs each step, coordinating tool calls through the LLM's native tool-use capability.
-
 ### Topological Sorting
 
-Before executing anything, the Executor sorts the plan steps using **Kahn's algorithm** — a standard BFS-based topological sort. This produces an execution order that respects all declared dependencies.
+Before executing anything, the Executor sorts plan steps using **Kahn's algorithm** — a BFS-based topological sort that resolves all declared dependencies into a safe execution order.
 
 ```
-Given steps: A (no deps), B (depends on A), C (no deps), D (depends on B, C)
+Given: A (no deps), B (depends on A), C (no deps), D (depends on B and C)
 
 In-degree:  A=0, B=1, C=0, D=2
-Queue seed: [A, C]      ← zero in-degree, original plan order preserved
+Queue seed: [A, C]       ← zero in-degree, original plan order preserved
 
 Process A → decrement B (now 0) → queue: [C, B]
 Process C → decrement D (now 1) → queue: [B]
 Process B → decrement D (now 0) → queue: [D]
 Process D → queue empty
 
-Sorted: [A, C, B, D]
+Sorted order: [A, C, B, D]
 ```
 
-If a circular dependency is detected (i.e., the sorted result contains fewer steps than the original plan), the Executor throws a `TepaCycleError` immediately — before any step runs.
+If the sorted result contains fewer steps than the original plan, a circular dependency exists. The Executor throws a `TepaCycleError` immediately — before any step runs.
 
-When multiple steps have no dependency relationship, the original plan order is preserved. This gives the Planner some control over execution sequence even among independent steps.
+When multiple steps have no dependency relationship, the original plan order is preserved. This gives the Planner control over execution sequence even among independent steps.
 
 ### Step Execution Flow
 
-For each step in the sorted order:
+For each step in sorted order:
 
-1. **Dependency check.** If any upstream dependency has failed, the step is immediately marked as failed with the message `Skipped: dependency "step_X" failed`. Failures cascade — a downstream step won't run if its upstream dependency didn't succeed.
-
-2. **Scoped inputs.** The step receives only the outputs of its declared dependencies — not the full output map. This is enforced by filtering the outputs map down to the step's declared dependency list. A step can't accidentally read data from a step it didn't declare a dependency on.
-
-3. **Execution.** The step runs as either a tool step or a reasoning step (see below).
-
-4. **Result capture.** The output is stored in the full step outputs map and made available to any downstream step that declares this step as a dependency.
+1. **Dependency check.** If any declared upstream dependency failed, the step is immediately marked as failed: `Skipped: dependency "step_X" failed`. Failures cascade — no tokens are spent on a step whose inputs are already broken.
+2. **Scoped inputs.** The step receives only the outputs of its declared dependencies. The framework filters the output map to the step's dependency list — a step cannot read data from a step it didn't declare a dependency on.
+3. **Execution.** Tool step or reasoning step (see below).
+4. **Result capture.** Output is stored in the step outputs map and made available to any downstream step declaring this step as a dependency.
 
 ### Native Tool Calling
 
-For steps with tools assigned, the Executor follows a structured flow:
+For steps with tools assigned:
 
-1. **Schema lookup.** Each tool name is looked up in the registry to get its `ToolSchema` (name, description, parameter definitions).
+1. Each tool name is looked up in the registry to get its `ToolSchema`.
+2. A message is assembled: step description, expected outcome, original goal, prompt context, current scratchpad state, and the outputs of declared dependency steps.
+3. The message is sent to the LLM with the tool schema attached via the provider's native tool-use API. The LLM returns a structured `tool_use` block with pre-parsed, typed parameters — no regex extraction, no free-form JSON parsing.
+4. The tool's `execute` function is called directly with those parameters. The result is captured as the step's output.
 
-2. **Context assembly.** A message is built containing the step description, expected outcome, tool name, original goal, prompt context, current scratchpad state, and the outputs of declared dependency steps.
+If the LLM doesn't return a `tool_use` block — i.e., it responds with text instead of a tool call — the step fails with: `LLM did not call tool "X" — no tool_use block in response`.
 
-3. **LLM call with tool schema.** The message is sent to the LLM with the tool schema attached via the provider's native tool-use API. The LLM returns a structured `tool_use` block with pre-parsed parameters — no regex extraction, no JSON parsing from free-form text.
-
-4. **Tool invocation.** The tool's `execute` function is called with the LLM-provided parameters. The result is captured as the step's output.
-
-If the LLM doesn't return a `tool_use` block (i.e., it responds with text instead of a tool call), the step is marked as failed with the message: `LLM did not call tool "X" — no tool_use block in response`.
-
-When a step specifies multiple tools, they are called sequentially in array order. Each tool goes through the full schema-lookup → LLM-call → invoke cycle. The step's output is a single value if one tool was used, or an array if multiple tools were called.
+**Multi-tool steps:** When a step specifies multiple tools, they are called sequentially in array order. Each tool goes through the full schema-lookup → LLM-call → invoke cycle. The step's output is a single value if one tool was used, or an array if multiple tools were called.
 
 ### Reasoning Steps
 
-Steps with an empty `tools` array are reasoning steps. The Executor sends a message with the step description, expected outcome, goal context, scratchpad state, and dependency outputs to the LLM using a reasoning-specific system prompt. The LLM's text response becomes the step's output.
+Steps with an empty `tools` array are executed using a reasoning-specific system prompt. The Executor sends the step description, expected outcome, goal context, scratchpad state, and dependency outputs to the LLM and captures the text response as the step's output. No tools are invoked.
 
-Reasoning steps are useful for intermediate analysis — reviewing data from a previous step, synthesizing information, or making decisions that feed into downstream tool-calling steps.
-
-### `ExecutionResult` Structure
-
-Each step produces an `ExecutionResult`:
+### `ExecutionResult` Interface
 
 ```typescript
 interface ExecutionResult {
@@ -266,18 +246,18 @@ interface ExecutionResult {
 }
 ```
 
-| Field        | Description                                                                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `stepId`     | The step's ID from the plan.                                                                                                                                                   |
-| `status`     | `"success"` if the step completed and produced output. `"failure"` if the tool wasn't found, the LLM didn't return a tool call, an exception occurred, or a dependency failed. |
-| `output`     | The tool's return value, the LLM's text response (for reasoning steps), or `null` on failure.                                                                                  |
-| `error`      | Present only on failure — describes what went wrong.                                                                                                                           |
-| `tokensUsed` | Tokens consumed by the LLM call(s) for this step.                                                                                                                              |
-| `durationMs` | Wall-clock time for the step in milliseconds.                                                                                                                                  |
+| Field | Description |
+|---|---|
+| `stepId` | The step's ID from the plan. |
+| `status` | `"success"` if the step completed and produced output. `"failure"` if the tool wasn't found, the LLM didn't return a tool call, an exception occurred, or a dependency failed. |
+| `output` | The tool's return value, the LLM's text response (reasoning steps), or `null` on failure. |
+| `error` | Present only on failure — describes what went wrong. |
+| `tokensUsed` | Tokens consumed by the LLM call(s) for this step. |
+| `durationMs` | Wall-clock time for the step in milliseconds. |
 
-### Automatic Scratchpad Write
+### Automatic `_execution_summary` Write
 
-After all steps complete, the orchestrator writes `_execution_summary` to the scratchpad — a simplified array of all step results:
+After all steps complete, the orchestrator writes `_execution_summary` to the scratchpad:
 
 ```typescript
 scratchpad.write(
@@ -291,83 +271,56 @@ scratchpad.write(
 );
 ```
 
-This summary persists across cycles. On the next cycle, the Planner sees it and can build on what already succeeded — enabling efficient self-correction without repeating work.
+This persists across cycles. On the next cycle, the Planner reads it and builds on what already succeeded — avoiding repeated work and making self-correction efficient.
+
+---
 
 ## Evaluator
 
-After all steps complete, the Evaluator judges whether the execution results meet the goal.
+### What the Evaluator Checks
 
-### What It Checks
+The evaluation message sent to the LLM includes: the goal, the full `expectedOutput` definition (including any criteria arrays), a summary of every step's result (status, output truncated to 500 characters, errors if any, tokens, and duration), and the current scratchpad state.
 
-The Evaluator instructs the LLM to assess two dimensions:
+The system prompt instructs the LLM to apply strict verdict rules:
 
-- **Structural criteria.** Were the expected outputs produced? Do files exist in the right format? Are all required artifacts present?
-- **Qualitative criteria.** Is the content meaningful and correct? Are outputs specific and relevant? Does the result actually address the goal?
+- `pass` **only** if the goal is fully achieved and all expected outputs are complete.
+- `fail` if **any** expected output is missing, incomplete, or fails any criterion.
+- Feedback on `fail` must be **specific and actionable** — referencing which steps failed and precisely what should change on the next attempt.
 
-The evaluation message includes the goal, expected output, a summary of every step's result (status, output truncated to 500 characters, errors if any, tokens, and duration), and the current scratchpad state.
-
-The verdict rules are explicit in the system prompt:
-
-- `pass` only if the goal is **fully** achieved and expected outputs are complete.
-- `fail` if **any** expected output is missing, incomplete, or incorrect.
-- Feedback on `fail` must be specific and actionable — referencing specific steps that failed and what should change.
-
-### `EvaluationResult` Structure
+### `EvaluationResult` Interface
 
 ```typescript
 interface EvaluationResult {
   verdict: "pass" | "fail";
-  confidence: number; // 0.0 – 1.0
-  feedback?: string; // required on fail — actionable explanation
-  summary?: string; // optional on pass — brief description of success
+  confidence: number;  // 0.0 – 1.0
+  feedback?: string;   // required on fail — actionable explanation for the Planner
+  summary?: string;    // optional on pass — becomes result.feedback in TepaResult
   tokensUsed: number;
 }
 ```
 
-On `fail`, the `feedback` field is exactly what the Planner receives on the next cycle to guide its revised plan. On `pass`, the `summary` becomes the `feedback` field in the final `TepaResult`.
+`feedback` on `fail` is not just a log message — it is the exact input the Planner receives on the next cycle to guide its revision. The quality of the evaluator's feedback directly determines the quality of self-correction.
 
 ### Parse Failure Handling
 
-Like the Planner, the Evaluator retries once if the LLM response can't be parsed as valid JSON. The retry sends the original conversation plus the unparseable response with a simplified prompt.
+Like the Planner, the Evaluator retries once if the LLM response can't be parsed. If both attempts fail, it returns a synthetic fail result with `confidence: 0` and the raw LLM response (truncated to 500 characters) as feedback. This ensures the pipeline can self-correct on the next cycle rather than crashing — the Planner will receive the raw response as context and can attempt a different approach.
 
-If both attempts fail, it returns a synthetic fail result with `confidence: 0` and the raw LLM response (truncated to 500 characters) as feedback. This ensures the pipeline can still self-correct on the next cycle rather than crashing — the Planner will see the feedback and can attempt a different approach.
+---
 
 ## Pipeline Lifecycle Events
 
-Eight lifecycle hooks let you observe, transform, or control the pipeline at every stage.
-
-### The 8 Event Points
-
-```
-  prePlanner ──▶ Planner ──▶ postPlanner
-                                  │
-                                  ▼
-  preExecutor ──▶ Executor ──▶ postExecutor
-                     │
-                     ├── preStep ──▶ Step ──▶ postStep
-                     ├── preStep ──▶ Step ──▶ postStep
-                     └── preStep ──▶ Step ──▶ postStep
-                                  │
-                                  ▼
-  preEvaluator ──▶ Evaluator ──▶ postEvaluator
-                                  │
-                                  ▼
-                            [pass → Done]
-                            [fail → back to prePlanner]
-```
-
 ### What Each Event Receives and Can Modify
 
-| Event           | Data Received                                           | Can Modify                                                                  |
-| --------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `prePlanner`    | `{ prompt, feedback? }`                                 | The prompt sent to the Planner; the feedback text                           |
-| `postPlanner`   | `Plan`                                                  | The plan before it reaches the Executor — add, remove, or modify steps      |
-| `preExecutor`   | `{ plan, prompt, cycle, scratchpad, previousResults? }` | The plan, prompt, and context before execution                              |
-| `postExecutor`  | `{ results, logs, tokensUsed }`                         | Execution results before they reach the Evaluator                           |
-| `preEvaluator`  | `{ prompt, results, scratchpad }`                       | The data the Evaluator will assess                                          |
-| `postEvaluator` | `EvaluationResult`                                      | The verdict — can override pass/fail, adjust confidence, or modify feedback |
-| `preStep`       | `{ step, cycle }`                                       | The step definition before it executes                                      |
-| `postStep`      | `{ step, result, cycle }`                               | The step's result after execution                                           |
+| Event | Data Received | Can Modify |
+|---|---|---|
+| `prePlanner` | `{ prompt, feedback? }` | The prompt sent to the Planner; the feedback text |
+| `postPlanner` | `Plan` | The plan before it reaches the Executor — add, remove, or modify steps |
+| `preExecutor` | `{ plan, prompt, cycle, scratchpad, previousResults? }` | The plan, prompt, and context before execution |
+| `postExecutor` | `{ results, logs, tokensUsed }` | Execution results before they reach the Evaluator |
+| `preEvaluator` | `{ prompt, results, scratchpad }` | The data the Evaluator will assess |
+| `postEvaluator` | `EvaluationResult` | The verdict — override pass/fail, adjust confidence, or modify feedback |
+| `preStep` | `{ step, cycle }` | The step definition before it executes |
+| `postStep` | `{ step, result, cycle }` | The step's result after execution |
 
 Every callback also receives a `CycleMetadata` object as its second argument:
 
@@ -381,56 +334,62 @@ interface CycleMetadata {
 
 ### How Callbacks Work
 
-Callbacks run in registration order. If a callback returns a value, that value **replaces** the data for the next callback in the chain — meaning callbacks can transform pipeline data in-flight. If a callback returns `void` (or `undefined`), the data passes through unchanged.
+Callbacks run in registration order. If a callback returns a value, that value **replaces** the data for all subsequent callbacks in the chain. If a callback returns `void`, the data passes through unchanged. Callbacks can return Promises, which the framework awaits.
 
-Callbacks can return Promises, which the framework awaits. This enables patterns like human-in-the-loop approval — pause execution, present data to a user, and resume only after approval.
+### Fault-Tolerant Callbacks
 
 By default, an error in a callback stops the pipeline. To make a callback fault-tolerant, register it as an `EventRegistration` with `continueOnError: true`:
 
 ```typescript
-events: {
-  postStep: [
-    {
-      handler: (data) => externalLogger.log(data),
-      continueOnError: true,
-    }
-  ],
-}
+const tepa = new Tepa({
+  provider: new AnthropicProvider(),
+  tools: [...],
+  events: {
+    postStep: [
+      {
+        handler: (data) => externalLogger.log(data),
+        continueOnError: true,
+      },
+    ],
+  },
+});
 ```
 
-When `continueOnError` is `true` and the handler throws, the data reverts to its state before that callback ran, and execution continues with the next callback in the chain.
+When `continueOnError` is `true` and the handler throws, the data reverts to its state before that callback ran and execution continues with the next callback in the chain.
 
-A deeper look at event patterns — including human-in-the-loop workflows, plan safety filters, and custom termination logic — is covered in [Event System Patterns](./07-event-system-patterns.md).
+For complete patterns — human-in-the-loop approval gates, plan safety filters, progress tracking, custom termination logic — see [Event System Patterns](./07-event-system-patterns.md).
+
+---
 
 ## Cycles and Termination
 
-### Cycle Flow
+### Full Cycle Sequence
 
 Each call to `tepa.run()` follows this sequence:
 
-1. **Validate.** The prompt is validated against the `TepaPrompt` schema using Zod. Invalid prompts throw a `TepaPromptError`.
-2. **Initialize.** A fresh `Scratchpad`, `TokenTracker`, `Logger`, and `EventBus` are created. The Planner, Executor, and Evaluator are instantiated with their configured models.
+1. **Validate.** The prompt is validated against the `TepaPrompt` schema using Zod. Invalid prompts throw a `TepaPromptError` before the loop starts.
+2. **Initialize.** A fresh `Scratchpad`, `TokenTracker`, `Logger`, and `EventBus` are created. Planner, Executor, and Evaluator are instantiated with their configured models.
 3. **Register tools.** All tool definitions are registered in an inline `ToolRegistry`.
-4. **Loop.** For each cycle (1 to `maxCycles`):
-   - Run the **Planner** (with `prePlanner`/`postPlanner` events).
-   - Run the **Executor** (with `preExecutor`/`postExecutor` and `preStep`/`postStep` events).
-   - Write `_execution_summary` to the scratchpad.
-   - Run the **Evaluator** (with `preEvaluator`/`postEvaluator` events).
-   - If the verdict is `pass`, return immediately with status `"pass"`.
-   - If the verdict is `fail`, carry the evaluator's feedback into the next cycle.
+4. **Loop** (1 to `maxCycles`):
+   - Fire `prePlanner` → run **Planner** → fire `postPlanner`
+   - Fire `preExecutor` → run **Executor** (with `preStep`/`postStep` per step) → fire `postExecutor`
+   - Write `_execution_summary` to scratchpad
+   - Fire `preEvaluator` → run **Evaluator** → fire `postEvaluator`
+   - If `pass` → return immediately
+   - If `fail` → carry evaluator feedback into next cycle
 
 ### Termination Conditions
 
-| Condition                | Result Status  | What Happens                                                                                                                                                                                                  |
-| ------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Evaluator returns `pass` | `"pass"`       | Pipeline returns immediately with the evaluator's summary.                                                                                                                                                    |
-| Max cycles exhausted     | `"fail"`       | The loop ends. The last evaluator feedback is returned.                                                                                                                                                       |
-| Token budget exceeded    | `"terminated"` | The `TokenTracker` throws a `TepaTokenBudgetExceeded` error mid-cycle. The pipeline catches it and returns with the tokens used.                                                                              |
-| Unrecoverable error      | `"fail"`       | Pipeline component errors (planner parse failures after retry, cycle errors) are caught and returned as structured failures rather than crashing. Non-Tepa errors are wrapped in a `TepaError` and re-thrown. |
+| Condition | Status | What Happens |
+|---|---|---|
+| Evaluator returns `pass` | `"pass"` | Returns immediately with the evaluator's summary as `feedback`. |
+| Max cycles exhausted | `"fail"` | Loop ends; last evaluator feedback is returned. |
+| Token budget exceeded | `"terminated"` | `TokenTracker` throws `TepaTokenBudgetExceeded` mid-cycle. Pipeline catches it and returns with tokens used. |
+| Unrecoverable error | `"fail"` | Component errors (planner parse failures after retry, cycle errors) are caught and returned as structured failures. Non-Tepa errors are wrapped in `TepaError` and re-thrown. |
 
-The `TokenTracker` checks the budget after every LLM call (planner, each executor step, evaluator). If the cumulative token count exceeds the budget at any point, the current cycle is interrupted immediately.
+The `TokenTracker` checks the budget after **every** LLM call — planner, each executor step, and evaluator. If cumulative token count exceeds the budget at any point mid-cycle, the current cycle is interrupted immediately. The check does not wait for the cycle to complete.
 
-### `TepaResult` Structure
+### `TepaResult` Interface
 
 ```typescript
 interface TepaResult {
@@ -443,14 +402,14 @@ interface TepaResult {
 }
 ```
 
-| Field        | Description                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`     | `"pass"` — goal achieved. `"fail"` — max cycles or unrecoverable error. `"terminated"` — token budget exhausted.                      |
-| `cycles`     | Number of Plan-Execute-Evaluate cycles that ran.                                                                                      |
-| `tokensUsed` | Total tokens consumed across all LLM calls in all cycles.                                                                             |
-| `outputs`    | Artifacts produced by the pipeline (file paths, descriptions, types).                                                                 |
-| `logs`       | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts.                             |
-| `feedback`   | On pass: the evaluator's summary. On fail: the evaluator's feedback or an error message. On termination: the budget-exceeded message. |
+| Field | Description |
+|---|---|
+| `status` | `"pass"` — goal achieved. `"fail"` — max cycles or unrecoverable error. `"terminated"` — token budget exhausted. |
+| `cycles` | Number of Plan-Execute-Evaluate cycles that ran. |
+| `tokensUsed` | Total tokens consumed across all LLM calls in all cycles. |
+| `outputs` | Artifacts produced by the pipeline. |
+| `logs` | Structured log entries. |
+| `feedback` | On pass: the evaluator's summary. On fail: the evaluator's feedback or an error message. On termination: the budget-exceeded message. |
 
 Supporting types:
 
@@ -472,21 +431,18 @@ interface LogEntry {
 }
 ```
 
-## Tools in the Pipeline Context
+---
+
+## Tool Schema Flow
 
 ### How the Executor Resolves Tools
 
-When the `Tepa` constructor receives a `tools` array, it registers each `ToolDefinition` in an inline `ToolRegistry` at the start of `run()`. During execution, the Executor looks up each tool name from the plan step against this registry. If a tool isn't found, the step fails with an error message listing the unknown tool name.
+When the `Tepa` constructor receives a `tools` array, it registers each `ToolDefinition` in an inline `ToolRegistry` at the start of `run()`. The same registry serves two purposes:
 
-The same registry is used during plan validation — the Planner checks every tool reference in the generated plan against the registry before execution begins. This catches hallucinated tool names early, before any step runs.
+- **Plan validation** — every tool name in the generated plan is checked against the registry before execution begins. Unknown tool names are caught here, not mid-execution.
+- **Step execution** — the Executor looks up each step's tool by name to retrieve its schema before calling the LLM.
 
-### How Tool Schemas Are Passed to the LLM
-
-Tool schemas flow through the pipeline at two points:
-
-1. **Planning.** The Planner's system prompt includes the full tool list with parameter definitions — names, types, descriptions, and required flags. This gives the LLM enough information to assign the right tools to each step.
-
-2. **Execution.** For each tool step, the Executor extracts a `ToolSchema` from the registry and passes it to the LLM via the provider's native tool-use API:
+### `ToolSchema` Interface
 
 ```typescript
 interface ToolSchema {
@@ -503,13 +459,18 @@ interface ParameterDef {
 }
 ```
 
-The provider translates this schema into the LLM's native format (e.g., Anthropic's `tools` parameter, OpenAI's `tools` with function calling). The LLM returns a structured `tool_use` block with typed parameters — no text parsing required.
+Tool schemas flow through the pipeline at two points:
 
-For a complete guide to defining, registering, and building tools, see [Tool System](./06-tool-system.md).
+1. **Planning.** The Planner's system prompt includes the full tool list with all parameter definitions. This gives the LLM enough information to assign the right tools to each step and declare the right parameters.
+2. **Execution.** For each tool step, the Executor passes the `ToolSchema` to the LLM via the provider's native tool-use API. The provider translates this into the LLM's native format (Anthropic's `tools` parameter, OpenAI's function calling, etc.). The LLM returns a structured `tool_use` block — typed parameters, no text parsing.
+
+For a complete guide to defining custom tools and building third-party tool packages, see [Tool System](./06-tool-system.md).
+
+---
 
 ## What's Next
 
-- [**Configuration**](./05-configuration.md) — Customize cycle limits, token budgets, per-stage models, and logging levels.
-- [**Tool System**](./06-tool-system.md) — Explore built-in tools and create your own.
-- [**Event System Patterns**](./07-event-system-patterns.md) — Human-in-the-loop approval, plan safety filters, progress tracking, and more.
+- [**Configuration**](./05-configuration.md) — Cycle limits, token budgets, per-stage model assignments, and logging levels.
+- [**Tool System**](./06-tool-system.md) — Built-in tools, custom tool definitions, and third-party packages.
+- [**Event System Patterns**](./07-event-system-patterns.md) — Human-in-the-loop approval, plan safety filters, progress tracking, and custom termination.
 - [**LLM Providers**](./08-llm-providers.md) — Built-in providers, native tool use, logging, and custom provider implementation.

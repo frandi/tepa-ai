@@ -6,9 +6,23 @@
 
 **Tepa** is a reusable library/framework that enables task execution through a cyclic loop of three core components: **Planner**, **Executor**, and **Evaluator**. By default, the pipeline operates as a fully autonomous system — once an initial prompt is submitted, it plans how to approach the task, executes the plan using available tools, evaluates the results, and self-corrects until the desired output is achieved or operational limits are reached.
 
-However, Tepa is not limited to full autonomy. Through its **Event System**, callers can hook into the pipeline at each stage — observing, transforming, or pausing the flow as needed. This enables a wide range of operational modes, from fully autonomous execution to human-in-the-loop workflows where approval or input is required between stages. The degree of autonomy is entirely up to the caller.
+Through its **Event System**, callers can hook into the pipeline at each stage — observing, transforming, or pausing the flow as needed. This enables a wide range of operational modes, from fully autonomous execution to human-in-the-loop workflows where approval or input is required between stages.
 
-The framework is designed to be technology-agnostic, extensible, and configurable. Developers integrate it into their own projects by providing a prompt, registering tools, configuring events, and setting configuration parameters. Tepa handles the rest.
+The framework is **LLM-provider-agnostic**, extensible, and configurable. Developers integrate it by providing a prompt, registering tools, selecting an LLM provider, configuring events, and setting configuration parameters. Tepa handles the rest.
+
+### 1.1 Package Architecture
+
+Tepa is organized as a monorepo with the following packages:
+
+| Package                    | Purpose                                                                     |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `@tepa/core`               | Pipeline orchestrator (Planner, Executor, Evaluator, Event Bus, Scratchpad) |
+| `@tepa/types`              | Shared TypeScript type definitions used across all packages                 |
+| `@tepa/tools`              | Built-in tool implementations, tool registry, and `defineTool` utility      |
+| `@tepa/provider-core`      | Base class for LLM providers with retry logic and file logging              |
+| `@tepa/provider-anthropic` | Anthropic Claude provider                                                   |
+| `@tepa/provider-openai`    | OpenAI provider                                                             |
+| `@tepa/provider-gemini`    | Google Gemini provider                                                      |
 
 ---
 
@@ -16,50 +30,108 @@ The framework is designed to be technology-agnostic, extensible, and configurabl
 
 ### 2.1 Planner
 
-The Planner is the strategic brain of the pipeline. It receives the initial prompt (or feedback from a previous evaluation cycle) and produces a structured, step-by-step plan.
+The Planner is the strategic brain of the pipeline. It receives the initial prompt (or feedback from a previous evaluation cycle) and produces a structured, step-by-step plan with a dependency graph.
 
 **Responsibilities:**
 
 - Parse the initial prompt to understand the goal, context, and expected output.
-- Break the goal down into discrete, ordered steps that the Executor can act on.
+- Break the goal down into discrete steps, each with an explicit list of dependencies on prior steps.
 - Assign appropriate tools to each step based on the available tool registry.
-- Estimate resource usage (token budget, expected cycles) for the plan.
-- On subsequent cycles, receive evaluator feedback and produce a _minimal revised plan_ — fixing only what failed rather than regenerating the entire plan from scratch.
+- Assign an LLM model tier to each step (executor model for simple tool-parameter construction, planner model for complex reasoning).
+- Estimate token usage for the plan.
+- On subsequent cycles, receive evaluator feedback and the current scratchpad state, and produce a _minimal revised plan_ — fixing only what failed rather than regenerating the entire plan from scratch.
+- If the LLM produces unparseable output, retry once with a simplified prompt before raising an error.
 
 **Inputs:**
 
-- Initial prompt (first cycle) or evaluator feedback (subsequent cycles).
-- Tool registry (list of available tools with their schemas).
-- Configuration constraints (token budget, max cycles).
-- Scratchpad contents from previous steps (if any).
+- Initial prompt (first cycle) or evaluator feedback + scratchpad state (subsequent cycles).
+- Tool registry (list of available tools with their schemas and parameter definitions).
+- Model configuration (available model tiers).
 
 **Outputs:**
 
-- An ordered list of plan steps, each containing: a description of what to do, which tool(s) to use, and the expected outcome.
+- A `Plan` object containing:
+  - `steps`: An ordered list of `PlanStep` objects (see Section 2.1.1).
+  - `estimatedTokens`: Token estimate for executing the plan.
+  - `reasoning`: Explanation of why this plan structure was chosen.
+
+#### 2.1.1 PlanStep Structure
+
+Each step in a plan has the following structure:
+
+```typescript
+interface PlanStep {
+  id: string; // Unique identifier (e.g., "step_1")
+  description: string; // What this step does
+  tools: string[]; // Tool names to use (empty array = LLM reasoning step)
+  expectedOutcome: string; // What this step should produce
+  dependencies: string[]; // Step IDs that must complete first (direct only)
+  model?: string; // Optional model override for this step
+}
+```
+
+**Rules:**
+
+- Step IDs must be unique.
+- Dependencies must reference step IDs that exist within the same plan.
+- Dependencies must be **direct only** — if step_3 depends on step_2 which depends on step_1, step_3 should list only `["step_2"]` unless it directly needs step_1's output.
+- An empty `tools` array indicates a pure LLM reasoning step (no tool invocation).
+- The `model` field is optional. If omitted, the step uses the default executor model. Steps requiring complex analysis or synthesis should use the planner model.
 
 ### 2.2 Executor
 
-The Executor is the operational engine. It takes the plan and carries out each step sequentially, interacting with the real world through tools.
+The Executor is the operational engine. It takes the plan and carries out each step using **native LLM tool calling** — the LLM receives tool schemas and returns structured `tool_use` blocks with parameters, which the Executor then invokes.
 
 **Responsibilities:**
 
-- Execute each plan step by invoking the specified tool(s) with the correct parameters.
-- Capture and store results from each step (in the scratchpad or as direct output).
+- **Topologically sort** plan steps based on their dependency graph (using Kahn's algorithm). Detect and reject circular dependencies.
+- Execute steps in dependency-safe order.
+- For each step, **scope inputs**: only provide outputs from steps listed in that step's `dependencies` array.
+- Skip steps whose dependencies have failed.
+- For **tool steps** (non-empty `tools` array): send the step description and context to the LLM along with tool schemas, receive a `tool_use` block, and invoke the tool with the LLM-provided parameters.
+- For **reasoning steps** (empty `tools` array): send the step description and context to the LLM, capture the text response as the step output.
+- Capture and store results from each step.
 - Handle tool failures gracefully — capture errors and surface them for evaluation.
-- Track resource consumption (tokens used, time elapsed) as execution progresses.
-- Support both tool-based steps and pure LLM reasoning steps (where no tool is needed).
+- Fire `preStep` and `postStep` events around each individual step execution.
 
 **Inputs:**
 
-- The plan (list of steps from the Planner).
-- Tool registry (to invoke tools).
-- Scratchpad (to read/write intermediate state).
+- The `Plan` (list of steps with dependencies from the Planner).
+- Execution context: original prompt, cycle number, scratchpad, previous cycle results (if any).
+- Tool registry (to resolve tool definitions and schemas).
+- Event bus (for preStep/postStep events).
 
 **Outputs:**
 
-- Results for each step (success or failure with details).
-- Updated scratchpad with intermediate data.
-- Accumulated resource usage metrics.
+- `ExecutorOutput` containing:
+  - `results`: Array of `ExecutionResult` objects (one per step).
+  - `logs`: Array of `LogEntry` objects.
+  - `tokensUsed`: Total tokens consumed across all steps.
+
+#### 2.2.1 ExecutionResult Structure
+
+```typescript
+interface ExecutionResult {
+  stepId: string;
+  status: "success" | "failure";
+  output: unknown;
+  error?: string;
+  tokensUsed: number;
+  durationMs: number;
+}
+```
+
+#### 2.2.2 Native Tool Calling
+
+The Executor uses the LLM provider's native tool-use capability rather than parsing tool parameters from free-form text. The flow for a tool step is:
+
+1. Build a user message containing: step description, expected outcome, tool name, original goal, context, scratchpad state, and outputs from dependency steps.
+2. Call `provider.complete()` with the tool's schema in the `tools` option.
+3. The LLM returns a response with a `toolUse` block containing the tool name and structured input parameters.
+4. Invoke `tool.execute(toolCall.input)` with the LLM-provided parameters.
+5. Capture the tool output as the step result.
+
+If the LLM does not return a `tool_use` block for the expected tool, the step is marked as failed.
 
 ### 2.3 Evaluator
 
@@ -68,29 +140,33 @@ The Evaluator is the quality gate. It inspects the Executor's results against th
 **Responsibilities:**
 
 - Compare the Executor's output against the expected output defined in the initial prompt.
-- Perform both structural checks (do the expected files exist? are the right fields present?) and qualitative checks (is the content meaningful? are recommendations actionable?).
-- Produce a clear verdict: **PASS** or **FAIL**.
+- Perform both **structural checks** (do the expected files/artifacts exist? are the right fields present?) and **qualitative checks** (is the content meaningful? does the output address the goal?).
+- Produce a verdict: **pass** or **fail**.
+- Produce a **confidence score** (0.0 to 1.0) reflecting certainty in the verdict.
 - On failure, generate specific, actionable feedback describing what went wrong and what needs to change — this feedback is sent to the Planner for the next cycle.
-- Enforce termination conditions: pass the configured maximum cycle limit or token budget, even if the task isn't complete.
+- On pass, generate a summary of what was achieved.
+- If the LLM produces unparseable output, retry once with a simplified prompt. If both attempts fail, return a synthetic fail result with confidence 0.
 
 **Inputs:**
 
+- Original prompt (goal + expected output).
 - Executor results (outputs from all steps).
-- Original prompt (to compare against expected output).
 - Scratchpad contents.
-- Resource usage metrics.
 
 **Outputs:**
 
-- Verdict: PASS or FAIL.
-- On PASS: final output summary returned to the caller.
-- On FAIL: structured feedback describing what failed and suggested corrections.
+- `EvaluationResult` containing:
+  - `verdict`: `"pass"` or `"fail"`.
+  - `confidence`: Number between 0 and 1.
+  - `feedback`: (on fail) Specific description of what went wrong.
+  - `summary`: (on pass) Description of what was achieved.
+  - `tokensUsed`: Tokens consumed by the evaluation.
 
 ---
 
 ## 3. Pipeline Flow
 
-The pipeline follows a cyclic flow that repeats until the Evaluator issues a PASS verdict or a termination condition is reached.
+The pipeline follows a cyclic flow that repeats until the Evaluator issues a **pass** verdict or a termination condition is reached.
 
 ```
                     ┌──────────────────────────────────────────┐
@@ -109,7 +185,7 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                  │            │                  │
                  │            │  Produces a      │
                  │            │  step-by-step    │
-                 │            │  plan            │
+                 │            │  plan with deps  │
                  │            └────────┬─────────┘
                  │                     │
                  │                     ▼
@@ -126,9 +202,15 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                  │            ┌─────────────────┐
                  │            │    EXECUTOR      │
                  │            │                  │
-                 │            │  Runs each step  │
-                 │            │  using tools     │
+                 │            │  For each step:  │
+                 │            │   preStep        │
+                 │            │   [execute]      │
+                 │            │   postStep       │
                  │            └────────┬─────────┘
+                 │                     │
+                 │                     ▼
+                 │           [write _execution_summary
+                 │            to scratchpad]
                  │                     │
                  │                     ▼
                  │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
@@ -155,7 +237,7 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
                  │                     │
                  │              ┌──────┴──────┐
                  │              │             │
-                 │            FAIL          PASS
+                 │            fail          pass
                  │              │             │
                  │              ▼             ▼
                  │        ┌──────────┐  ┌──────────────┐
@@ -165,76 +247,100 @@ The pipeline follows a cyclic flow that repeats until the Evaluator issues a PAS
 
 **Step-by-step flow:**
 
-1. The caller submits an **initial prompt** containing the goal, supporting context, and a description of the expected output.
-2. **prePlanner** events fire (if registered), receiving and optionally transforming the Planner input.
-3. The **Planner** analyzes the (potentially transformed) input and produces an ordered plan.
-4. **postPlanner** events fire, receiving and optionally transforming the generated plan.
-5. **preExecutor** events fire, receiving and optionally transforming the Executor input.
-6. The **Executor** carries out each step in the plan, invoking tools and recording results.
-7. **postExecutor** events fire, receiving and optionally transforming the Executor output.
-8. **preEvaluator** events fire, receiving and optionally transforming the Evaluator input.
-9. The **Evaluator** inspects the results against the expected output criteria.
-10. **postEvaluator** events fire, receiving and optionally transforming the Evaluator output.
-11. If the Evaluator issues a **PASS**, the pipeline terminates and returns the final output to the caller.
-12. If the Evaluator issues a **FAIL**, it generates structured feedback. The pipeline checks termination conditions (max cycles, token budget). If limits are not exceeded, the feedback is sent back to the Planner for a new cycle (starting from step 2). If limits are exceeded, the pipeline terminates with a partial result and failure report.
-
-> **Note:** At any event point, if a callback returns a Promise, the pipeline pauses until the Promise resolves. If a callback throws or a Promise rejects, the pipeline aborts (unless `continueOnError` is set for that callback). See **Section 4** for full event system details.
+1. The caller submits a **`TepaPrompt`** containing the goal, context, and expected output.
+2. Prompt is validated against the schema.
+3. Tools are registered into an inline tool registry.
+4. Scratchpad, token tracker, logger, and event bus are initialized.
+5. **For each cycle** (1 to `maxCycles`):
+   1. Build cycle metadata (cycle number, total cycles used, tokens used so far).
+   2. **prePlanner** events fire, receiving `{ prompt, feedback }`.
+   3. The **Planner** produces a plan (initial or revised based on feedback + scratchpad).
+   4. Token tracker records planner token usage.
+   5. **postPlanner** events fire, receiving the `Plan`.
+   6. **preExecutor** events fire, receiving `{ plan, prompt, cycle, scratchpad, previousResults }`.
+   7. The **Executor** topologically sorts steps, then executes each in order with preStep/postStep events.
+   8. Token tracker records executor token usage.
+   9. Execution summary is written to scratchpad under key `_execution_summary`.
+   10. **postExecutor** events fire, receiving the `ExecutorOutput`.
+   11. **preEvaluator** events fire, receiving `{ prompt, results, scratchpad }`.
+   12. The **Evaluator** inspects results against expected output.
+   13. Token tracker records evaluator token usage.
+   14. **postEvaluator** events fire, receiving the `EvaluationResult`.
+   15. If verdict is **pass**: return `TepaResult` with `status: "pass"`.
+   16. If verdict is **fail**: store feedback for next cycle's planner.
+6. If max cycles exhausted: return `TepaResult` with `status: "fail"`.
+7. If token budget exceeded at any point: return `TepaResult` with `status: "terminated"`.
+8. If an unrecoverable `TepaError` occurs: return `TepaResult` with `status: "fail"`.
+9. Any other error is re-thrown as a `TepaError`.
 
 ---
 
 ## 4. Event System
 
-The Event System introduces lifecycle hooks around each core component, giving callers the ability to inject custom behavior at defined points in the pipeline without modifying the core framework. By default, Tepa operates as a fully autonomous system. Events make it extensible — callers can observe, transform, pause, or enrich the pipeline flow as needed.
+The Event System provides lifecycle hooks around each core component and individual execution steps, giving callers the ability to inject custom behavior without modifying the core framework.
 
 ### 4.1 Event Points
 
-There are six event points — a **pre** and **post** event for each core component:
+There are eight event points — a **pre** and **post** event for each core component, plus step-level events within the Executor:
 
-| Event           | Fires                         | Receives                                                                          | Can Modify       |
-| --------------- | ----------------------------- | --------------------------------------------------------------------------------- | ---------------- |
-| `prePlanner`    | Before the Planner runs       | Planner input (prompt or feedback, tool registry, config, scratchpad)             | Planner input    |
-| `postPlanner`   | After the Planner completes   | Planner output (the generated plan)                                               | Planner output   |
-| `preExecutor`   | Before the Executor runs      | Executor input (plan, tool registry, scratchpad)                                  | Executor input   |
-| `postExecutor`  | After the Executor completes  | Executor output (step results, updated scratchpad, resource metrics)              | Executor output  |
-| `preEvaluator`  | Before the Evaluator runs     | Evaluator input (executor results, original prompt, scratchpad, resource metrics) | Evaluator input  |
-| `postEvaluator` | After the Evaluator completes | Evaluator output (verdict, feedback or final output)                              | Evaluator output |
+| Event           | Fires                         | Receives                                                     | Can Modify        |
+| --------------- | ----------------------------- | ------------------------------------------------------------ | ----------------- |
+| `prePlanner`    | Before the Planner runs       | `{ prompt: TepaPrompt, feedback?: string }`                  | Planner input     |
+| `postPlanner`   | After the Planner completes   | `Plan`                                                       | Plan              |
+| `preExecutor`   | Before the Executor runs      | `{ plan, prompt, cycle, scratchpad, previousResults? }`      | Executor input    |
+| `postExecutor`  | After the Executor completes  | `ExecutorOutput`                                             | Executor output   |
+| `preEvaluator`  | Before the Evaluator runs     | `{ prompt, results, scratchpad }`                            | Evaluator input   |
+| `postEvaluator` | After the Evaluator completes | `EvaluationResult`                                           | Evaluation result |
+| `preStep`       | Before each step executes     | `{ step: PlanStep, cycle: number }`                          | Step input        |
+| `postStep`      | After each step completes     | `{ step: PlanStep, result: ExecutionResult, cycle: number }` | Step result       |
 
 The pipeline flow with events:
 
 ```
-prePlanner → [PLANNER] → postPlanner → preExecutor → [EXECUTOR] → postExecutor → preEvaluator → [EVALUATOR] → postEvaluator
+prePlanner → [PLANNER] → postPlanner → preExecutor →
+  [EXECUTOR: preStep → [step] → postStep (per step)] →
+postExecutor → preEvaluator → [EVALUATOR] → postEvaluator
 ```
 
-All events fire on every cycle. The pipeline provides cycle metadata (cycle number, total cycles used so far) to every event callback. If a caller needs an event to execute only on specific cycles, they handle that logic within their own callback implementation.
+All component-level events fire on every cycle. Step-level events fire for every step within each cycle.
 
 ### 4.2 Event Registration
 
-Event callbacks are registered at Tepa initialization time as part of the configuration. Callers provide a mapping of event names to one or more callback functions.
+Event callbacks are registered at `Tepa` initialization time as part of the options. Callers provide a mapping of event names to one or more callback functions or registration objects.
 
-Example structure:
-
-```
-Tepa({
-  config: { ... },
-  tools: [ ... ],
+```typescript
+const tepa = new Tepa({
+  provider: new AnthropicProvider(),
+  tools: [...],
   events: {
     prePlanner: [callbackA, callbackB],
     postExecutor: [callbackC],
-    preEvaluator: [callbackD]
-  }
-})
+    preEvaluator: [{ handler: callbackD, continueOnError: true }],
+    preStep: [stepLogger],
+    postStep: [stepResultHandler],
+  },
+});
 ```
 
 ### 4.3 Event Contract
 
-Events are **transformation hooks**. Each callback receives the component's input (for pre-events) or output (for post-events) along with cycle metadata, and may return a modified version.
+Each callback receives two arguments: the event data and cycle metadata.
+
+```typescript
+type EventCallback<T> = (data: T, cycle: CycleMetadata) => T | void | Promise<T | void>;
+
+interface CycleMetadata {
+  cycleNumber: number;
+  totalCyclesUsed: number;
+  tokensUsed: number;
+}
+```
 
 **Rules:**
 
-- A callback receives the data and cycle metadata as arguments.
 - If the callback returns a modified value, that value replaces the original and is passed to the next callback or to the core component.
-- If the callback returns nothing (undefined/null), the original data passes through unchanged.
-- If the callback returns a `Promise`, the pipeline awaits its resolution before proceeding. This naturally enables pausing — for example, a callback that waits for human input simply returns a Promise that does not resolve until the input is provided.
+- If the callback returns `undefined` or `null`, the original data passes through unchanged.
+- If the callback returns a `Promise`, the pipeline awaits its resolution before proceeding. This enables pausing — for example, a callback that waits for human input returns a Promise that resolves when the input is provided.
 - If the Promise rejects (or the callback throws synchronously), the pipeline aborts — see Error Handling below.
 
 ### 4.4 Execution Order
@@ -243,370 +349,414 @@ When multiple callbacks are registered for the same event, they execute in **reg
 
 1. Callback A runs, optionally transforms the data.
 2. Callback B receives the (potentially transformed) data from A, optionally transforms it further.
-3. The final output is passed to the core component (for pre-events) or to the next stage in the pipeline (for post-events).
+3. The final output is passed to the core component (for pre-events) or to the next stage (for post-events).
 
 ### 4.5 Error Handling
 
-- By default, if any event callback throws an exception (or returns a rejected Promise), the **pipeline aborts** with an error report — the same as an unrecoverable error.
-- Callers can set `continueOnError: true` on individual event registrations to override this behavior. When enabled, the pipeline logs the error, skips the failed callback, and continues with the data as it was before that callback ran.
+Callbacks can be registered as either bare functions or `EventRegistration` objects:
+
+```typescript
+interface EventRegistration<T = unknown> {
+  handler: EventCallback<T>;
+  continueOnError?: boolean; // Default: false
+}
+```
+
+- **`continueOnError: false`** (default): If the callback throws, the pipeline aborts.
+- **`continueOnError: true`**: If the callback throws, the pipeline restores the data to its state before that callback ran and continues with the next callback.
 
 ### 4.6 Usage Scenarios
 
-The event system is intentionally general-purpose. Example use cases:
-
-| Scenario                        | Event(s)           | Approach                                                                                                                           |
-| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Human-in-the-loop approval**  | `postPlanner`      | Callback presents the generated plan to a human, returns a Promise that resolves when the human approves (or rejects to abort).    |
-| **Plan safety filter**          | `postPlanner`      | Callback inspects the plan and removes or modifies steps that invoke restricted tools.                                             |
-| **Input enrichment**            | `prePlanner`       | Callback fetches additional context from an external system and appends it to the prompt.                                          |
-| **Data cleanup**                | `postExecutor`     | Callback sanitizes or normalizes executor results before evaluation.                                                               |
-| **External logging / alerting** | `postEvaluator`    | Callback sends the evaluation verdict to a monitoring system or notifies a Slack channel on failure.                               |
-| **Custom termination logic**    | `postEvaluator`    | Callback inspects the verdict and forces an abort based on custom business rules (e.g., "stop after 2 failures on the same step"). |
-| **Progress reporting**          | Any pre/post event | Callback emits progress updates to a UI or dashboard at each stage of the pipeline.                                                |
+| Scenario                       | Event(s)              | Approach                                                                            |
+| ------------------------------ | --------------------- | ----------------------------------------------------------------------------------- |
+| **Human-in-the-loop approval** | `postPlanner`         | Callback presents the plan to a human, returns a Promise that resolves on approval. |
+| **Plan safety filter**         | `postPlanner`         | Callback inspects and removes/modifies steps with restricted tools.                 |
+| **Input enrichment**           | `prePlanner`          | Callback fetches additional context and appends it to the prompt.                   |
+| **Data cleanup**               | `postExecutor`        | Callback sanitizes or normalizes executor results before evaluation.                |
+| **External logging**           | `postEvaluator`       | Callback sends the verdict to a monitoring system.                                  |
+| **Custom termination**         | `postEvaluator`       | Callback forces abort based on custom business rules.                               |
+| **Step-level progress**        | `preStep`, `postStep` | Callbacks emit real-time progress updates as each step starts and finishes.         |
+| **Step-level filtering**       | `preStep`             | Callback can inspect or modify individual steps before execution.                   |
 
 ---
 
 ## 5. Tool System
 
-Tools are the mechanism by which the Executor interacts with the outside world. The pipeline itself is tool-agnostic — it relies on a **tool registry** where developers register the tools available for a given task.
+Tools are the mechanism by which the Executor interacts with the outside world. The pipeline is tool-agnostic — it relies on a **tool registry** where developers register the tools available for a given task.
 
-### 5.1 Tool Registry
+### 5.1 Tool Definition
 
-Every tool is registered with a schema that includes:
+Every tool conforms to the `ToolDefinition` interface:
 
-- **Name**: unique identifier (e.g., `file_read`, `http_request`).
-- **Description**: human-readable explanation of what the tool does (used by the Planner to reason about tool selection).
-- **Input parameters**: typed parameter definitions with descriptions.
-- **Output format**: description of what the tool returns.
+```typescript
+interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, ParameterDef>;
+  execute: (params: Record<string, unknown>) => Promise<unknown>;
+}
 
-The registry is extensible. Developers can register custom tools alongside the built-in set.
+interface ParameterDef {
+  type: "string" | "number" | "boolean" | "object" | "array";
+  description: string;
+  required?: boolean;
+  default?: unknown;
+}
+```
 
-### 5.2 Initial Tool Set
+Tools are passed directly to the `Tepa` constructor as an array. The core package builds an internal registry from them. The `@tepa/tools` package also exports a standalone `ToolRegistryImpl` for programmatic use.
 
-The following tools are included as the default set for the initial implementation:
+### 5.2 Tool Creation
+
+The `defineTool` utility (from `@tepa/tools`) validates tool definitions at creation time using Zod schemas:
+
+```typescript
+import { defineTool } from "@tepa/tools";
+
+const myTool = defineTool({
+  name: "my_tool",
+  description: "Does something useful",
+  parameters: {
+    input: { type: "string", description: "Input value", required: true },
+  },
+  execute: async ({ input }) => {
+    return { result: `processed: ${input}` };
+  },
+});
+```
+
+### 5.3 Built-in Tools
+
+The following tools are included in `@tepa/tools`:
 
 **File System**
 
-- `file_read` — Read the contents of a file at a given path.
-- `file_write` — Write content to a file at a given path (create or overwrite).
-- `directory_list` — List files and subdirectories at a given path, with optional recursive traversal.
-- `file_search` — Find files matching a glob pattern or name filter within a directory tree.
+| Tool             | Description                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `file_read`      | Read the contents of a file at a given path. Supports optional encoding parameter.      |
+| `file_write`     | Write content to a file at a given path. Creates parent directories if needed.          |
+| `directory_list` | List files and subdirectories. Supports recursive traversal and configurable max depth. |
+| `file_search`    | Find files matching a glob pattern within a directory tree.                             |
 
 **Process Execution**
 
-- `shell_execute` — Run a shell command, capturing stdout, stderr, and exit code. Supports configurable timeout and working directory.
+| Tool            | Description                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `shell_execute` | Run a shell command, capturing stdout, stderr, and exit code. Supports configurable timeout and working directory. |
 
 **Network**
 
-- `http_request` — Make an HTTP request (GET, POST, PUT, DELETE) with configurable URL, headers, query parameters, and body. Returns status code, headers, and response body.
-- `web_search` — Perform a web search query and return a list of results with titles, URLs, and snippets.
+| Tool           | Description                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `http_request` | Make an HTTP request (GET, POST, PUT, DELETE) with configurable URL, headers, query parameters, body, and timeout. |
+| `web_search`   | Perform a web search query via a configurable API endpoint. Returns results with titles, URLs, and snippets.       |
 
 **Data Processing**
 
-- `data_parse` — Parse structured data (JSON, CSV, YAML) from a file or string. Returns typed data structures. Supports preview mode (return first N rows) for large files.
+| Tool         | Description                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| `data_parse` | Parse structured data (JSON, CSV, YAML) from a string or file. Returns typed data structures. |
 
 **Pipeline Internal**
 
-- `scratchpad_read` — Read a value from the pipeline's key-value scratchpad by key.
-- `scratchpad_write` — Write a value to the scratchpad under a given key. Used to carry intermediate state between steps without consuming conversation context.
-- `log_observe` — Record an observation or reasoning note to the pipeline's execution log. Used for debugging and auditability.
+| Tool          | Description                                                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scratchpad`  | Read or write to the pipeline's in-memory key-value scratchpad. Uses an `action` parameter (`"read"` or `"write"`) with `key` and optional `value`. |
+| `log_observe` | Record an observation or reasoning note to the pipeline's execution log. Supports log levels.                                                       |
 
-### 5.3 Custom Tool Registration
+### 5.4 Third-Party Tools
 
-Developers can extend the tool set by registering custom tools that conform to the tool schema interface. This allows the pipeline to be adapted to domain-specific use cases (e.g., database query tools, email senders, domain-specific API clients) without modifying the core framework.
+Any npm package can be a Tepa tool. The contract is simple — export a `ToolDefinition` object:
+
+```typescript
+import type { ToolDefinition } from "@tepa/types";
+
+export const postgresQuery: ToolDefinition = {
+  name: "postgres_query",
+  description: "Execute a SQL query against PostgreSQL",
+  parameters: {
+    query: { type: "string", description: "SQL query", required: true },
+  },
+  execute: async ({ query }) => {
+    // implementation
+  },
+};
+```
+
+No plugin API needed — just import and pass to `Tepa`.
 
 ---
 
-## 6. Configuration
+## 6. LLM Provider System
 
-The configuration layer governs operational boundaries and behavioral parameters for the pipeline. Configuration is provided at initialization time and remains constant for the duration of a pipeline run.
+Tepa abstracts LLM communication through a provider interface, allowing the same pipeline to run against different LLM backends.
 
-### 6.1 Configuration Parameters
+### 6.1 Provider Interface
 
-- **LLM Models**: Which language model(s) to use. Supports assigning different models to different components (e.g., a high-capability model for the Planner, a faster/cheaper model for the Evaluator).
-- **Max Token Budget**: The total token allowance for the entire pipeline run across all cycles. Once exceeded, the pipeline terminates regardless of completion status.
-- **Max Cycles**: The maximum number of Planner → Executor → Evaluator loops before forced termination.
-- **Tool Timeout**: Default timeout for tool executions (can be overridden per tool).
-- **Retry Policy**: How many times a failed tool invocation should be retried before surfacing as a step failure.
-- **Logging Level**: Verbosity of the execution log (e.g., minimal, standard, verbose).
+All providers implement the `LLMProvider` interface:
 
-### 6.2 Termination Conditions
+```typescript
+interface LLMProvider {
+  complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>;
+}
+
+interface LLMRequestOptions {
+  model: string;
+  maxTokens?: number;
+  temperature?: number;
+  systemPrompt?: string;
+  tools?: ToolSchema[]; // For native tool use
+}
+
+interface LLMMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface LLMResponse {
+  text: string;
+  tokensUsed: { input: number; output: number };
+  finishReason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use";
+  toolUse?: LLMToolUseBlock[]; // Present when finishReason is "tool_use"
+}
+
+interface LLMToolUseBlock {
+  id: string; // Provider-assigned tool call ID
+  name: string; // Tool name
+  input: Record<string, unknown>; // Parsed parameters
+}
+```
+
+### 6.2 Base Provider (`@tepa/provider-core`)
+
+All built-in providers extend `BaseLLMProvider`, which provides:
+
+- **Retry logic**: Configurable max retries (default: 3) with exponential backoff (default base: 1000ms).
+- **Rate limit handling**: Rate limit errors receive 30x longer backoff. Respects `retry-after` headers when available.
+- **Error classification**: Providers implement `isRetryable()`, `isRateLimitError()`, and `getRetryAfterMs()` to classify errors.
+- **File logging**: By default, all LLM requests/responses are logged to `.tepa/logs/llm-<timestamp>.jsonl` in JSONL format. Can be disabled via `defaultLog: false`.
+- **Log callbacks**: Additional log listeners can be registered via `onLog()`.
+- **Content inclusion**: Optionally include full message content in logs (disabled by default for privacy).
+
+### 6.3 Built-in Providers
+
+| Provider      | Package                    | Default Model            | Notes                                                   |
+| ------------- | -------------------------- | ------------------------ | ------------------------------------------------------- |
+| **Anthropic** | `@tepa/provider-anthropic` | `claude-haiku-4-5`       | Uses `@anthropic-ai/sdk`. 15-minute timeout.            |
+| **OpenAI**    | `@tepa/provider-openai`    | `gpt-5-mini`             | Uses OpenAI SDK Responses API. 15-minute timeout.       |
+| **Gemini**    | `@tepa/provider-gemini`    | `gemini-3-flash-preview` | Uses `@google/genai` SDK. Supports system instructions. |
+
+---
+
+## 7. Configuration
+
+Configuration governs operational boundaries and behavioral parameters for the pipeline. It is provided at initialization time and remains constant for the duration of a pipeline run.
+
+### 7.1 Configuration Structure
+
+```typescript
+interface TepaConfig {
+  model: ModelConfig;
+  limits: LimitsConfig;
+  tools: string[]; // Reserved for future use
+  logging: LoggingConfig;
+}
+
+interface ModelConfig {
+  planner: string; // Model for planning phase
+  executor: string; // Default model for step execution
+  evaluator: string; // Model for evaluation phase
+}
+
+interface LimitsConfig {
+  maxCycles: number; // Max pipeline cycles
+  maxTokens: number; // Total token budget across all cycles
+  toolTimeout: number; // Default timeout for tool executions (ms)
+  retryAttempts: number; // Retry count for transient errors
+}
+
+interface LoggingConfig {
+  level: "minimal" | "standard" | "verbose";
+  output?: string; // Optional log file path
+}
+```
+
+### 7.2 Default Values
+
+```typescript
+{
+  model: {
+    planner: "claude-sonnet-4-6",
+    executor: "claude-haiku-4-5",
+    evaluator: "claude-sonnet-4-6",
+  },
+  limits: {
+    maxCycles: 5,
+    maxTokens: 64_000,
+    toolTimeout: 30_000,
+    retryAttempts: 1,
+  },
+  tools: [],
+  logging: { level: "standard" },
+}
+```
+
+### 7.3 Partial Configuration
+
+Callers provide a `DeepPartial<TepaConfig>` — only overriding fields they want to change. The `defineConfig()` function deep-merges the partial config with defaults and validates the result using a Zod schema. Invalid configuration throws `TepaConfigError`.
+
+### 7.4 Logging Levels
+
+| Level      | Behavior                                                 |
+| ---------- | -------------------------------------------------------- |
+| `minimal`  | No console output                                        |
+| `standard` | Cycle/step/tool info (plan size, success rates, verdict) |
+| `verbose`  | Standard + durations and token counts                    |
+
+### 7.5 Termination Conditions
 
 The pipeline terminates when any of the following conditions are met:
 
-1. The Evaluator issues a **PASS** verdict (success).
-2. The **max cycle count** is reached (graceful failure with partial results).
-3. The **token budget** is exhausted (graceful failure with partial results).
-4. An **unrecoverable error** occurs (e.g., a critical tool is unavailable).
-
-On non-success termination, the pipeline returns whatever partial results have been produced along with a report explaining why it stopped and what remained incomplete.
+1. The Evaluator issues a **pass** verdict → `status: "pass"`.
+2. The **max cycle count** is reached → `status: "fail"`.
+3. The **token budget** is exhausted (`TepaTokenBudgetExceeded`) → `status: "terminated"`.
+4. An **unrecoverable `TepaError`** occurs → `status: "fail"`.
 
 ---
 
-## 7. Prompt Structure
+## 8. Prompt Structure
 
-The initial prompt is the sole input from the caller. It must contain enough information for the Planner to produce a meaningful plan. The prompt consists of three sections:
+The prompt is the sole input from the caller. It is a structured `TepaPrompt` object validated at the start of every pipeline run.
 
-- **Goal**: A clear statement of what the agent should accomplish.
-- **Context**: Supporting information — file locations, technology constraints, background knowledge, style preferences, or any domain-specific details the agent needs.
-- **Expected Output**: A description of what the final deliverable should look like — file paths, formats, content criteria, and success conditions.
+### 8.1 TepaPrompt Interface
 
-Example structure:
+```typescript
+interface TepaPrompt {
+  goal: string; // What should be accomplished
+  context: Record<string, unknown>; // Supporting information (free-form)
+  expectedOutput: string | ExpectedOutput[]; // Desired outputs
+}
 
+interface ExpectedOutput {
+  path?: string; // File path (for file outputs)
+  description: string; // What should be produced
+  criteria?: string[]; // Acceptance criteria
+}
 ```
-Goal: [What should be accomplished]
 
-Context:
-- [Relevant detail 1]
-- [Relevant detail 2]
-- [Relevant detail N]
+### 8.2 Validation
 
-Expected Output:
-- [Deliverable 1 with format and location]
-- [Deliverable 2 with format and location]
-- [Success condition]
+- `goal` must be a non-empty string.
+- `context` is a free-form object (any shape).
+- `expectedOutput` can be either:
+  - A single non-empty string describing the desired output.
+  - An array of `ExpectedOutput` objects (at least one) for structured output specifications.
+- Invalid prompts throw `TepaPromptError`.
+
+### 8.3 Prompt File Loading
+
+Prompts can be loaded from YAML or JSON files using `parsePromptFile()`. The format is auto-detected from the file extension (`.yaml`, `.yml`, `.json`).
+
+---
+
+## 9. Scratchpad
+
+The scratchpad is an in-memory key-value store that persists across execution steps and cycles within a single pipeline run.
+
+### 9.1 API
+
+```typescript
+class Scratchpad {
+  read(key: string): unknown;
+  has(key: string): boolean;
+  write(key: string, value: unknown): void;
+  entries(): Record<string, unknown>;
+  clear(): void;
+}
+```
+
+### 9.2 Behavior
+
+- Persists across all steps and cycles within a single `run()` call.
+- Reset between separate pipeline runs (each `run()` creates a fresh scratchpad).
+- After each Executor cycle, an `_execution_summary` is automatically written to the scratchpad, providing the Planner with context for re-planning.
+- Available to all components: Planner reads it for re-planning context, Executor passes it to step prompts, Evaluator receives it for assessment.
+- Also accessible via the `scratchpad` tool, allowing steps to programmatically read/write values during execution.
+
+---
+
+## 10. Error Handling
+
+Tepa defines a custom error hierarchy for structured error handling:
+
+| Error Class               | Purpose                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `TepaError`               | Base class for all pipeline errors                                               |
+| `TepaConfigError`         | Configuration validation failures                                                |
+| `TepaPromptError`         | Prompt validation failures                                                       |
+| `TepaToolError`           | Tool-related errors                                                              |
+| `TepaCycleError`          | Pipeline execution errors (plan parsing, tool references, circular dependencies) |
+| `TepaTokenBudgetExceeded` | Token limit exceeded (carries `tokensUsed` and `tokenBudget`)                    |
+
+### 10.1 Token Tracking
+
+The `TokenTracker` monitors cumulative token usage across all LLM calls (planning, execution, evaluation). When a token addition would exceed the budget, it throws `TepaTokenBudgetExceeded`. The pipeline catches this and returns a `TepaResult` with `status: "terminated"`.
+
+### 10.2 LLM Parse Failures
+
+Both the Planner and Evaluator implement a retry-once strategy for unparseable LLM responses:
+
+1. First attempt: send the prompt, try to parse the response.
+2. If parsing fails: send a follow-up message with the original response and a simplified prompt requesting valid JSON.
+3. If the retry also fails: Planner throws `TepaCycleError`; Evaluator returns a synthetic fail result with `confidence: 0`.
+
+---
+
+## 11. Pipeline Result
+
+Every pipeline run returns a `TepaResult`:
+
+```typescript
+interface TepaResult {
+  status: "pass" | "fail" | "terminated";
+  cycles: number;
+  tokensUsed: number;
+  outputs: OutputArtifact[];
+  logs: LogEntry[];
+  feedback: string;
+}
+
+interface OutputArtifact {
+  path: string;
+  description: string;
+  type: "file" | "data" | "report";
+}
+
+interface LogEntry {
+  timestamp: number;
+  cycle: number;
+  step?: string;
+  tool?: string;
+  message: string;
+  durationMs?: number;
+  tokensUsed?: number;
+}
 ```
 
 ---
 
-## 8. Scenario Simulations
+## 12. Notes from v1 Worth Considering
 
-The following simulations demonstrate how the pipeline handles two fundamentally different types of tasks using the same components and tool set.
+The following items from the v1 requirements are not currently implemented but may be worth revisiting:
 
-### 8.1 Scenario A — Automated API Client Generation
+1. **Per-tool timeout overrides**: v1 specified that `toolTimeout` can be overridden per tool. The config has `toolTimeout` as a global default, but individual `ToolDefinition` objects don't have a timeout field. Adding an optional `timeout` to `ParameterDef` or `ToolDefinition` would allow tools like `shell_execute` to have longer timeouts than `file_read`.
 
-**Domain:** Software development
-**Task type:** Code generation, testing, and self-correction
+2. **Tool-level retry policy**: v1 specified retrying failed tool invocations. The current `retryAttempts` config exists but retry logic only operates at the LLM provider level (retrying API calls), not at the tool execution level. A tool invocation that fails is immediately recorded as a step failure.
 
-#### Initial Prompt
+3. **Detailed termination reports**: v1 specified that on non-success termination, the pipeline should return "whatever partial results have been produced along with a report explaining why it stopped and what remained incomplete." The current implementation returns `status`, `feedback`, and `logs`, but doesn't explicitly enumerate what remained incomplete (e.g., which plan steps were never attempted).
 
-```
-Goal: Create a TypeScript API client module for the JSONPlaceholder API
-(https://jsonplaceholder.typicode.com).
+4. **Planner cycle estimation**: v1 specified the Planner should "estimate resource usage (token budget, expected cycles)". The current Planner estimates tokens (`estimatedTokens`) but not expected cycles.
 
-Context:
-- Project uses Node.js with TypeScript
-- Project root is at ./my-project
-- Use axios for HTTP calls
-- Follow existing code style in the project
-- Testing framework is vitest
+5. **OutputArtifact population**: The `TepaResult.outputs` array is typed as `OutputArtifact[]` but is currently always returned as an empty array `[]`. The pipeline doesn't extract structured output artifacts from execution results. This could be populated by inspecting step results that produce files or by having the Evaluator identify artifacts on pass.
 
-Expected Output:
-- A typed API client at src/api/jsonplaceholder.ts
-- Type definitions at src/api/types.ts
-- Test file at src/api/__tests__/jsonplaceholder.test.ts
-- All tests passing
-```
-
-#### Cycle 1 — Initial Attempt
-
-**PLANNER** produces a 7-step plan:
-
-| Step | Action                                                  | Tools                         |
-| ---- | ------------------------------------------------------- | ----------------------------- |
-| 1    | Explore project structure and code style                | `directory_list`, `file_read` |
-| 2    | Discover API endpoints by making sample requests        | `http_request`                |
-| 3    | Generate TypeScript type definitions from API responses | `file_write`                  |
-| 4    | Generate API client module matching project code style  | `file_read`, `file_write`     |
-| 5    | Generate test file                                      | `file_write`                  |
-| 6    | Run the test suite                                      | `shell_execute`               |
-| 7    | Verify all tests pass                                   | (Evaluator)                   |
-
-**EXECUTOR** carries out each step:
-
-- **Step 1**: Lists the project directory, reads `package.json` and an existing utility file `src/utils/http.ts`. Stores code style observations in the scratchpad (async/await pattern, custom error class, camelCase conventions).
-- **Step 2**: Makes HTTP GET requests to `/posts?_limit=1`, `/users?_limit=1`, and `/comments?_limit=1`. Captures response shapes and stores the discovered schema in the scratchpad.
-- **Step 3**: Generates `src/api/types.ts` with `Post`, `User`, and `Comment` interfaces based on the discovered schema.
-- **Step 4**: Reads the scratchpad for code style notes. Generates `src/api/jsonplaceholder.ts` with a `JsonPlaceholderClient` class containing typed methods (`getPosts`, `getPostById`, `getUsers`, `getCommentsByPost`, `createPost`).
-- **Step 5**: Generates a test file with 4 test cases using vitest.
-- **Step 6**: Runs `npx vitest run src/api` — **tests fail**. The error indicates that `axios` is not properly initialized: `TypeError: Cannot read properties of undefined (reading 'get')`.
-
-The Executor logs the observation: _"Tests failed — axios instance not initialized. The client class is calling methods on axios directly instead of creating an instance with axios.create()."_
-
-**EVALUATOR** inspects:
-
-- Files exist: **types.ts** ✓, **jsonplaceholder.ts** ✓, **test file** ✓
-- Tests passing: ✗ — TypeError during execution.
-- Verdict: **FAIL**
-- Feedback: _"The client class does not initialize an axios instance in its constructor. The existing project pattern in src/utils/http.ts uses axios.create() with a baseURL. The client must follow this pattern. Only the client module needs to be fixed — types and tests are fine."_
-- Token usage: 3,800 / 10,000
-
-#### Cycle 2 — Self-Correction
-
-**PLANNER** receives the feedback and produces a minimal revised plan:
-
-| Step | Action                                                     | Tools           |
-| ---- | ---------------------------------------------------------- | --------------- |
-| 1    | Re-read `src/utils/http.ts` for the exact axios pattern    | `file_read`     |
-| 2    | Rewrite the client module with proper axios initialization | `file_write`    |
-| 3    | Re-run the test suite                                      | `shell_execute` |
-
-**EXECUTOR** carries out the fix:
-
-- **Step 1**: Reads the existing utility file. Confirms the pattern: `axios.create({ baseURL })` stored as a class property.
-- **Step 2**: Rewrites the client module. The constructor now initializes a private `AxiosInstance` with the base URL. All methods use `this.http.get(...)` instead of `axios.get(...)`.
-- **Step 3**: Runs the test suite — **all 4 tests pass**.
-
-**EVALUATOR** inspects:
-
-- Files exist: all three ✓
-- Tests passing: ✓ (4/4)
-- Code follows project conventions: ✓ (verified against scratchpad notes)
-- Verdict: **PASS**
-- Token usage: 5,200 / 10,000
-
-#### Final Output
-
-```
-✅ Agent completed in 2 cycles (5,200 tokens used)
-
-Files created:
-  - src/api/types.ts              (Post, User, Comment interfaces)
-  - src/api/jsonplaceholder.ts    (typed client with 5 methods)
-  - src/api/__tests__/jsonplaceholder.test.ts  (4 tests, all passing)
-
-Note: Cycle 1 failed due to missing axios instance initialization.
-Auto-corrected in Cycle 2 by following existing pattern in src/utils/http.ts.
-```
-
-#### Key Observations
-
-- The pipeline self-corrected a real bug without human intervention.
-- The revised plan in Cycle 2 was surgical — only 3 steps instead of repeating all 7.
-- The scratchpad carried code style context across steps without re-reading files.
-- The evaluator validated actual test execution, not just file existence.
-
----
-
-### 8.2 Scenario B — Student Learning Progress Insights
-
-**Domain:** Education / data analysis
-**Task type:** Data processing, statistical analysis, and report generation
-
-#### Initial Prompt
-
-```
-Goal: Analyze student learning progress for Class 5B (Fall 2025 semester)
-and produce an insight report with actionable recommendations.
-
-Context:
-- Grade data is in ./class-5b/grades.csv (columns: student_name, subject,
-  assignment_name, score, max_score, date)
-- Attendance data is in ./class-5b/attendance.csv (columns: student_name,
-  date, status)
-- There are 28 students, 6 subjects
-- School grading policy: below 60% is failing, below 70% needs intervention
-- Parent-teacher conferences are scheduled for next week
-
-Expected Output:
-- A comprehensive PDF report at ./class-5b/progress-report.pdf containing:
-  - Class-wide performance overview
-  - Per-subject trend analysis
-  - Individual student flags (at-risk students)
-  - Correlation between attendance and performance
-  - Actionable recommendations for each flagged student
-- A summary CSV at ./class-5b/flagged-students.csv for quick reference
-```
-
-#### Cycle 1 — Single-Pass Success
-
-**PLANNER** produces an 8-step plan:
-
-| Step | Action                                                | Tools                         |
-| ---- | ----------------------------------------------------- | ----------------------------- |
-| 1    | Read and parse both CSV files                         | `file_read`, `data_parse`     |
-| 2    | Compute class-wide metrics                            | `shell_execute`               |
-| 3    | Compute per-subject trends over time                  | `shell_execute`               |
-| 4    | Compute per-student metrics and flag at-risk students | `shell_execute`               |
-| 5    | Analyze attendance-performance correlation            | `shell_execute`               |
-| 6    | Generate recommendations for flagged students         | (LLM reasoning)               |
-| 7    | Compile PDF report                                    | `shell_execute`, `file_write` |
-| 8    | Export flagged students CSV                           | `file_write`                  |
-
-**EXECUTOR** carries out each step:
-
-- **Step 1**: Reads both CSV files. Grades data contains 1,240 rows (28 students × ~7–8 assignments × 6 subjects). Attendance data contains 2,520 rows (28 students × 90 school days). Stores data shape summary in scratchpad.
-
-- **Step 2**: Runs a data analysis script. Results: class average 72.4%, median 74.1%, pass rate 82.1%, intervention zone 14.3%, failing 3.6%. Highest subject: Art (81.2%), lowest: Math (65.8%). Stored in scratchpad.
-
-- **Step 3**: Runs subject trend analysis. Identifies Math as declining over the semester (68.2% → 65.8%), English and Art as improving, and Science/History/PE as stable. Logs an observation: _"Math shows consistent decline — this is a systemic issue, not just individual students."_
-
-- **Step 4**: Runs per-student analysis. Flags 5 students:
-
-  | Student         | Overall | Urgency | Primary Concern                                     |
-  | --------------- | ------- | ------- | --------------------------------------------------- |
-  | Liam Chen       | 54.2%   | High    | Multi-subject failure + chronic absence             |
-  | Sofia Rodriguez | 58.1%   | High    | Failing Math and Science                            |
-  | Jake Thompson   | 62.8%   | Medium  | Isolated Math failure (51%) despite good attendance |
-  | Aisha Patel     | 67.4%   | Medium  | Sharpest decline in class (78.2% → 67.4%)           |
-  | Marcus Williams | 69.1%   | Low     | Math below threshold, rest adequate                 |
-
-  Also notes Noah Kim as the biggest improvement story (61.0% → 73.5%).
-
-- **Step 5**: Runs attendance-performance correlation analysis. Finds a correlation coefficient of 0.73 (strong positive). Attendance breakdown for flagged students reveals that Liam (68.9%) and Sofia (77.8%) have significant absences, while Jake (91.1%) and Marcus (93.3%) attend regularly — suggesting their Math struggles are comprehension-based, not engagement-based. Aisha's absences are increasing monthly (2 → 3 → 4 → 4), mirroring her grade decline. Logs: _"Aisha's rising absences mirror her grade decline — possible external factor."_
-
-- **Step 6**: Pure LLM reasoning step (no tool invocation). Generates tailored recommendations per student based on accumulated scratchpad data. Each recommendation set addresses the specific pattern discovered — attendance-driven interventions for Liam and Sofia, comprehension-focused support for Jake and Marcus, and a sensitive counselor-referral approach for Aisha. Also generates a class-wide recommendation to review Math curriculum pacing.
-
-- **Step 7**: Runs a report generation script that produces charts (performance distribution, subject trend lines, attendance-performance scatter plot) and assembles an 8-page PDF. Verifies the file exists (245KB).
-
-- **Step 8**: Writes `flagged-students.csv` with columns: student name, overall percentage, urgency, attendance percentage, primary concern, and top recommendation.
-
-**EVALUATOR** inspects:
-
-- PDF report exists: ✓ (8 pages, 245KB)
-  - Class-wide overview: ✓
-  - Per-subject trends: ✓
-  - Individual student flags: ✓ (5 students)
-  - Attendance correlation: ✓
-  - Actionable recommendations: ✓
-- Summary CSV exists: ✓ (5 rows, correct columns)
-- Quality checks:
-  - Recommendations are specific and actionable, not generic: ✓
-  - Systemic Math issue identified as class-wide, not just individual: ✓
-  - Aisha's case correctly identified as likely external factor: ✓
-  - Distinction between attendance-driven and comprehension-driven struggles: ✓
-- Verdict: **PASS**
-- Token usage: 4,800 / 10,000
-
-#### Final Output
-
-```
-✅ Agent completed in 1 cycle (4,800 tokens used)
-
-Files created:
-  - ./class-5b/progress-report.pdf    (8 pages, 245KB)
-  - ./class-5b/flagged-students.csv   (5 at-risk students)
-
-Key Findings:
-  - 5 students flagged (2 high urgency, 2 medium, 1 low)
-  - Math is declining class-wide — likely a curriculum/pacing issue
-  - Strong attendance-performance correlation (0.73)
-  - Aisha Patel's sharp decline may indicate external factors
-
-Ready for parent-teacher conferences.
-```
-
-#### Key Observations
-
-- The pipeline completed in a single cycle — the loop is not always multi-cycle.
-- The Executor mixed tool-based steps (data analysis scripts) with a pure LLM reasoning step (recommendation generation) within the same plan.
-- The scratchpad was essential — it carried computed metrics from steps 2–5 into step 6 without re-processing raw data or consuming token budget on large CSV contents.
-- The Evaluator performed qualitative checks (specificity of recommendations, identification of systemic issues), not just structural validation.
-- The same tool set (file read, shell execute, file write, scratchpad, log) served a completely different domain than Scenario A.
-
----
-
-## 9. Cross-Scenario Validation Summary
-
-These two simulations validate that the pipeline architecture is domain-agnostic and behaviorally adaptive:
-
-| Characteristic      | Scenario A (Code Gen)          | Scenario B (Data Analysis)       |
-| ------------------- | ------------------------------ | -------------------------------- |
-| Cycles needed       | 2 (self-corrected)             | 1 (first-pass success)           |
-| Primary tools       | file I/O, HTTP, shell          | file I/O, shell, data parse      |
-| LLM reasoning steps | 0 (all tool-driven)            | 1 (recommendation generation)    |
-| Scratchpad usage    | Code style reference           | Accumulated metrics across steps |
-| Evaluator strategy  | Test execution pass/fail       | Structural + qualitative checks  |
-| Planner adaptation  | Surgical 3-step fix in Cycle 2 | N/A (single cycle)               |
-
-The same three components, the same tool set, and the same flow — applied to completely different problems — produced appropriate, autonomous behavior in both cases.
+6. **Separate `scratchpad_read` and `scratchpad_write` tools**: v1 specified these as two distinct tools. The current implementation uses a single `scratchpad` tool with an `action` parameter. The two-tool approach has clearer semantics and makes it easier for the Planner to reason about read vs. write operations.

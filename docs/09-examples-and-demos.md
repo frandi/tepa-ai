@@ -1,28 +1,67 @@
 # Examples and Demos
 
-Tepa ships with three demos that showcase different pipeline behaviors — autonomous multi-cycle self-correction, single-cycle data analysis, and human-in-the-loop interaction. Each demo is a standalone project in the `demos/` directory with its own prompt file, entry script, and mock data. This section walks through what each demo does, how it's configured, and what it demonstrates about the pipeline.
+Tepa ships with three runnable demos in the `demos/` directory. Each is a standalone project that demonstrates a different pipeline behaviour — autonomous self-correction, single-cycle data analysis, and human-in-the-loop interaction. They're designed to be run, read, and adapted.
 
-All three demos use the Anthropic provider and share the same event hook pattern for visualizing plans, steps, and evaluations. The differences are in the tools, prompt structure, and event-driven control flow.
+## Demo Map
+
+| Demo | Use Case | Key Concepts |
+|---|---|---|
+| [API Client Generation](#api-client-generation) | Code generation with automated testing | Multi-cycle self-correction, structured `expectedOutput`, `shell_execute` |
+| [Student Progress Analysis](#student-progress-analysis) | Data analysis and report generation | Single-cycle completion, reasoning steps, `scratchpad`, `data_parse` |
+| [Study Plan Generator](#study-plan-generator) | Interactive, human-guided output | `postPlanner` approval gate, `postEvaluator` verdict override, async events |
+
+If you're evaluating Tepa for a specific use case, the table above should point you to the most relevant demo. If you're new and just want to see the pipeline in action, start with the [API Client Generation](#api-client-generation) demo — it shows the full self-correction loop most clearly.
+
+---
+
+## Before You Run
+
+All three demos live in the `demos/` directory of the repository. Prerequisites:
+
+```bash
+# 1. Clone the repo (if you haven't already)
+git clone https://github.com/frandi/tepa-ai.git
+cd tepa-ai
+
+# 2. Install all dependencies from the root
+npm install
+
+# 3. Build all packages
+npm run build
+
+# 4. Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+All three demos use the Anthropic provider. Each demo directory has its own `run.sh` script — always use `run.sh` rather than `npm start` directly, because it cleans up any previously generated output files before running so the pipeline always starts from a clean state.
+
+---
 
 ## API Client Generation
 
-**Directory:** `demos/api-client-gen/`
-**Demonstrates:** Autonomous code generation, test execution, multi-cycle self-correction
+**Directory:** `demos/api-client-gen/`  
+**Demonstrates:** Autonomous code generation, multi-cycle self-correction, verifiable test-based evaluation
 
-This demo generates a typed TypeScript API client for the [JSONPlaceholder API](https://jsonplaceholder.typicode.com), writes tests, runs them, and self-corrects if the tests fail. It's a fully autonomous pipeline — no human input after the initial run.
+This demo generates a typed TypeScript API client for the [JSONPlaceholder API](https://jsonplaceholder.typicode.com), writes tests, runs them, and self-corrects if they fail. It's fully autonomous — no human input after the initial run.
+
+### What It Shows
+
+This demo answers the question: *what does self-correction actually look like in practice?*
+
+The success criterion isn't "did the agent generate code" — it's "do the tests pass." The Evaluator runs `npx vitest run` and checks the exit code. If the generated code compiles but fails tests (a common failure mode — the agent might use `new axios()` instead of `axios.create()` to match the existing project pattern), the Evaluator feeds back exactly what failed and the Planner produces a minimal revised plan. The pipeline fixes only what broke.
+
+This is the clearest demonstration of the Plan-Execute-Evaluate loop in the codebase. See [How Tepa Works](./03-how-tepa-works.md) for the conceptual explanation and [Pipeline in Detail](./04-pipeline-in-detail.md) for the self-correction mechanics.
 
 ### What Happens
 
-1. The Planner reads the prompt and produces a plan: explore the project, discover the existing code style, generate types, generate the client, generate tests, run the tests
-2. The Executor explores the mock project at `my-project/` and discovers an `HttpClient` class in `src/utils/http.ts` that wraps `axios.create()`
-3. It probes the JSONPlaceholder API endpoints to discover response shapes, then generates `src/api/types.ts`, `src/api/jsonplaceholder.ts`, and `src/api/__tests__/jsonplaceholder.test.ts`
-4. It runs `npx vitest run` via `shell_execute` to verify the tests
-5. The Evaluator checks whether the generated files exist, follow the expected patterns, and the tests pass
-6. If tests fail (e.g., the agent used `new axios()` instead of `axios.create()` matching the project pattern), the Evaluator feeds back the failure and the pipeline re-plans a minimal fix
+1. The Planner reads the prompt and produces a plan: explore the project structure, discover code style, probe API endpoints, generate types, generate the client, generate tests, run the tests
+2. The Executor explores the mock project at `my-project/` and finds an `HttpClient` class in `src/utils/http.ts` that wraps `axios.create()`
+3. It probes the JSONPlaceholder API to discover response shapes, then generates `src/api/types.ts`, `src/api/jsonplaceholder.ts`, and `src/api/__tests__/jsonplaceholder.test.ts`
+4. It runs `npx vitest run` via `shell_execute` to verify the tests pass
+5. The Evaluator checks whether all three files exist, follow the expected patterns, and all tests pass
+6. If tests fail, the Evaluator's feedback guides the Planner to produce a minimal fix — typically just correcting the client initialisation
 
 ### Prompt
-
-The prompt file (`prompts/task.yaml`) defines a goal with rich context — the existing project structure, target structure, language, HTTP client, and test framework:
 
 ```yaml
 goal: >
@@ -57,84 +96,91 @@ expectedOutput:
       - All tests passing when run with npx vitest run
 ```
 
-The `expectedOutput` criteria are what the Evaluator checks against. The requirement that tests must pass when run with `npx vitest run` is what drives self-correction — if the Executor generates code that compiles but fails tests, the Evaluator will return `fail` with specific feedback about what went wrong.
+The `criteria` entries are what drive self-correction. The requirement that tests must pass when run with `npx vitest run` means the Evaluator doesn't just check if a test file exists — it verifies the code actually works. See [Pipeline in Detail — Structured expectedOutput](./04-pipeline-in-detail.md#structured-expectedoutput) for how criteria arrays affect evaluation.
 
 ### Tools
 
-This demo uses six tools:
-
-| Tool             | Purpose                                            |
-| ---------------- | -------------------------------------------------- |
-| `file_read`      | Read existing project files to discover code style |
-| `file_write`     | Write generated code files                         |
-| `directory_list` | Explore the mock project structure                 |
-| `file_search`    | Find files matching patterns                       |
-| `shell_execute`  | Run `npx vitest run` to verify tests               |
-| `http_request`   | Probe API endpoints to discover response shapes    |
+| Tool | Purpose |
+|---|---|
+| `file_read` | Read existing project files to discover code style |
+| `file_write` | Write generated code files |
+| `directory_list` | Explore the mock project structure |
+| `file_search` | Find files matching patterns |
+| `shell_execute` | Run `npx vitest run` to verify tests |
+| `http_request` | Probe API endpoints to discover response shapes |
 
 ### Configuration
 
 ```typescript
 const tepa = new Tepa({
   tools: [
-    fileReadTool,
-    fileWriteTool,
-    directoryListTool,
-    fileSearchTool,
-    shellExecuteTool,
-    httpRequestTool,
+    fileReadTool, fileWriteTool, directoryListTool,
+    fileSearchTool, shellExecuteTool, httpRequestTool,
   ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
-      maxCycles: 3,
-      maxTokens: 400_000,
+      maxCycles: 3,       // Room for one attempt + two correction cycles
+      maxTokens: 400_000, // Higher budget: code generation steps produce longer outputs
     },
     logging: { level: "verbose" },
   },
 });
 ```
 
-The `maxCycles: 3` gives the pipeline room for one initial attempt plus two correction cycles. The higher token budget (`400_000`) accounts for the multi-step nature of code generation — the Executor makes multiple LLM calls per cycle (one per plan step), and code generation steps tend to produce longer outputs.
-
 ### Self-Correction in Action
 
 The pipeline typically completes in 1–2 cycles:
 
-- **Cycle 1:** Generates all files. Tests may fail if the agent doesn't correctly follow the `axios.create()` pattern from `src/utils/http.ts`.
-- **Cycle 2 (if needed):** The Evaluator's feedback guides the Planner to produce a minimal revised plan — usually just fixing the client initialization. Tests pass.
+- **Cycle 1** — Generates all three files. Tests may fail if the agent doesn't correctly follow the `axios.create()` pattern from `src/utils/http.ts`.
+- **Cycle 2 (if needed)** — The Evaluator's feedback identifies exactly which test failed and why. The Planner produces a minimal revised plan — usually just fixing the client initialisation. Tests pass.
 
-This is the key value of the Plan-Execute-Evaluate loop: the pipeline doesn't just generate code and hope — it verifies the output against concrete criteria and fixes what's broken.
+The key observation: cycle 2 doesn't re-generate everything. The Planner reads `_execution_summary` from the scratchpad, sees that types and tests were generated correctly, and produces a plan that only touches the client file. This is minimal revision, not a full restart.
 
 ### Running
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
 cd demos/api-client-gen
 ./run.sh
 ```
 
-Use `run.sh` instead of `npm start` directly — it removes `my-project/src/api/` (the generated output directory) before starting, so the pipeline always begins from a clean state.
+---
 
 ## Student Progress Analysis
 
-**Directory:** `demos/student-progress/`
-**Demonstrates:** Data pipeline, CSV parsing, LLM reasoning steps, single-cycle completion
+**Directory:** `demos/student-progress/`  
+**Demonstrates:** Data pipeline, LLM reasoning steps, scratchpad state management, single-cycle completion
 
-This demo analyzes student grade and attendance data for a class, produces a comprehensive insight report, and exports a flagged students summary. It demonstrates that the pipeline loop isn't always multi-cycle — when the task is well-defined and the tools are sufficient, a single cycle is enough.
+This demo analyses student grade and attendance data for a class, produces a comprehensive insight report, and exports a flagged-students summary. It demonstrates that the self-correction loop adds zero overhead when it isn't needed — a well-defined task with sufficient tools completes in a single cycle.
+
+### What It Shows
+
+This demo answers two questions: *how does Tepa handle multi-step data analysis?* and *does the pipeline add overhead when self-correction isn't needed?*
+
+The answer to the second question is no — the pipeline runs one cycle and exits immediately when the Evaluator passes. There's no retry tax for tasks that are well-specified.
+
+It also demonstrates **reasoning steps** — plan steps with an empty `tools` array where the LLM produces analysis as text rather than invoking a tool. Step 4 in the typical plan is a pure reasoning step: the LLM receives the computed metrics from prior steps and generates tailored recommendations for each at-risk student. No tools needed — just synthesis. See [How Tepa Works — The Planner](./03-how-tepa-works.md#the-planner) for the reasoning step concept.
 
 ### What Happens
 
-1. The Planner produces a plan to read and parse CSVs, compute metrics, identify at-risk students, correlate attendance with performance, and write the report
-2. The Executor reads `grades.csv` (1,344 rows — 28 students × 6 subjects × 8 assignments) and `attendance.csv` (1,764 rows — 28 students × 63 school days) using `data_parse` to convert them to structured data
-3. It computes class-wide averages, pass rates, and per-subject trends — carrying intermediate results across steps via the `scratchpad` tool
-4. A reasoning step (no tools — pure LLM) generates tailored recommendations for each at-risk student
+1. The Planner produces a plan: read and parse CSVs, compute class metrics, identify at-risk students, correlate attendance with performance (reasoning step), write the report
+2. The Executor reads `grades.csv` (1,344 rows — 28 students × 6 subjects × 8 assignments) and `attendance.csv` (1,764 rows — 28 students × 63 school days) using `data_parse`
+3. It computes averages, pass rates, and per-subject trends — carrying intermediate results across steps via the `scratchpad` tool
+4. A reasoning step synthesises findings and generates tailored recommendations for each flagged student — pure LLM reasoning, no tool calls
 5. It writes `progress-report.md` and `flagged-students.csv` to the data directory
-6. The Evaluator performs structural checks (files exist, correct CSV format) and qualitative checks (recommendations are specific, not generic)
+6. The Evaluator performs structural checks (files exist, correct CSV format) and qualitative checks (recommendations are specific, not generic) — passes on the first attempt
+
+### Mock Data
+
+The CSV files contain realistic data designed to produce meaningful analysis:
+
+- **28 students** across **6 subjects** (Math, English, Science, History, Art, PE)
+- **Class average:** ~72%, with Math declining and Art/English improving
+- **5 at-risk students** with distinct patterns: multi-subject failure + chronic absence (Liam Chen, ~54%), isolated Math failure despite strong attendance (Jake Thompson, ~63%), sharpest attendance decline (Aisha Patel, ~67%), and two others
+- **Strong attendance-performance correlation** (~0.73) — the report surfaces this automatically
+- **One improvement story** — Noah Kim (61% → 73.5%) provides a positive data point
 
 ### Prompt
-
-The prompt file provides domain-specific context — grading thresholds, column definitions, and a note about upcoming parent-teacher conferences:
 
 ```yaml
 goal: >
@@ -171,100 +217,121 @@ expectedOutput:
       - Columns include student name, overall percentage, urgency level, attendance rate, primary concern
 ```
 
-The `gradingPolicy` context gives the pipeline concrete thresholds to work with. The `notes` about parent-teacher conferences inform the Evaluator — it can check whether recommendations are timely and actionable for that context.
-
-### Mock Data
-
-The CSV files contain realistic data designed to produce meaningful analysis:
-
-- **28 students** across **6 subjects** (Math, English, Science, History, Art, PE)
-- **Class average:** ~72%, with Math declining and Art/English improving
-- **5 at-risk students** with distinct patterns:
-  - Liam Chen (~54%) — multi-subject failure + chronic absence
-  - Sofia Rodriguez (~58%) — failing Math and Science
-  - Jake Thompson (~63%) — isolated Math failure despite good attendance
-  - Aisha Patel (~67%) — sharpest decline, absences increasing monthly
-  - Marcus Williams (~69%) — Math below threshold, rest adequate
-- **Strong attendance-performance correlation** (~0.73)
-- Noah Kim as an improvement story (61% → 73.5%)
+Notice the `notes` field in context — *"Parent-teacher conferences are scheduled for next week"* is domain context that informs the Evaluator's qualitative check. The Evaluator can assess whether the recommendations are appropriately timely and actionable for that context, not just formally complete.
 
 ### Tools
 
-| Tool             | Purpose                               |
-| ---------------- | ------------------------------------- |
-| `file_read`      | Read CSV data files                   |
-| `file_write`     | Write report and flagged students CSV |
-| `directory_list` | Explore the data directory            |
-| `data_parse`     | Parse CSV into structured data        |
-| `shell_execute`  | Run data analysis scripts             |
-| `scratchpad`     | Carry computed metrics across steps   |
-| `log_observe`    | Record analytical observations        |
+| Tool | Purpose |
+|---|---|
+| `file_read` | Read CSV data files |
+| `file_write` | Write report and flagged students CSV |
+| `directory_list` | Explore the data directory |
+| `data_parse` | Parse CSV into structured row objects |
+| `shell_execute` | Run data processing scripts if needed |
+| `scratchpad` | Carry computed metrics between steps |
+| `log_observe` | Record analytical observations to the pipeline log |
 
-This is the only demo that uses `data_parse` (for CSV processing) and `scratchpad` (for carrying intermediate computed metrics between steps). The scratchpad is essential here — the Executor computes averages and pass rates in one step, then reads them back in a later step that generates recommendations.
+The scratchpad is essential in this demo — the Executor computes averages and pass rates in one step, then reads them back in a later reasoning step that generates recommendations. Without the scratchpad, each step would only have access to its declared dependencies' direct output.
 
 ### Configuration
 
 ```typescript
 const tepa = new Tepa({
   tools: [
-    fileReadTool,
-    fileWriteTool,
-    directoryListTool,
-    dataParseTool,
-    shellExecuteTool,
-    scratchpadTool,
-    logObserveTool,
+    fileReadTool, fileWriteTool, directoryListTool,
+    dataParseTool, shellExecuteTool, scratchpadTool, logObserveTool,
   ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
-      maxCycles: 3,
-      maxTokens: 250_000,
+      maxCycles: 3,       // Allowed, but typically completes in 1
+      maxTokens: 250_000, // Lower budget sufficient — no code generation
     },
     logging: { level: "verbose" },
   },
 });
 ```
 
-A lower token budget (`250_000`) is sufficient because this task doesn't involve code generation or test execution — the LLM calls are shorter.
-
-### Single-Cycle Completion
-
-This demo typically completes in a **single cycle**. The task is well-constrained — the data exists, the expected output format is clear, and the tools provide everything the Executor needs. The Evaluator checks that the report covers all five criteria and that the CSV has the right columns, and passes on the first attempt.
-
-This demonstrates that the self-correction loop adds zero overhead when it isn't needed — the pipeline runs one cycle and exits.
-
 ### Running
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
 cd demos/student-progress
 ./run.sh
 ```
 
-Use `run.sh` instead of `npm start` directly — it removes any previously generated `progress-report.md` and `flagged-students.csv` from the `class-5b/` directory before starting.
+---
 
 ## Study Plan Generator
 
-**Directory:** `demos/study-plan/`
-**Demonstrates:** Human-in-the-loop interaction, plan approval gates, verdict override
+**Directory:** `demos/study-plan/`  
+**Demonstrates:** Human-in-the-loop interaction, async event callbacks, plan approval, verdict override
 
-This demo showcases Tepa's event system for inserting human checkpoints into the pipeline. The user provides a learning goal, reviews and approves the generated plan, and decides whether to accept results or request another improvement cycle.
+This demo shows Tepa's event system used for inserting human decision points into the pipeline. The user provides a learning goal, reviews the generated plan before execution begins, and can accept or reject results after evaluation. No part of the pipeline runs without the user's explicit approval at each checkpoint.
+
+### What It Shows
+
+This demo answers the question: *how do you put a human in control of an autonomous pipeline?*
+
+The mechanism is two async event callbacks — one that pauses after planning, one that pauses after evaluation. Because event callbacks can return Promises, the pipeline waits at each checkpoint until the user responds. The pipeline doesn't know or care that it's paused for human input — from its perspective, a callback returned a Promise that eventually resolved. See [Event System Patterns — Human-in-the-Loop](./07-event-system-patterns.md#human-in-the-loop-plan-approval) for the full pattern documentation.
+
+### Interactive Flow
+
+Here's what a typical run looks like:
+
+```
+=== Tepa Demo: Study Plan (Human-in-the-Loop) ===
+
+What would you like to study?
+> Learn Rust programming
+
+--- Plan (4 steps) ---
+  research: Research Rust learning resources (LLM reasoning) 
+  outline: Create study plan outline (scratchpad)
+  write: Write detailed study plan (file_write)
+  review: Review and finalize (file_read)
+
+Do you approve this plan? (yes/no): yes
+
+  research: OK — Research Rust learning resources (2140 tok, 3200ms)
+  outline: OK — Create study plan outline (1800 tok, 2100ms)
+  write: OK — Write detailed study plan (3200 tok, 4500ms)
+  review: OK — Review and finalize (1100 tok, 1800ms)
+
+--- Evaluation: PASS (confidence: 0.85) ---
+  Summary: Study plan covers all criteria with specific weekly topics and resources.
+
+=== Result ===
+Status: pass | Cycles: 1 | Tokens: 12,400
+```
+
+If the Evaluator returns `fail`, the user gets to decide whether to retry or accept:
+
+```
+--- Evaluation: FAIL (confidence: 0.45) ---
+  Feedback: Missing time estimates for weeks 3-4. Resources are too generic.
+
+Continue with another cycle to improve? (yes/no): no
+  [User override] Accepting current results.
+
+=== Result ===
+Status: pass | Cycles: 1 | Tokens: 11,200
+```
+
+Notice the result: `Status: pass` even though the Evaluator returned `fail`. The `postEvaluator` callback flipped the verdict to `"pass"` when the user declined to retry — the pipeline treats a user-overridden verdict identically to a genuine evaluator pass.
 
 ### What Happens
 
-1. The demo prompts the user for a learning goal (e.g., "Learn Rust programming")
-2. The Planner generates a structured plan for creating the study plan
-3. **The pipeline pauses** — the `postPlanner` event displays the plan and asks the user to approve it
+1. The entry script prompts the user for a learning goal and injects it into the prompt context
+2. The Planner generates a plan for producing the study plan
+3. **Pipeline pauses** — `postPlanner` callback displays the plan and awaits user approval
 4. After approval, the Executor writes a detailed study plan to `study-plan.md`
-5. The Evaluator checks the output against quality criteria (weekly breakdowns, concrete resources, time estimates)
-6. **If the Evaluator fails, the pipeline pauses again** — the `postEvaluator` event asks the user whether to run another improvement cycle or accept the current results
+5. The Evaluator checks quality criteria: weekly breakdowns, concrete resources, time estimates
+6. **If `fail`** — `postEvaluator` callback asks the user whether to run another cycle or accept the results
+7. If the user accepts, the verdict is overridden to `"pass"` and the pipeline exits
 
-### Human-in-the-Loop via Events
+### The Event Callbacks
 
-This is the key pattern. Two async event callbacks insert human decision points into the pipeline:
-
-**Plan approval gate (`postPlanner`):**
+**Plan approval gate — `postPlanner`:**
 
 ```typescript
 events: {
@@ -272,25 +339,25 @@ events: {
     async (data: unknown) => {
       const plan = data as Plan;
 
-      // Display the plan with dependency tree
       console.log(`\n--- Plan (${plan.steps.length} steps) ---`);
       for (const step of plan.steps) {
-        console.log(`  ${step.id}: ${step.description}`);
+        const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
+        console.log(`  ${step.id}: ${step.description} (${tools})`);
       }
 
-      // Pause for human approval
       const answer = await ask("\nDo you approve this plan? (yes/no): ");
       if (answer !== "yes" && answer !== "y") {
-        console.log("  [Note] Plan revision is not yet supported. Continuing.\n");
+        throw new Error("Plan rejected by user");
       }
+      // Returning void — original plan passes through unchanged
     },
   ],
 }
 ```
 
-The `postPlanner` callback is `async` — it returns a Promise that resolves when the user responds. The pipeline waits on this Promise before moving to execution. This is the same mechanism described in [Event System Patterns](./07-event-system-patterns.md) — any event callback can return a Promise to pause the pipeline.
+The callback is `async` and awaits the user's response. The pipeline waits on this Promise. Throwing rejects the plan and aborts the pipeline. Returning nothing approves it as-is.
 
-**Verdict override (`postEvaluator`):**
+**Verdict override — `postEvaluator`:**
 
 ```typescript
 postEvaluator: [
@@ -301,18 +368,19 @@ postEvaluator: [
       const answer = await ask("Continue with another cycle to improve? (yes/no): ");
       if (answer !== "yes" && answer !== "y") {
         console.log("  [User override] Accepting current results.\n");
-        return { ...result, verdict: "pass" as const };
+        return { ...result, verdict: "pass" as const }; // Flips the verdict
       }
     }
+    // Returning void — original verdict passes through, pipeline continues to next cycle
   },
 ],
 ```
 
-When the Evaluator returns `fail`, the callback asks the user whether to continue. If the user declines, the callback **returns a modified result** with `verdict: "pass"`, overriding the Evaluator's decision. This is what makes the event system powerful — callbacks can transform the data flowing through the pipeline, not just observe it.
+Returning a modified `EvaluationResult` with `verdict: "pass"` stops the re-planning loop. The pipeline checks the verdict after all `postEvaluator` callbacks complete — a flipped verdict is treated identically to a genuine evaluator pass.
 
 ### Prompt
 
-The prompt file uses a placeholder for user input that gets injected at runtime:
+The prompt uses a placeholder that gets injected at runtime:
 
 ```yaml
 goal: >
@@ -340,7 +408,7 @@ expectedOutput:
       - Estimated time commitments
 ```
 
-The entry script injects the user's input into the prompt before running:
+The entry script injects the user's input before running:
 
 ```typescript
 const userInput = await rl.question("What would you like to study?\n> ");
@@ -349,14 +417,14 @@ prompt.context.userInput = userInput;
 
 ### Tools
 
-| Tool             | Purpose                                 |
-| ---------------- | --------------------------------------- |
-| `file_read`      | Read existing files                     |
-| `file_write`     | Write the study plan to `study-plan.md` |
-| `directory_list` | Explore the output directory            |
-| `scratchpad`     | Carry state across execution steps      |
+| Tool | Purpose |
+|---|---|
+| `file_read` | Read existing files in the output directory |
+| `file_write` | Write the study plan to `study-plan.md` |
+| `directory_list` | Explore the output directory |
+| `scratchpad` | Carry research notes and outline between steps |
 
-This demo uses the fewest tools — it's primarily an LLM reasoning task with file output. The scratchpad lets the Executor carry research and outline notes from earlier steps into the final writing step.
+This demo uses the fewest tools — it's primarily an LLM reasoning task. The scratchpad carries research findings from early steps into the final writing step without requiring an explicit dependency chain on the raw tool outputs.
 
 ### Configuration
 
@@ -374,98 +442,62 @@ const tepa = new Tepa({
 });
 ```
 
-### Interactive Flow
-
-A typical run looks like this:
-
-```
-=== Tepa Demo: Study Plan (Human-in-the-Loop) ===
-
-What would you like to study?
-> Learn Rust programming
-
---- Plan (4 steps) ---
-  research: Research Rust learning resources (LLM reasoning)
-  outline: Create study plan outline (scratchpad)
-  write: Write detailed study plan (file_write)
-  review: Review and finalize (file_read)
-
-Do you approve this plan? (yes/no): yes
-
-  research: OK — Research Rust learning resources (2140 tok, 3200ms)
-  outline: OK — Create study plan outline (1800 tok, 2100ms)
-  write: OK — Write detailed study plan (3200 tok, 4500ms)
-  review: OK — Review and finalize (1100 tok, 1800ms)
-
---- Evaluation: PASS (confidence: 0.85) ---
-  Summary: Study plan covers all criteria with specific weekly topics and resources.
-
-=== Result ===
-Status: pass
-Cycles: 1
-Tokens used: 12400
-```
-
-If the Evaluator had returned `fail`, the user would see:
-
-```
---- Evaluation: FAIL (confidence: 0.45) ---
-  Feedback: Missing time estimates for weeks 3-4. Resources are too generic.
-
-Continue with another cycle to improve? (yes/no): no
-  [User override] Accepting current results.
-```
-
 ### Running
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
 cd demos/study-plan
 ./run.sh
 ```
 
-Use `run.sh` instead of `npm start` directly — it removes any previously generated `study-plan.md` before starting.
+---
 
-## Shared Event Pattern
+## Shared Observability Pattern
 
-All three demos use the same event hooks for visualization. These aren't required for the pipeline to work — they're convenience hooks that make the demo output readable:
+All three demos register the same three event hooks for pipeline visibility. These aren't required — the pipeline runs identically without them — but they represent a useful baseline for any Tepa integration. Add them when you need to see what's happening; strip them for a clean production run.
 
-**`postPlanner`** — Prints the plan as a dependency tree:
+**`postPlanner`** — Print the generated plan as a step list:
 
 ```typescript
 postPlanner: [(data: unknown) => {
   const plan = data as Plan;
   for (const step of plan.steps) {
     const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
-    const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
+    const deps = step.dependencies.length > 0 ? ` ← ${step.dependencies.join(", ")}` : "";
     console.log(`  ${step.id}: ${step.description} (${tools})${deps}`);
   }
 }],
 ```
 
-**`postStep`** — Logs each step's result with status, token usage, and duration:
+**`postStep`** — Log each step's result with token and timing data:
 
 ```typescript
 postStep: [(data: unknown) => {
   const { step, result } = data as PostStepPayload;
   const icon = result.status === "success" ? "OK" : "FAIL";
   console.log(`  ${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)`);
+  if (result.error) console.log(`    → ${result.error}`);
 }],
 ```
 
-**`postEvaluator`** — Prints the verdict with confidence and feedback:
+**`postEvaluator`** — Print the verdict with confidence score and feedback:
 
 ```typescript
 postEvaluator: [(data: unknown) => {
   const result = data as EvaluationResult;
   const icon = result.verdict === "pass" ? "PASS" : "FAIL";
-  console.log(`--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
-  if (result.feedback) console.log(`  Feedback: ${result.feedback}`);
+  console.log(`--- Evaluation: ${icon} (confidence: ${result.confidence.toFixed(2)}) ---`);
+  if (result.verdict === "pass" && result.summary) console.log(`  Summary: ${result.summary}`);
+  if (result.verdict === "fail" && result.feedback) console.log(`  Feedback: ${result.feedback}`);
 }],
 ```
 
-This pattern is a good starting point for any Tepa integration — register event hooks for the visibility you need, and add async callbacks when you need human control.
+These three hooks cover the three moments developers most want visibility into: *what is the agent about to do?* (plan), *how did each step go?* (step), and *did it work?* (evaluation). For the full patterns — adding human approval gates, safety filters, monitoring integration — see [Event System Patterns](./07-event-system-patterns.md).
+
+---
 
 ## What's Next
 
-- [**Contributing**](./10-contributing.md) — Development setup, code conventions, and how to add new tools or providers.
+- [**API Reference**](./11-api-reference.md) — Complete interface definitions for everything used in these demos.
+- [**Configuration**](./05-configuration.md) — Tune cycle limits, token budgets, and per-stage models for your use case.
+- [**Event System Patterns**](./07-event-system-patterns.md) — Extend the observability hooks above into full human-in-the-loop workflows, safety filters, and monitoring integrations.
+- [**Contributing**](./10-contributing.md) — Add your own demo, tool, or provider to the repository.
