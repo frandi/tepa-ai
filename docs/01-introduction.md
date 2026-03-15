@@ -4,7 +4,7 @@
 
 Tepa is a TypeScript framework for building AI agents that plan, execute, and **verify their own work**.
 
-The name comes from the Javanese concept _tepa slira_ — the practice of self-reflection, measuring oneself against a standard before acting. That philosophy is the framework's core: every pipeline cycle ends not with "done" but with a question — *did it actually pass?* — and the agent keeps going until it does, or until it honestly can't.
+The name comes from the Javanese concept _tepa slira_ — the practice of self-reflection, measuring oneself against a standard before acting. That philosophy is the framework's core: every pipeline cycle ends not with "done" but with a question — _did it actually pass?_ — and the agent keeps going until it does, or until it honestly can't.
 
 Most agent frameworks give you the ability to run. Tepa gives you the ability to know when you've succeeded.
 
@@ -43,7 +43,7 @@ const result = await tepa.run({
   expectedOutput: "A file at src/hello.ts that compiles without errors",
 });
 
-console.log(result.status);   // "pass" | "fail" | "terminated"
+console.log(result.status); // "pass" | "fail" | "terminated"
 console.log(result.feedback); // Summary of what happened, or why it failed
 ```
 
@@ -55,11 +55,11 @@ console.log(result.feedback); // Summary of what happened, or why it failed
 
 ### An Evaluator Is a First-Class Citizen
 
-Most frameworks leave the question of *"did it work?"* to you. Tepa treats evaluation as a required step in every cycle, not an afterthought. You define success criteria upfront as `expectedOutput`; the framework measures every run against it. This makes pass/fail auditable, consistent, and independent of which LLM you're using.
+Most frameworks leave the question of _"did it work?"_ to you. Tepa treats evaluation as a required step in every cycle, not an afterthought. You define success criteria upfront as `expectedOutput`; the framework measures every run against it. This makes pass/fail auditable, consistent, and independent of which LLM you're using.
 
 ### Self-Correction With Revised Planning
 
-When the evaluator says "fail," the feedback doesn't just go to the executor for a retry — it goes back to the **Planner**. The agent reasons about *why* it failed and produces a genuinely different approach. This is the difference between retrying and rethinking.
+When the evaluator says "fail," the feedback doesn't just go to the executor for a retry — it goes back to the **Planner**. The agent reasons about _why_ it failed and produces a genuinely different approach. This is the difference between retrying and rethinking.
 
 ### LLM-Agnostic by Design
 
@@ -111,7 +111,7 @@ Tepa is purpose-built for a specific kind of task: **goal-oriented pipelines whe
 
 Common fits include:
 
-- **Code generation and testing** — Generate code, run tests, and fix failures automatically. The test suite *is* the expected output.
+- **Code generation and testing** — Generate code, run tests, and fix failures automatically. The test suite _is_ the expected output.
 - **Data analysis pipelines** — Parse, analyze, and synthesize reports from structured data, with LLM-driven reasoning across multiple steps.
 - **Document and content generation** — Produce structured outputs (reports, plans, documentation) that need to meet specific quality or completeness criteria.
 - **Automated multi-step workflows** — Chain tool calls (file I/O, shell commands, HTTP requests) into processes that need to handle their own errors and recover gracefully.
@@ -126,14 +126,14 @@ Tepa is intentionally narrow. It does one thing well — self-correcting, goal-o
 
 Here's where another tool is likely a better fit, and how you might still use Tepa alongside it:
 
-| Scenario | Why Tepa Isn't Ideal | How to Combine |
-|---|---|---|
-| **Conversational agents / chatbots** | Tepa runs a pipeline to completion — it's not a multi-turn dialogue framework | Use your chat framework for conversation, invoke Tepa for specific turns that need multi-step execution |
-| **Simple, single-turn tasks** | The Plan-Execute-Evaluate loop adds overhead you don't need | Call the LLM directly; save Tepa for the complex tasks |
-| **Low-latency or streaming apps** | Multiple LLM calls per cycle; self-correction may add more | Use a lighter-weight approach; Tepa can still handle async background jobs |
-| **Long-lived stateful agents** | Each `run()` is self-contained; no persistent memory across runs | Use a stateful agent framework for session management; trigger Tepa runs within sessions |
-| **Fixed, pre-defined workflows** | Tepa's strength is dynamic planning; rigid step sequences don't benefit from it | Use a workflow engine for fixed sequences; Tepa can be an individual step inside one |
-| **Open-ended creative tasks** | Evaluation works best when success criteria are concrete | Skip the evaluator and use a direct LLM call; Tepa won't add value here |
+| Scenario                             | Why Tepa Isn't Ideal                                                            | How to Combine                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Conversational agents / chatbots** | Tepa runs a pipeline to completion — it's not a multi-turn dialogue framework   | Use your chat framework for conversation, invoke Tepa for specific turns that need multi-step execution |
+| **Simple, single-turn tasks**        | The Plan-Execute-Evaluate loop adds overhead you don't need                     | Call the LLM directly; save Tepa for the complex tasks                                                  |
+| **Low-latency or streaming apps**    | Multiple LLM calls per cycle; self-correction may add more                      | Use a lighter-weight approach; Tepa can still handle async background jobs                              |
+| **Long-lived stateful agents**       | Each `run()` is self-contained; no persistent memory across runs                | Use a stateful agent framework for session management; trigger Tepa runs within sessions                |
+| **Fixed, pre-defined workflows**     | Tepa's strength is dynamic planning; rigid step sequences don't benefit from it | Use a workflow engine for fixed sequences; Tepa can be an individual step inside one                    |
+| **Open-ended creative tasks**        | Evaluation works best when success criteria are concrete                        | Skip the evaluator and use a direct LLM call; Tepa won't add value here                                 |
 
 The goal of this list isn't to discourage — it's to help you spend your time well. Tepa works best when you reach for it deliberately, for the tasks it was designed to handle.
 
@@ -141,20 +141,20 @@ The goal of this list isn't to discourage — it's to help you spend your time w
 
 ## Feature Summary
 
-| Feature | Description |
-|---|---|
-| **Plan-Execute-Evaluate loop** | Autonomous multi-cycle pipeline with self-correction on failure |
-| **Multi-provider support** | Anthropic, OpenAI, and Gemini via a unified `LLMProvider` interface |
-| **Native tool calling** | Structured tool schemas passed to LLM APIs — no text parsing |
-| **Built-in tools** | File system, shell execution, HTTP requests, data parsing, web search, scratchpad, and logging |
+| Feature                         | Description                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Plan-Execute-Evaluate loop**  | Autonomous multi-cycle pipeline with self-correction on failure                                              |
+| **Multi-provider support**      | Anthropic, OpenAI, and Gemini via a unified `LLMProvider` interface                                          |
+| **Native tool calling**         | Structured tool schemas passed to LLM APIs — no text parsing                                                 |
+| **Built-in tools**              | File system, shell execution, HTTP requests, data parsing, web search, scratchpad, and logging               |
 | **Community tools & providers** | Any npm package implementing `ToolDefinition` or `LLMProvider` works out of the box — no core changes needed |
-| **Event hooks** | 8 lifecycle events for observation, transformation, and human-in-the-loop control |
-| **Scratchpad** | In-memory key-value store for sharing state across steps and cycles |
-| **Structured prompts** | Goal, context, and expected output — loadable from YAML or JSON files |
-| **Token budget** | Configurable token limits with per-cycle tracking to control LLM costs |
-| **Per-stage model config** | Assign different models to planner, executor, and evaluator |
-| **Sensible defaults** | Zero-config works out of the box; override only what you need |
-| **Provider logging** | Automatic JSONL logging of all LLM calls with custom callback support |
+| **Event hooks**                 | 8 lifecycle events for observation, transformation, and human-in-the-loop control                            |
+| **Scratchpad**                  | In-memory key-value store for sharing state across steps and cycles                                          |
+| **Structured prompts**          | Goal, context, and expected output — loadable from YAML or JSON files                                        |
+| **Token budget**                | Configurable token limits with per-cycle tracking to control LLM costs                                       |
+| **Per-stage model config**      | Assign different models to planner, executor, and evaluator                                                  |
+| **Sensible defaults**           | Zero-config works out of the box; override only what you need                                                |
+| **Provider logging**            | Automatic JSONL logging of all LLM calls with custom callback support                                        |
 
 ---
 

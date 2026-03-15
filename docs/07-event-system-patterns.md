@@ -21,18 +21,19 @@ const tepa = new Tepa({
 });
 ```
 
-| Event | Fires | Primary Use |
-|---|---|---|
-| `prePlanner` | Before planning | Enrich prompt context, inject external data |
-| `postPlanner` | After plan is generated | Review, modify, or approve the plan |
-| `preExecutor` | Before execution starts | Modify plan or context before any step runs |
-| `postExecutor` | After all steps complete | Sanitize results before evaluation |
-| `preEvaluator` | Before evaluation | Modify what the Evaluator sees |
-| `postEvaluator` | After evaluation | Override verdict, send metrics, custom termination |
-| `preStep` | Before each step | Per-step logging, pre-execution checks |
-| `postStep` | After each step | Per-step progress tracking, result inspection |
+| Event           | Fires                    | Primary Use                                        |
+| --------------- | ------------------------ | -------------------------------------------------- |
+| `prePlanner`    | Before planning          | Enrich prompt context, inject external data        |
+| `postPlanner`   | After plan is generated  | Review, modify, or approve the plan                |
+| `preExecutor`   | Before execution starts  | Modify plan or context before any step runs        |
+| `postExecutor`  | After all steps complete | Sanitize results before evaluation                 |
+| `preEvaluator`  | Before evaluation        | Modify what the Evaluator sees                     |
+| `postEvaluator` | After evaluation         | Override verdict, send metrics, custom termination |
+| `preStep`       | Before each step         | Per-step logging, pre-execution checks             |
+| `postStep`      | After each step          | Per-step progress tracking, result inspection      |
 
 **Three things a callback can do:**
+
 - **Observe** — return nothing; data passes through unchanged
 - **Transform** — return a modified value; it replaces the data for all subsequent callbacks
 - **Pause** — return a Promise; the framework awaits it before continuing
@@ -65,7 +66,8 @@ import type { Plan } from "@tepa/types";
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 const tepa = new Tepa({
-  provider, tools,
+  provider,
+  tools,
   events: {
     postPlanner: [
       async (data) => {
@@ -95,7 +97,7 @@ const answer = await rl.question("Approve, or type 'safe' to remove shell steps:
 if (answer.trim() === "safe") {
   return {
     ...plan,
-    steps: plan.steps.filter(s => !s.tools.includes("shell_execute")),
+    steps: plan.steps.filter((s) => !s.tools.includes("shell_execute")),
   };
 }
 ```
@@ -244,6 +246,7 @@ events: {
 ```
 
 Output during a run:
+
 ```
 [cycle 1] step_1: List files in ./src... ✓ (245ms, 1200 tokens)
 [cycle 1] step_2: Analyze project structure... ✓ (1830ms, 3400 tokens)
@@ -324,7 +327,7 @@ events: {
 }
 ```
 
-Note the two termination strategies: returning a modified `verdict: "pass"` terminates the pipeline *gracefully* with `status: "pass"`. Throwing terminates it *abruptly* with `status: "fail"` and the thrown error message as `feedback`. Choose based on whether you want to surface the early stop as success or failure to the caller.
+Note the two termination strategies: returning a modified `verdict: "pass"` terminates the pipeline _gracefully_ with `status: "pass"`. Throwing terminates it _abruptly_ with `status: "fail"` and the thrown error message as `feedback`. Choose based on whether you want to surface the early stop as success or failure to the caller.
 
 ---
 
@@ -364,14 +367,15 @@ Callbacks compose naturally — register multiple handlers for the same event an
 
 ```typescript
 const tepa = new Tepa({
-  provider, tools,
+  provider,
+  tools,
   events: {
     prePlanner: [enrichContextFromDatabase],
 
     postPlanner: [
-      enforceSafetyFilter,       // Transform: strip restricted tools
-      logPlanToAuditTrail,       // Observe: fire and forget
-      presentPlanForApproval,    // Pause: await human input
+      enforceSafetyFilter, // Transform: strip restricted tools
+      logPlanToAuditTrail, // Observe: fire and forget
+      presentPlanForApproval, // Pause: await human input
     ],
 
     postStep: [
@@ -379,7 +383,7 @@ const tepa = new Tepa({
     ],
 
     postEvaluator: [
-      applyCustomTerminationRules,  // Transform: may flip verdict
+      applyCustomTerminationRules, // Transform: may flip verdict
       { handler: sendToMonitoring, continueOnError: true }, // Non-critical
     ],
   },

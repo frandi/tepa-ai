@@ -46,7 +46,7 @@ const result = await tepa.run({
   expectedOutput: "A file at src/hello.ts that compiles without errors",
 });
 
-console.log(result.status);   // "pass" | "fail" | "terminated" ← a verdict, not a guess
+console.log(result.status); // "pass" | "fail" | "terminated" ← a verdict, not a guess
 console.log(result.feedback); // what happened, or why it failed
 ```
 
@@ -56,14 +56,14 @@ console.log(result.feedback); // what happened, or why it failed
 
 Tepa is intentionally scoped. It does one thing well: **goal-oriented pipelines with a verifiable success condition**.
 
-| Tepa is a great fit for… | Tepa is not designed for… |
-|---|---|
-| Code generation + automated testing | Conversational chatbots or multi-turn dialogue |
-| Data analysis and structured report generation | Simple single-prompt → response tasks |
-| Document pipelines with quality criteria | Low-latency or streaming applications |
-| Multi-step automated workflows with error recovery | Long-lived agents with persistent memory |
+| Tepa is a great fit for…                           | Tepa is not designed for…                      |
+| -------------------------------------------------- | ---------------------------------------------- |
+| Code generation + automated testing                | Conversational chatbots or multi-turn dialogue |
+| Data analysis and structured report generation     | Simple single-prompt → response tasks          |
+| Document pipelines with quality criteria           | Low-latency or streaming applications          |
+| Multi-step automated workflows with error recovery | Long-lived agents with persistent memory       |
 
-Not sure? Read [When Tepa Might Not Be the Best Fit](./docs/01-introduction.md#when-tepa-isnt-the-right-tool) in the introduction — including how to use Tepa *alongside* your existing stack rather than replacing it.
+Not sure? Read [When Tepa Might Not Be the Best Fit](./docs/01-introduction.md#when-tepa-isnt-the-right-tool) in the introduction — including how to use Tepa _alongside_ your existing stack rather than replacing it.
 
 ---
 
@@ -89,18 +89,18 @@ Any npm package that implements `ToolDefinition` or extends `BaseLLMProvider` wo
 
 ## Documentation
 
-| | Section | |
-|---|---|---|
-| **Learn** | [Introduction](./docs/01-introduction.md) | What Tepa is, who it's for, and when to use something else |
-| | [Getting Started](./docs/02-getting-started.md) | Installation, first example, understanding results |
-| | [How Tepa Works](./docs/03-how-tepa-works.md) | The Plan-Execute-Evaluate cycle in depth |
-| **Build** | [Pipeline in Detail](./docs/04-pipeline-in-detail.md) | Prompt structure, lifecycle events, tool resolution |
-| | [Configuration](./docs/05-configuration.md) | Models, limits, logging |
-| | [Tool System](./docs/06-tool-system.md) | Built-in tools, custom tools, third-party packages |
-| | [Event System](./docs/07-event-system-patterns.md) | Human-in-the-loop, safety filters, monitoring |
-| | [LLM Providers](./docs/08-llm-providers.md) | Anthropic, OpenAI, Gemini, custom providers |
-| **Explore** | [Examples & Demos](./docs/09-examples-and-demos.md) | Runnable demos with walkthroughs |
-| **Reference** | [API Reference](./docs/11-api-reference.md) | Complete API surface |
+|               | Section                                               |                                                            |
+| ------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| **Learn**     | [Introduction](./docs/01-introduction.md)             | What Tepa is, who it's for, and when to use something else |
+|               | [Getting Started](./docs/02-getting-started.md)       | Installation, first example, understanding results         |
+|               | [How Tepa Works](./docs/03-how-tepa-works.md)         | The Plan-Execute-Evaluate cycle in depth                   |
+| **Build**     | [Pipeline in Detail](./docs/04-pipeline-in-detail.md) | Prompt structure, lifecycle events, tool resolution        |
+|               | [Configuration](./docs/05-configuration.md)           | Models, limits, logging                                    |
+|               | [Tool System](./docs/06-tool-system.md)               | Built-in tools, custom tools, third-party packages         |
+|               | [Event System](./docs/07-event-system-patterns.md)    | Human-in-the-loop, safety filters, monitoring              |
+|               | [LLM Providers](./docs/08-llm-providers.md)           | Anthropic, OpenAI, Gemini, custom providers                |
+| **Explore**   | [Examples & Demos](./docs/09-examples-and-demos.md)   | Runnable demos with walkthroughs                           |
+| **Reference** | [API Reference](./docs/11-api-reference.md)           | Complete API surface                                       |
 
 ---
 

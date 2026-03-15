@@ -4,11 +4,11 @@ Tepa ships with three runnable demos in the `demos/` directory. Each is a standa
 
 ## Demo Map
 
-| Demo | Use Case | Key Concepts |
-|---|---|---|
-| [API Client Generation](#api-client-generation) | Code generation with automated testing | Multi-cycle self-correction, structured `expectedOutput`, `shell_execute` |
-| [Student Progress Analysis](#student-progress-analysis) | Data analysis and report generation | Single-cycle completion, reasoning steps, `scratchpad`, `data_parse` |
-| [Study Plan Generator](#study-plan-generator) | Interactive, human-guided output | `postPlanner` approval gate, `postEvaluator` verdict override, async events |
+| Demo                                                    | Use Case                               | Key Concepts                                                                |
+| ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| [API Client Generation](#api-client-generation)         | Code generation with automated testing | Multi-cycle self-correction, structured `expectedOutput`, `shell_execute`   |
+| [Student Progress Analysis](#student-progress-analysis) | Data analysis and report generation    | Single-cycle completion, reasoning steps, `scratchpad`, `data_parse`        |
+| [Study Plan Generator](#study-plan-generator)           | Interactive, human-guided output       | `postPlanner` approval gate, `postEvaluator` verdict override, async events |
 
 If you're evaluating Tepa for a specific use case, the table above should point you to the most relevant demo. If you're new and just want to see the pipeline in action, start with the [API Client Generation](#api-client-generation) demo — it shows the full self-correction loop most clearly.
 
@@ -46,7 +46,7 @@ This demo generates a typed TypeScript API client for the [JSONPlaceholder API](
 
 ### What It Shows
 
-This demo answers the question: *what does self-correction actually look like in practice?*
+This demo answers the question: _what does self-correction actually look like in practice?_
 
 The success criterion isn't "did the agent generate code" — it's "do the tests pass." The Evaluator runs `npx vitest run` and checks the exit code. If the generated code compiles but fails tests (a common failure mode — the agent might use `new axios()` instead of `axios.create()` to match the existing project pattern), the Evaluator feeds back exactly what failed and the Planner produces a minimal revised plan. The pipeline fixes only what broke.
 
@@ -100,27 +100,31 @@ The `criteria` entries are what drive self-correction. The requirement that test
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read existing project files to discover code style |
-| `file_write` | Write generated code files |
-| `directory_list` | Explore the mock project structure |
-| `file_search` | Find files matching patterns |
-| `shell_execute` | Run `npx vitest run` to verify tests |
-| `http_request` | Probe API endpoints to discover response shapes |
+| Tool             | Purpose                                            |
+| ---------------- | -------------------------------------------------- |
+| `file_read`      | Read existing project files to discover code style |
+| `file_write`     | Write generated code files                         |
+| `directory_list` | Explore the mock project structure                 |
+| `file_search`    | Find files matching patterns                       |
+| `shell_execute`  | Run `npx vitest run` to verify tests               |
+| `http_request`   | Probe API endpoints to discover response shapes    |
 
 ### Configuration
 
 ```typescript
 const tepa = new Tepa({
   tools: [
-    fileReadTool, fileWriteTool, directoryListTool,
-    fileSearchTool, shellExecuteTool, httpRequestTool,
+    fileReadTool,
+    fileWriteTool,
+    directoryListTool,
+    fileSearchTool,
+    shellExecuteTool,
+    httpRequestTool,
   ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
-      maxCycles: 3,       // Room for one attempt + two correction cycles
+      maxCycles: 3, // Room for one attempt + two correction cycles
       maxTokens: 400_000, // Higher budget: code generation steps produce longer outputs
     },
     logging: { level: "verbose" },
@@ -155,7 +159,7 @@ This demo analyses student grade and attendance data for a class, produces a com
 
 ### What It Shows
 
-This demo answers two questions: *how does Tepa handle multi-step data analysis?* and *does the pipeline add overhead when self-correction isn't needed?*
+This demo answers two questions: _how does Tepa handle multi-step data analysis?_ and _does the pipeline add overhead when self-correction isn't needed?_
 
 The answer to the second question is no — the pipeline runs one cycle and exits immediately when the Evaluator passes. There's no retry tax for tasks that are well-specified.
 
@@ -217,19 +221,19 @@ expectedOutput:
       - Columns include student name, overall percentage, urgency level, attendance rate, primary concern
 ```
 
-Notice the `notes` field in context — *"Parent-teacher conferences are scheduled for next week"* is domain context that informs the Evaluator's qualitative check. The Evaluator can assess whether the recommendations are appropriately timely and actionable for that context, not just formally complete.
+Notice the `notes` field in context — _"Parent-teacher conferences are scheduled for next week"_ is domain context that informs the Evaluator's qualitative check. The Evaluator can assess whether the recommendations are appropriately timely and actionable for that context, not just formally complete.
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read CSV data files |
-| `file_write` | Write report and flagged students CSV |
-| `directory_list` | Explore the data directory |
-| `data_parse` | Parse CSV into structured row objects |
-| `shell_execute` | Run data processing scripts if needed |
-| `scratchpad` | Carry computed metrics between steps |
-| `log_observe` | Record analytical observations to the pipeline log |
+| Tool             | Purpose                                            |
+| ---------------- | -------------------------------------------------- |
+| `file_read`      | Read CSV data files                                |
+| `file_write`     | Write report and flagged students CSV              |
+| `directory_list` | Explore the data directory                         |
+| `data_parse`     | Parse CSV into structured row objects              |
+| `shell_execute`  | Run data processing scripts if needed              |
+| `scratchpad`     | Carry computed metrics between steps               |
+| `log_observe`    | Record analytical observations to the pipeline log |
 
 The scratchpad is essential in this demo — the Executor computes averages and pass rates in one step, then reads them back in a later reasoning step that generates recommendations. Without the scratchpad, each step would only have access to its declared dependencies' direct output.
 
@@ -238,13 +242,18 @@ The scratchpad is essential in this demo — the Executor computes averages and 
 ```typescript
 const tepa = new Tepa({
   tools: [
-    fileReadTool, fileWriteTool, directoryListTool,
-    dataParseTool, shellExecuteTool, scratchpadTool, logObserveTool,
+    fileReadTool,
+    fileWriteTool,
+    directoryListTool,
+    dataParseTool,
+    shellExecuteTool,
+    scratchpadTool,
+    logObserveTool,
   ],
   provider: new AnthropicProvider(),
   config: {
     limits: {
-      maxCycles: 3,       // Allowed, but typically completes in 1
+      maxCycles: 3, // Allowed, but typically completes in 1
       maxTokens: 250_000, // Lower budget sufficient — no code generation
     },
     logging: { level: "verbose" },
@@ -270,7 +279,7 @@ This demo shows Tepa's event system used for inserting human decision points int
 
 ### What It Shows
 
-This demo answers the question: *how do you put a human in control of an autonomous pipeline?*
+This demo answers the question: _how do you put a human in control of an autonomous pipeline?_
 
 The mechanism is two async event callbacks — one that pauses after planning, one that pauses after evaluation. Because event callbacks can return Promises, the pipeline waits at each checkpoint until the user responds. The pipeline doesn't know or care that it's paused for human input — from its perspective, a callback returned a Promise that eventually resolved. See [Event System Patterns — Human-in-the-Loop](./07-event-system-patterns.md#human-in-the-loop-plan-approval) for the full pattern documentation.
 
@@ -285,7 +294,7 @@ What would you like to study?
 > Learn Rust programming
 
 --- Plan (4 steps) ---
-  research: Research Rust learning resources (LLM reasoning) 
+  research: Research Rust learning resources (LLM reasoning)
   outline: Create study plan outline (scratchpad)
   write: Write detailed study plan (file_write)
   review: Review and finalize (file_read)
@@ -417,12 +426,12 @@ prompt.context.userInput = userInput;
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| `file_read` | Read existing files in the output directory |
-| `file_write` | Write the study plan to `study-plan.md` |
-| `directory_list` | Explore the output directory |
-| `scratchpad` | Carry research notes and outline between steps |
+| Tool             | Purpose                                        |
+| ---------------- | ---------------------------------------------- |
+| `file_read`      | Read existing files in the output directory    |
+| `file_write`     | Write the study plan to `study-plan.md`        |
+| `directory_list` | Explore the output directory                   |
+| `scratchpad`     | Carry research notes and outline between steps |
 
 This demo uses the fewest tools — it's primarily an LLM reasoning task. The scratchpad carries research findings from early steps into the final writing step without requiring an explicit dependency chain on the raw tool outputs.
 
@@ -491,7 +500,7 @@ postEvaluator: [(data: unknown) => {
 }],
 ```
 
-These three hooks cover the three moments developers most want visibility into: *what is the agent about to do?* (plan), *how did each step go?* (step), and *did it work?* (evaluation). For the full patterns — adding human approval gates, safety filters, monitoring integration — see [Event System Patterns](./07-event-system-patterns.md).
+These three hooks cover the three moments developers most want visibility into: _what is the agent about to do?_ (plan), _how did each step go?_ (step), and _did it work?_ (evaluation). For the full patterns — adding human approval gates, safety filters, monitoring integration — see [Event System Patterns](./07-event-system-patterns.md).
 
 ---
 

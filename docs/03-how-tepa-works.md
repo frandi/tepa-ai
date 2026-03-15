@@ -36,10 +36,10 @@ Every call to `tepa.run()` triggers a loop. It keeps running until one of three 
 
 The loop terminates on the first condition that fires:
 
-| Condition | Result |
-|---|---|
-| Evaluator returns `pass` | `"pass"` |
-| Max cycles exhausted (default: 5) | `"fail"` |
+| Condition                               | Result         |
+| --------------------------------------- | -------------- |
+| Evaluator returns `pass`                | `"pass"`       |
+| Max cycles exhausted (default: 5)       | `"fail"`       |
 | Token budget exceeded (default: 64,000) | `"terminated"` |
 
 Here's what happens inside each component.
@@ -52,7 +52,7 @@ The Planner's job is to turn your goal into a sequence of actionable steps — e
 
 It receives three things: the goal and expected output you provided, the full list of tools available to the agent, and — on retry cycles — the evaluator's feedback from the previous attempt plus a summary of what already succeeded.
 
-What it produces is a **structured plan**: an ordered list of steps with declared dependencies between them. A step can depend on the output of a prior step. A step with no tools assigned is a *reasoning step* — the LLM produces a text analysis rather than invoking a tool, which is useful for distilling or interpreting data before a downstream tool-calling step consumes it.
+What it produces is a **structured plan**: an ordered list of steps with declared dependencies between them. A step can depend on the output of a prior step. A step with no tools assigned is a _reasoning step_ — the LLM produces a text analysis rather than invoking a tool, which is useful for distilling or interpreting data before a downstream tool-calling step consumes it.
 
 **On failure, the Planner doesn't start over — it revises.** It sees exactly what succeeded and what didn't in the previous cycle, and produces a minimal revision: only fix what failed, build on what worked. This keeps self-correction efficient rather than wasteful.
 
@@ -67,7 +67,7 @@ Before executing anything, it performs a **topological sort** of the plan steps 
 Each step then runs in sequence:
 
 - If a step's upstream dependency failed, the step is automatically skipped. Failures cascade — Tepa won't waste tokens running a step whose inputs are already broken.
-- Each step only receives the outputs of its *declared* dependencies — not the full result set. This is enforced by the framework, preventing a step from accidentally consuming data it didn't explicitly ask for.
+- Each step only receives the outputs of its _declared_ dependencies — not the full result set. This is enforced by the framework, preventing a step from accidentally consuming data it didn't explicitly ask for.
 - For tool steps, the LLM receives the step description along with the tool's schema and returns a **structured `tool_use` block** — typed parameters, no free-form text, no string parsing. The framework invokes the tool directly with those parameters.
 - For reasoning steps, the LLM produces a text response that becomes that step's output, available to any downstream step that depends on it.
 
@@ -77,7 +77,7 @@ The key design principle here: **the Executor never guesses.** It only calls too
 
 ## The Evaluator
 
-After all steps complete, the Evaluator asks the only question that matters: *did the result actually meet the goal?*
+After all steps complete, the Evaluator asks the only question that matters: _did the result actually meet the goal?_
 
 It assesses two dimensions simultaneously:
 

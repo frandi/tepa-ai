@@ -52,7 +52,7 @@ const result = await tepa.run({
   expectedOutput: "A file at ./summary.md describing the project structure.",
 });
 
-console.log(result.status);   // "pass" — the evaluator confirmed ./summary.md meets the goal
+console.log(result.status); // "pass" — the evaluator confirmed ./summary.md meets the goal
 console.log(result.feedback); // a summary of what was produced, or why it fell short
 ```
 
@@ -77,14 +77,14 @@ const tepa = new Tepa({
 
 `tepa.run()` returns a `TepaResult` object. Here's what each field means:
 
-| Field | Description |
-|---|---|
-| `status` | `"pass"` — output met the expected criteria. `"fail"` — max cycles reached without passing. `"terminated"` — token budget exhausted mid-cycle. |
-| `feedback` | On pass: a summary from the evaluator. On fail: what fell short and why. On termination: the budget-exceeded message. |
-| `cycles` | How many Plan-Execute-Evaluate cycles ran before the pipeline stopped. |
-| `tokensUsed` | Total tokens consumed across all LLM calls (planner + executor + evaluator, across all cycles). |
-| `outputs` | Artifacts produced by the pipeline — file paths, descriptions, types. |
-| `logs` | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts. |
+| Field        | Description                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`     | `"pass"` — output met the expected criteria. `"fail"` — max cycles reached without passing. `"terminated"` — token budget exhausted mid-cycle. |
+| `feedback`   | On pass: a summary from the evaluator. On fail: what fell short and why. On termination: the budget-exceeded message.                          |
+| `cycles`     | How many Plan-Execute-Evaluate cycles ran before the pipeline stopped.                                                                         |
+| `tokensUsed` | Total tokens consumed across all LLM calls (planner + executor + evaluator, across all cycles).                                                |
+| `outputs`    | Artifacts produced by the pipeline — file paths, descriptions, types.                                                                          |
+| `logs`       | Structured log entries with timestamps, cycle numbers, step IDs, tool names, durations, and token counts.                                      |
 
 ```typescript
 interface TepaResult {

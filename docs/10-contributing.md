@@ -6,12 +6,12 @@ Tepa's core repository is intentionally lean. It ships only the essential built-
 
 ## Where to Start
 
-| What you want to do | Where to go |
-|---|---|
-| Publish a custom tool as an npm package | [How to Create a Custom Tool](#how-to-create-a-custom-tool) |
-| Publish a custom LLM provider as an npm package | [How to Create a Custom LLM Provider](#how-to-create-a-custom-llm-provider) |
-| Fix a bug, improve the core, update docs | [Development Setup](#development-setup) → [Pull Request Guidelines](#pull-request-guidelines) |
-| Report a bug or request a feature | [Issue Reporting](#issue-reporting) |
+| What you want to do                             | Where to go                                                                                   |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Publish a custom tool as an npm package         | [How to Create a Custom Tool](#how-to-create-a-custom-tool)                                   |
+| Publish a custom LLM provider as an npm package | [How to Create a Custom LLM Provider](#how-to-create-a-custom-llm-provider)                   |
+| Fix a bug, improve the core, update docs        | [Development Setup](#development-setup) → [Pull Request Guidelines](#pull-request-guidelines) |
+| Report a bug or request a feature               | [Issue Reporting](#issue-reporting)                                                           |
 
 ---
 
@@ -67,7 +67,8 @@ export const redisCacheTool = defineTool({
     },
     key: {
       type: "string",
-      description: "The cache key to read from or write to. Use descriptive keys like 'user:123:profile'.",
+      description:
+        "The cache key to read from or write to. Use descriptive keys like 'user:123:profile'.",
       required: true,
     },
     value: {
@@ -76,7 +77,8 @@ export const redisCacheTool = defineTool({
     },
     ttl: {
       type: "number",
-      description: "Time-to-live in seconds before the key expires. Only applies to 'set'. Default: 3600.",
+      description:
+        "Time-to-live in seconds before the key expires. Only applies to 'set'. Default: 3600.",
       default: 3600,
     },
   },
@@ -226,7 +228,13 @@ Extend `BaseLLMProvider` and implement four methods. You only implement the API 
 ```typescript
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
-import { toMyLLMMessages, toMyLLMTools, extractText, extractToolUse, mapFinishReason } from "./formatting.js";
+import {
+  toMyLLMMessages,
+  toMyLLMTools,
+  extractText,
+  extractToolUse,
+  mapFinishReason,
+} from "./formatting.js";
 
 export interface MyLLMProviderOptions extends BaseLLMProviderOptions {
   apiKey?: string;
@@ -304,16 +312,18 @@ Create `src/formatting.ts` to translate between Tepa's normalised types and your
 **`extractText(response)`** — Pull the text content from your SDK's response object.
 
 **`extractToolUse(response)`** — Convert tool call blocks from your SDK's format into `LLMToolUseBlock[]`:
+
 ```typescript
 // Target shape:
 interface LLMToolUseBlock {
-  id: string;    // Use a synthetic ID if your SDK doesn't provide one: "myllm-call-0"
-  name: string;  // Tool name the LLM wants to call
+  id: string; // Use a synthetic ID if your SDK doesn't provide one: "myllm-call-0"
+  name: string; // Tool name the LLM wants to call
   input: Record<string, unknown>; // Pre-parsed parameters — not a JSON string
 }
 ```
 
 **`mapFinishReason(reason)`** — Map your SDK's stop reason to Tepa's standard enum:
+
 ```typescript
 // Valid values: "end_turn" | "tool_use" | "max_tokens" | "stop_sequence"
 function mapFinishReason(reason: string): LLMResponse["finishReason"] {
@@ -359,10 +369,9 @@ describe("MyLLMProvider", () => {
   it("returns a normalised response", async () => {
     // Mock your SDK client
     const provider = new MyLLMProvider({ apiKey: "test-key" });
-    const response = await provider.complete(
-      [{ role: "user", content: "Hello" }],
-      { model: "myllm-default" },
-    );
+    const response = await provider.complete([{ role: "user", content: "Hello" }], {
+      model: "myllm-default",
+    });
     expect(response.finishReason).toBe("end_turn");
     expect(response.tokensUsed.input).toBeGreaterThan(0);
   });
@@ -370,10 +379,12 @@ describe("MyLLMProvider", () => {
   it("maps tool use finish reason correctly", async () => {
     // Mock a tool-use response from the SDK
     const provider = new MyLLMProvider({ apiKey: "test-key" });
-    const response = await provider.complete(
-      [{ role: "user", content: "Call a tool" }],
-      { model: "myllm-default", tools: [/* mock schema */] },
-    );
+    const response = await provider.complete([{ role: "user", content: "Call a tool" }], {
+      model: "myllm-default",
+      tools: [
+        /* mock schema */
+      ],
+    });
     expect(response.finishReason).toBe("tool_use");
     expect(response.toolUse).toBeDefined();
     expect(response.toolUse?.length).toBeGreaterThan(0);

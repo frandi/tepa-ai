@@ -19,12 +19,12 @@ interface ToolDefinition {
 }
 ```
 
-| Field | Purpose |
-|---|---|
-| `name` | Unique identifier used in plans and tool calls. Use `snake_case` (e.g., `"file_read"`). |
-| `description` | Tells the LLM what the tool does — directly affects planning and execution quality. |
-| `parameters` | Schema of accepted inputs, keyed by parameter name. |
-| `execute` | The async function invoked when the tool is called. |
+| Field         | Purpose                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `name`        | Unique identifier used in plans and tool calls. Use `snake_case` (e.g., `"file_read"`). |
+| `description` | Tells the LLM what the tool does — directly affects planning and execution quality.     |
+| `parameters`  | Schema of accepted inputs, keyed by parameter name.                                     |
+| `execute`     | The async function invoked when the tool is called.                                     |
 
 ### `ParameterDef`
 
@@ -37,12 +37,12 @@ interface ParameterDef {
 }
 ```
 
-| Field | Purpose |
-|---|---|
-| `type` | One of five JSON-compatible types. |
+| Field         | Purpose                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| `type`        | One of five JSON-compatible types.                                      |
 | `description` | Tells the LLM what value to provide — be specific (see guidance below). |
-| `required` | Whether the parameter must be supplied. Defaults to `true` if omitted. |
-| `default` | Default value applied when the parameter is not provided. |
+| `required`    | Whether the parameter must be supplied. Defaults to `true` if omitted.  |
+| `default`     | Default value applied when the parameter is not provided.               |
 
 The parameter schema serves double duty: validated with Zod at tool creation time, and converted to the LLM provider's native tool format at execution time.
 
@@ -56,10 +56,10 @@ The `description` field on both the tool and its parameters is the primary signa
 
 ```typescript
 // ❌ Too vague — the LLM doesn't know when or how to use this
-description: "Processes files"
+description: "Processes files";
 
 // ✅ Specific — the LLM knows exactly what this tool does and what to expect back
-description: "Reads the full text contents of a file at the given path and returns them as a UTF-8 string. Use this to load source code, configuration files, data files, or any text-based content before analyzing or transforming it."
+description: "Reads the full text contents of a file at the given path and returns them as a UTF-8 string. Use this to load source code, configuration files, data files, or any text-based content before analyzing or transforming it.";
 ```
 
 **Parameter descriptions:** Describe what value the LLM should supply, including format, constraints, and examples where the input isn't obvious.
@@ -88,7 +88,8 @@ import { defineTool } from "@tepa/tools";
 
 const myTool = defineTool({
   name: "my_custom_tool",
-  description: "Fetches the current status of a deployment by its ID and returns the status string and last updated timestamp.",
+  description:
+    "Fetches the current status of a deployment by its ID and returns the status string and last updated timestamp.",
   parameters: {
     deploymentId: {
       type: "string",
@@ -164,9 +165,9 @@ import { ToolRegistryImpl } from "@tepa/tools";
 const registry = new ToolRegistryImpl();
 registry.register(fileReadTool);
 
-const tool = registry.get("file_read");    // Look up by name
-const allTools = registry.list();          // List all registered tools
-const schemas = registry.toSchema();       // Schemas without execute functions (safe to serialize)
+const tool = registry.get("file_read"); // Look up by name
+const allTools = registry.list(); // List all registered tools
+const schemas = registry.toSchema(); // Schemas without execute functions (safe to serialize)
 ```
 
 Registering a tool name that already exists throws: `Tool "file_read" is already registered`. See the [API Reference](./11-api-reference.md) for the full `ToolRegistry` interface.
@@ -187,10 +188,10 @@ npm install @tepa/tools
 
 Read the contents of a file at the given path.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | string | yes | — | Absolute or relative file path to read. |
-| `encoding` | string | no | `"utf-8"` | File encoding. |
+| Parameter  | Type   | Required | Default   | Description                             |
+| ---------- | ------ | -------- | --------- | --------------------------------------- |
+| `path`     | string | yes      | —         | Absolute or relative file path to read. |
+| `encoding` | string | no       | `"utf-8"` | File encoding.                          |
 
 **Returns:** File contents as a string.
 
@@ -202,10 +203,10 @@ import { fileReadTool } from "@tepa/tools";
 
 Write content to a file, creating parent directories if needed.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | string | yes | — | Absolute or relative file path to write. |
-| `content` | string | yes | — | Content to write. |
+| Parameter | Type   | Required | Default | Description                              |
+| --------- | ------ | -------- | ------- | ---------------------------------------- |
+| `path`    | string | yes      | —       | Absolute or relative file path to write. |
+| `content` | string | yes      | —       | Content to write.                        |
 
 **Returns:** `{ path: string, bytesWritten: number }`
 
@@ -217,10 +218,10 @@ import { fileWriteTool } from "@tepa/tools";
 
 List directory contents with optional recursive depth.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `path` | string | yes | — | Directory path to list. |
-| `maxDepth` | number | no | `1` | Maximum recursion depth. |
+| Parameter  | Type   | Required | Default | Description              |
+| ---------- | ------ | -------- | ------- | ------------------------ |
+| `path`     | string | yes      | —       | Directory path to list.  |
+| `maxDepth` | number | no       | `1`     | Maximum recursion depth. |
 
 **Returns:** Array of `{ name, type: "file" | "directory", children? }` entries, nested by depth.
 
@@ -232,10 +233,10 @@ import { directoryListTool } from "@tepa/tools";
 
 Search for files matching a glob pattern.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `pattern` | string | yes | — | Glob pattern (e.g., `**/*.ts`). |
-| `cwd` | string | no | `"."` | Working directory for the search. |
+| Parameter | Type   | Required | Default | Description                       |
+| --------- | ------ | -------- | ------- | --------------------------------- |
+| `pattern` | string | yes      | —       | Glob pattern (e.g., `**/*.ts`).   |
+| `cwd`     | string | no       | `"."`   | Working directory for the search. |
 
 **Returns:** Array of matching file paths.
 
@@ -249,11 +250,11 @@ import { fileSearchTool } from "@tepa/tools";
 
 Execute a shell command and capture stdout, stderr, and exit code.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `command` | string | yes | — | Shell command to execute. |
-| `cwd` | string | no | — | Working directory for the command. |
-| `timeout` | number | no | `30000` | Timeout in milliseconds. |
+| Parameter | Type   | Required | Default | Description                        |
+| --------- | ------ | -------- | ------- | ---------------------------------- |
+| `command` | string | yes      | —       | Shell command to execute.          |
+| `cwd`     | string | no       | —       | Working directory for the command. |
+| `timeout` | number | no       | `30000` | Timeout in milliseconds.           |
 
 **Returns:** `{ stdout: string, stderr: string, exitCode: number }`
 
@@ -267,14 +268,14 @@ import { shellExecuteTool } from "@tepa/tools";
 
 Make an HTTP request using fetch.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `url` | string | yes | — | URL to request. |
-| `method` | string | no | `"GET"` | HTTP method. |
-| `headers` | object | no | — | Request headers. |
-| `queryParams` | object | no | — | Query parameters to append to the URL. |
-| `body` | string | no | — | Request body. |
-| `timeout` | number | no | `30000` | Timeout in milliseconds. |
+| Parameter     | Type   | Required | Default | Description                            |
+| ------------- | ------ | -------- | ------- | -------------------------------------- |
+| `url`         | string | yes      | —       | URL to request.                        |
+| `method`      | string | no       | `"GET"` | HTTP method.                           |
+| `headers`     | object | no       | —       | Request headers.                       |
+| `queryParams` | object | no       | —       | Query parameters to append to the URL. |
+| `body`        | string | no       | —       | Request body.                          |
+| `timeout`     | number | no       | `30000` | Timeout in milliseconds.               |
 
 **Returns:** `{ status: number, statusText: string, headers: object, body: string }`
 
@@ -290,11 +291,11 @@ import { httpRequestTool } from "@tepa/tools";
 
 Search the web using a configurable search API endpoint.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `query` | string | yes | — | Search query. |
-| `endpoint` | string | yes | — | Search API endpoint URL. |
-| `count` | number | no | `5` | Number of results to return. |
+| Parameter  | Type   | Required | Default | Description                  |
+| ---------- | ------ | -------- | ------- | ---------------------------- |
+| `query`    | string | yes      | —       | Search query.                |
+| `endpoint` | string | yes      | —       | Search API endpoint URL.     |
+| `count`    | number | no       | `5`     | Number of results to return. |
 
 **Returns:** JSON response from the search API.
 
@@ -310,14 +311,15 @@ import { webSearchTool } from "@tepa/tools";
 
 Parse JSON, CSV, or YAML data from a string or file.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `input` | string | yes | — | Data string or file path to parse. |
-| `format` | string | yes | — | `"json"`, `"csv"`, or `"yaml"`. |
-| `fromFile` | boolean | no | `false` | If true, treat `input` as a file path. |
-| `preview` | number | no | — | Limit output to first N rows/entries. |
+| Parameter  | Type    | Required | Default | Description                            |
+| ---------- | ------- | -------- | ------- | -------------------------------------- |
+| `input`    | string  | yes      | —       | Data string or file path to parse.     |
+| `format`   | string  | yes      | —       | `"json"`, `"csv"`, or `"yaml"`.        |
+| `fromFile` | boolean | no       | `false` | If true, treat `input` as a file path. |
+| `preview`  | number  | no       | —       | Limit output to first N rows/entries.  |
 
 **Returns:** Parsed data — shape depends on format:
+
 - **CSV:** `Array<Record<string, string>>` — each row as an object keyed by header
 - **JSON:** Parsed JSON value
 - **YAML:** Parsed YAML value
@@ -332,13 +334,14 @@ import { dataParseTool } from "@tepa/tools";
 
 In-memory key-value store for sharing intermediate data between steps. Data persists for the duration of a single `run()` call.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `action` | string | yes | — | `"read"` or `"write"`. |
-| `key` | string | yes | — | Storage key. |
-| `value` | string | no | — | Value to store (required for `"write"`). |
+| Parameter | Type   | Required | Default | Description                              |
+| --------- | ------ | -------- | ------- | ---------------------------------------- |
+| `action`  | string | yes      | —       | `"read"` or `"write"`.                   |
+| `key`     | string | yes      | —       | Storage key.                             |
+| `value`   | string | no       | —       | Value to store (required for `"write"`). |
 
 **Returns:**
+
 - Write: `{ success: true, key: string }`
 - Read (found): `{ found: true, key: string, value: unknown }`
 - Read (not found): `{ found: false, key: string }`
@@ -353,10 +356,10 @@ import { scratchpadTool } from "@tepa/tools";
 
 Record an observation to the pipeline logs without producing a primary output.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `message` | string | yes | — | Observation message to record. |
-| `level` | string | no | `"info"` | `"info"`, `"warn"`, or `"error"`. |
+| Parameter | Type   | Required | Default  | Description                       |
+| --------- | ------ | -------- | -------- | --------------------------------- |
+| `message` | string | yes      | —        | Observation message to record.    |
+| `level`   | string | no       | `"info"` | `"info"`, `"warn"`, or `"error"`. |
 
 **Returns:** `{ observation: string, level: string, timestamp: string }`
 
@@ -379,7 +382,8 @@ import type { ToolDefinition } from "@tepa/types";
 
 export const postgresQueryTool: ToolDefinition = {
   name: "postgres_query",
-  description: "Execute a read-only SQL SELECT query against a PostgreSQL database and return the result rows. Use this to retrieve structured data for analysis or reporting. Does not support INSERT, UPDATE, DELETE, or DDL statements.",
+  description:
+    "Execute a read-only SQL SELECT query against a PostgreSQL database and return the result rows. Use this to retrieve structured data for analysis or reporting. Does not support INSERT, UPDATE, DELETE, or DDL statements.",
   parameters: {
     query: {
       type: "string",
