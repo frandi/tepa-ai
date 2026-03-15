@@ -57,7 +57,3 @@ nav:
       - Contributing: 10-contributing.md
       - API Reference: 11-api-reference.md
       - Future Iterations: 12-future-iterations.md
-  - Contributing:
-      - Bug Report Example: contributing/bug-report-example.md
-      - Feature Request Example: contributing/feature-request-example.md
-      - Pull Request Example: contributing/pull-request-example.md
