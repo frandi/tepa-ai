@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import path from "node:path";
 import fs from "node:fs/promises";
 import { fileReadTool } from "../../src/file-read.js";
 
@@ -15,7 +16,7 @@ describe("file_read tool", () => {
     const result = await fileReadTool.execute({ path: "/tmp/test.txt" });
 
     expect(result).toBe("file content");
-    expect(fs.readFile).toHaveBeenCalledWith("/tmp/test.txt", { encoding: "utf-8" });
+    expect(fs.readFile).toHaveBeenCalledWith(path.resolve("/tmp/test.txt"), { encoding: "utf-8" });
   });
 
   it("should read file with custom encoding", async () => {
@@ -27,7 +28,7 @@ describe("file_read tool", () => {
     });
 
     expect(result).toBe("ascii content");
-    expect(fs.readFile).toHaveBeenCalledWith("/tmp/test.txt", { encoding: "ascii" });
+    expect(fs.readFile).toHaveBeenCalledWith(path.resolve("/tmp/test.txt"), { encoding: "ascii" });
   });
 
   it("should resolve relative paths to absolute", async () => {
@@ -37,8 +38,9 @@ describe("file_read tool", () => {
 
     const lastCall = vi.mocked(fs.readFile).mock.calls.at(-1)!;
     const calledPath = lastCall[0] as string;
-    expect(calledPath).toMatch(/^\//); // absolute path
-    expect(calledPath).toContain("relative/file.txt");
+    expect(path.isAbsolute(calledPath)).toBe(true);
+    expect(calledPath).toContain("relative");
+    expect(calledPath).toContain("file.txt");
   });
 
   it("should propagate fs errors", async () => {
