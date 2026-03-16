@@ -36,9 +36,44 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
-# ─── Pre-flight ──────────────────────────────────────────────
+# ─── Pre-flight checks ───────────────────────────────────────
 
+header "Pre-flight checks"
+
+# Required tools
+command -v node >/dev/null 2>&1 || die "node is not installed"
 command -v gh >/dev/null 2>&1 || die "gh CLI is not installed. See https://cli.github.com"
+command -v curl >/dev/null 2>&1 || die "curl is not installed"
+success "Required tools: node, gh, curl"
+
+# npm auth
+if npm whoami &>/dev/null; then
+  success "npm: logged in as $(npm whoami)"
+else
+  if $DRY_RUN; then
+    warn "npm: not logged in (run 'npm login' before a real release)"
+  else
+    die "npm: not logged in. Run 'npm login' first."
+  fi
+fi
+
+# GitHub auth
+if gh auth status &>/dev/null; then
+  success "GitHub: authenticated"
+else
+  die "GitHub: not authenticated. Run 'gh auth login' first."
+fi
+
+# Verify we're in a GitHub repo
+gh repo view --json nameWithOwner >/dev/null 2>&1 || die "Not in a GitHub repository"
+
+# Anthropic API key
+load_env
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  success "Anthropic API key: set"
+else
+  die "ANTHROPIC_API_KEY not set. Export it or add to .env"
+fi
 
 header "tepa-ai Release Pipeline"
 
