@@ -139,16 +139,6 @@ const tepa = new Tepa({
 });
 ```
 
-### Default Models
-
-Each provider uses a sensible default model. You can override it by passing the `model` option:
-
-| Provider      | Default Model            | Override Example                                               |
-| ------------- | ------------------------ | -------------------------------------------------------------- |
-| Anthropic     | `claude-haiku-4-5`       | `new AnthropicProvider({ model: "claude-sonnet-4-20250514" })` |
-| OpenAI        | `gpt-5-mini`             | `new OpenAIProvider({ model: "gpt-5" })`                       |
-| Google Gemini | `gemini-3-flash-preview` | `new GeminiProvider({ model: "gemini-3-pro-preview" })`        |
-
 ## Understanding the Result
 
 `tepa.run()` returns a `TepaResult` object. Here's what each field means:
