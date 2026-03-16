@@ -23,14 +23,60 @@ npm install @tepa/core @tepa/tools @tepa/provider-openai
 npm install @tepa/core @tepa/tools @tepa/provider-gemini
 ```
 
-Set your API key as an environment variable:
+Since the code in this tutorial uses ES module `import` syntax, make sure your `package.json` includes:
 
-```bash
-# Pick the one that matches your provider
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-export GEMINI_API_KEY="..."
+```json
+{
+  "type": "module"
+}
 ```
+
+If you started with `npm init -y`, open `package.json` and add the `"type": "module"` field.
+
+### Set Your API Key
+
+Set the API key for your chosen provider as an environment variable:
+
+=== "Bash (Linux/macOS)"
+
+    ```bash
+    # Pick the one that matches your provider
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    export OPENAI_API_KEY="sk-..."
+    export GEMINI_API_KEY="..."
+    ```
+
+=== "PowerShell (Windows)"
+
+    ```powershell
+    # Pick the one that matches your provider
+    $env:ANTHROPIC_API_KEY="sk-ant-..."
+    $env:OPENAI_API_KEY="sk-..."
+    $env:GEMINI_API_KEY="..."
+    ```
+
+=== "CMD (Windows)"
+
+    ```cmd
+    rem Pick the one that matches your provider
+    set ANTHROPIC_API_KEY=sk-ant-...
+    set OPENAI_API_KEY=sk-...
+    set GEMINI_API_KEY=...
+    ```
+
+!!! tip "Use a `.env` file instead"
+
+    To avoid setting environment variables every time, create a `.env` file in your project root:
+
+    ```
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+
+    Then load it with a package like [`dotenv`](https://www.npmjs.com/package/dotenv) at the top of your script:
+
+    ```typescript
+    import "dotenv/config";
+    ```
 
 ## Your First Pipeline
 
@@ -56,6 +102,26 @@ console.log(result.status); // "pass" — the evaluator confirmed ./summary.md m
 console.log(result.feedback); // a summary of what was produced, or why it fell short
 ```
 
+Save this as `pipeline.js`, then run it:
+
+=== "Bash (Linux/macOS)"
+
+    ```bash
+    node pipeline.js
+    ```
+
+=== "PowerShell (Windows)"
+
+    ```powershell
+    node pipeline.js
+    ```
+
+=== "CMD (Windows)"
+
+    ```cmd
+    node pipeline.js
+    ```
+
 No plan to write. No retry logic to implement. No output to parse. Tepa planned the steps, executed them using the tools you registered, evaluated the result against your `expectedOutput`, and gave you a verdict.
 
 ### Swapping Providers
@@ -72,6 +138,16 @@ const tepa = new Tepa({
   tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
 });
 ```
+
+### Default Models
+
+Each provider uses a sensible default model. You can override it by passing the `model` option:
+
+| Provider      | Default Model            | Override Example                                               |
+| ------------- | ------------------------ | -------------------------------------------------------------- |
+| Anthropic     | `claude-haiku-4-5`       | `new AnthropicProvider({ model: "claude-sonnet-4-20250514" })` |
+| OpenAI        | `gpt-5-mini`             | `new OpenAIProvider({ model: "gpt-5" })`                       |
+| Google Gemini | `gemini-3-flash-preview` | `new GeminiProvider({ model: "gemini-3-pro-preview" })`        |
 
 ## Understanding the Result
 
