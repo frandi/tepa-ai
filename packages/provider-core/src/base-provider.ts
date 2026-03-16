@@ -64,6 +64,15 @@ export abstract class BaseLLMProvider implements LLMProvider {
   /** Return true if the error is a rate limit error (uses longer backoff). */
   protected abstract isRateLimitError(error: unknown): boolean;
 
+  /**
+   * Optional hook to transform errors before they are thrown.
+   * Providers can override this to add context (e.g. better auth error messages).
+   * Return the original error if no transformation is needed.
+   */
+  protected mapError(error: unknown): unknown {
+    return error;
+  }
+
   /** Register an additional log listener. */
   onLog(callback: LLMLogCallback): void {
     this.logCallbacks.push(callback);
@@ -106,7 +115,8 @@ export abstract class BaseLLMProvider implements LLMProvider {
         });
 
         return response;
-      } catch (error) {
+      } catch (rawError) {
+        const error = this.mapError(rawError);
         lastError = error;
         const durationMs = Date.now() - start;
         const retryable = this.isRetryable(error);

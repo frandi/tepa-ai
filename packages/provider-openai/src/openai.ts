@@ -75,6 +75,16 @@ export class OpenAIProvider extends BaseLLMProvider {
     };
   }
 
+  protected mapError(error: unknown): unknown {
+    if (error instanceof OpenAI.AuthenticationError) {
+      return new Error(
+        "Authentication failed. Did you set the OPENAI_API_KEY environment variable?",
+        { cause: error },
+      );
+    }
+    return error;
+  }
+
   protected isRetryable(error: unknown): boolean {
     if (error instanceof OpenAI.RateLimitError) {
       return true;

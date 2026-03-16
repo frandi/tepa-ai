@@ -259,7 +259,7 @@ describe("GeminiProvider", () => {
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
     });
 
-    it("does not retry on 401 authentication errors", async () => {
+    it("does not retry on 401 authentication errors and provides helpful message", async () => {
       const authError = new ApiError(401, "invalid api key");
       mockGenerateContent.mockRejectedValue(authError);
 
@@ -273,7 +273,7 @@ describe("GeminiProvider", () => {
         fastProvider.complete([{ role: "user", content: "Hi" }], {
           model: "gemini-3-flash-preview",
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Did you set the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable?");
 
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     });
