@@ -78,6 +78,16 @@ export class GeminiProvider extends BaseLLMProvider {
     };
   }
 
+  protected mapError(error: unknown): unknown {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      return new Error(
+        "Authentication failed. Did you set the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable?",
+        { cause: error },
+      );
+    }
+    return error;
+  }
+
   protected isRetryable(error: unknown): boolean {
     if (error instanceof TypeError) {
       return true;

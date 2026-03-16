@@ -67,6 +67,16 @@ export class AnthropicProvider extends BaseLLMProvider {
     };
   }
 
+  protected mapError(error: unknown): unknown {
+    if (error instanceof Anthropic.AuthenticationError) {
+      return new Error(
+        "Authentication failed. Did you set the ANTHROPIC_API_KEY environment variable?",
+        { cause: error },
+      );
+    }
+    return error;
+  }
+
   protected isRetryable(error: unknown): boolean {
     if (error instanceof Anthropic.RateLimitError) {
       return true;

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import path from "node:path";
 import { shellExecuteTool } from "../../src/shell-execute.js";
 
 vi.mock("node:child_process", () => ({
@@ -8,6 +9,10 @@ vi.mock("node:child_process", () => ({
 import { exec } from "node:child_process";
 
 describe("shell_execute tool", () => {
+  beforeEach(() => {
+    vi.mocked(exec).mockReset();
+  });
+
   it("should capture stdout and stderr on success", async () => {
     vi.mocked(exec).mockImplementation((_cmd, _opts, callback) => {
       (callback as (...args: unknown[]) => void)(null, "output", "");
@@ -65,6 +70,10 @@ describe("shell_execute tool", () => {
 
     await shellExecuteTool.execute({ command: "ls", cwd: "/tmp" });
 
-    expect(exec).toHaveBeenCalledWith("ls", { timeout: 30000, cwd: "/tmp" }, expect.any(Function));
+    expect(exec).toHaveBeenCalledWith(
+      "ls",
+      { timeout: 30000, cwd: path.resolve("/tmp") },
+      expect.any(Function),
+    );
   });
 });

@@ -261,7 +261,7 @@ describe("OpenAIProvider", () => {
       expect(result.text).toBe("Success");
     });
 
-    it("does not retry on authentication errors", async () => {
+    it("does not retry on authentication errors and provides helpful message", async () => {
       const authError = new (
         OpenAI as unknown as Record<string, new () => Error>
       ).AuthenticationError();
@@ -275,7 +275,7 @@ describe("OpenAIProvider", () => {
 
       await expect(
         fastProvider.complete([{ role: "user", content: "Hi" }], { model: "gpt-4.1" }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Did you set the OPENAI_API_KEY environment variable?");
 
       // Only 1 attempt, no retries
       expect(mockCreate).toHaveBeenCalledTimes(1);

@@ -20,6 +20,26 @@ PACKAGES=(
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_ALL=false
 
+# Verify workspace symlinks exist so builds don't fail with cryptic DTS errors.
+check_workspace_links() {
+  local missing=()
+  for pkg in "${PACKAGES[@]}"; do
+    local pkg_name
+    pkg_name=$(node -p "require('./packages/${pkg}/package.json').name" 2>/dev/null || true)
+    if [[ -n "$pkg_name" && ! -d "${ROOT_DIR}/node_modules/${pkg_name}" ]]; then
+      missing+=("$pkg_name")
+    fi
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "ERROR: Missing workspace symlinks: ${missing[*]}"
+    echo "Run 'npm install' to set up workspace links, then try again."
+    exit 1
+  fi
+}
+
+check_workspace_links
+
 if [[ "${1:-}" == "--all" ]]; then
   BUILD_ALL=true
 fi

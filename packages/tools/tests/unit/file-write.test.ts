@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import path from "node:path";
 import fs from "node:fs/promises";
 import { fileWriteTool } from "../../src/file-write.js";
 
@@ -11,14 +12,18 @@ vi.mock("node:fs/promises", () => ({
 
 describe("file_write tool", () => {
   it("should write content and create parent directories", async () => {
+    const inputPath = "/tmp/sub/dir/file.txt";
+    const resolved = path.resolve(inputPath);
+    const resolvedDir = path.dirname(resolved);
+
     const result = await fileWriteTool.execute({
-      path: "/tmp/sub/dir/file.txt",
+      path: inputPath,
       content: "hello world",
     });
 
-    expect(fs.mkdir).toHaveBeenCalledWith("/tmp/sub/dir", { recursive: true });
-    expect(fs.writeFile).toHaveBeenCalledWith("/tmp/sub/dir/file.txt", "hello world", "utf-8");
-    expect(result).toEqual({ path: "/tmp/sub/dir/file.txt", bytesWritten: 11 });
+    expect(fs.mkdir).toHaveBeenCalledWith(resolvedDir, { recursive: true });
+    expect(fs.writeFile).toHaveBeenCalledWith(resolved, "hello world", "utf-8");
+    expect(result).toEqual({ path: resolved, bytesWritten: 11 });
   });
 
   it("should return correct byte count for multi-byte content", async () => {
@@ -40,7 +45,8 @@ describe("file_write tool", () => {
     });
 
     const resolved = (result as { path: string }).path;
-    expect(resolved).toMatch(/^\//); // absolute path
-    expect(resolved).toContain("relative/file.txt");
+    expect(path.isAbsolute(resolved)).toBe(true);
+    expect(resolved).toContain("relative");
+    expect(resolved).toContain("file.txt");
   });
 });

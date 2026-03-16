@@ -257,7 +257,7 @@ describe("AnthropicProvider", () => {
       expect(result.text).toBe("Success");
     });
 
-    it("does not retry on authentication errors", async () => {
+    it("does not retry on authentication errors and provides helpful message", async () => {
       const authError = new (
         Anthropic as unknown as Record<string, new () => Error>
       ).AuthenticationError();
@@ -273,7 +273,7 @@ describe("AnthropicProvider", () => {
         fastProvider.complete([{ role: "user", content: "Hi" }], {
           model: "claude-sonnet-4-20250514",
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Did you set the ANTHROPIC_API_KEY environment variable?");
 
       // Only 1 attempt, no retries
       expect(mockCreate).toHaveBeenCalledTimes(1);

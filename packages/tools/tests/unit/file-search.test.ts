@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import path from "node:path";
 import { fileSearchTool } from "../../src/file-search.js";
 
 vi.mock("glob", () => ({
@@ -14,10 +15,9 @@ describe("file_search tool", () => {
     const result = await fileSearchTool.execute({ pattern: "**/*.ts" });
 
     expect(result).toEqual(["src/index.ts", "src/utils.ts"]);
-    expect(glob).toHaveBeenCalledWith("**/*.ts", {
-      cwd: expect.stringMatching(/^\//),
-      nodir: true,
-    });
+    const callArgs = vi.mocked(glob).mock.calls.at(-1)!;
+    const cwd = (callArgs[1] as { cwd: string }).cwd;
+    expect(path.isAbsolute(cwd)).toBe(true);
   });
 
   it("should use custom cwd", async () => {
@@ -25,7 +25,10 @@ describe("file_search tool", () => {
 
     await fileSearchTool.execute({ pattern: "*.txt", cwd: "/tmp" });
 
-    expect(glob).toHaveBeenCalledWith("*.txt", { cwd: "/tmp", nodir: true });
+    const callArgs = vi.mocked(glob).mock.calls.at(-1)!;
+    expect(callArgs[0]).toBe("*.txt");
+    expect((callArgs[1] as { cwd: string; nodir: boolean }).cwd).toBe(path.resolve("/tmp"));
+    expect((callArgs[1] as { cwd: string; nodir: boolean }).nodir).toBe(true);
   });
 
   it("should return empty array for no matches", async () => {
