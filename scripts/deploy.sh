@@ -5,9 +5,6 @@ set -euo pipefail
 # tepa-ai · npm deployment script
 # ─────────────────────────────────────────────────────────────
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
-
 # ─── Parse flags ──────────────────────────────────────────────
 
 DRY_RUN=false
@@ -25,15 +22,11 @@ for arg in "$@"; do
   esac
 done
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m' # No Color
+# ─── Load shared utilities ───────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
 
 # Publishable packages in dependency order
 # (types first, then provider-core, then the rest)
@@ -46,19 +39,6 @@ ORDERED_PACKAGES=(
   "packages/provider-openai"
   "packages/provider-gemini"
 )
-
-# ─── Helpers ──────────────────────────────────────────────────
-
-info()    { echo -e "${BLUE}ℹ${NC} $*"; }
-success() { echo -e "${GREEN}✔${NC} $*"; }
-warn()    { echo -e "${YELLOW}⚠${NC} $*"; }
-error()   { echo -e "${RED}✖${NC} $*"; }
-header()  { echo -e "\n${BOLD}${CYAN}── $* ──${NC}\n"; }
-
-get_pkg_name() { node -p "require('./$1/package.json').name"; }
-get_pkg_version() { node -p "require('./$1/package.json').version"; }
-
-die() { error "$@"; exit 1; }
 
 if $DRY_RUN; then
   echo -e "\n${BOLD}${YELLOW}▶ DRY RUN MODE — nothing will be published, bumped, or committed${NC}"
