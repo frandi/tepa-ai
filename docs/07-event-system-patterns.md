@@ -15,8 +15,8 @@ const tepa = new Tepa({
   provider: myProvider,
   tools: [...],
   events: {
-    postPlanner: [(plan, cycle) => { /* ... */ }],
-    postStep: [(data, cycle) => { /* ... */ }],
+    postPlanner: [(plan, cycle, ctx) => { /* ... */ }],
+    postStep: [(data, cycle, ctx) => { /* ... */ }],
   },
 });
 ```
@@ -32,11 +32,18 @@ const tepa = new Tepa({
 | `preStep`       | Before each step         | Per-step logging, pre-execution checks             |
 | `postStep`      | After each step          | Per-step progress tracking, result inspection      |
 
-**Three things a callback can do:**
+Every callback receives three arguments: the event data, a `CycleMetadata` object, and an `EventContext`:
+
+```typescript
+(data: TData, cycle: CycleMetadata, ctx: EventContext) => TData | void | Promise<TData | void>
+```
+
+**Four things a callback can do:**
 
 - **Observe** — return nothing; data passes through unchanged
 - **Transform** — return a modified value; it replaces the data for all subsequent callbacks
 - **Pause** — return a Promise; the framework awaits it before continuing
+- **Suppress defaults** — call `ctx.preventDefault()` to prevent the built-in default behavior for this event (see [Default Behaviors and `preventDefault()`](#default-behaviors-and-preventdefault))
 
 For non-critical callbacks (monitoring, logging), use `continueOnError: true` so a callback failure doesn't abort the pipeline:
 
@@ -44,12 +51,114 @@ For non-critical callbacks (monitoring, logging), use `continueOnError: true` so
 events: {
   postEvaluator: [
     {
-      handler: (data) => metrics.record(data),
+      handler: (data, cycle, ctx) => metrics.record(data),
       continueOnError: true,
     },
   ],
 }
 ```
+
+---
+
+## Default Behaviors and `preventDefault()`
+
+Tepa registers **default behaviors** for lifecycle events that handle the built-in console logging you see during a pipeline run — the step progress, stage timing, and evaluation verdicts described in [Configuration — Logging](./05-configuration.md#logging-configuration). These defaults run automatically after all your custom callbacks complete. You don't need to do anything to get them.
+
+Default behaviors are **side-effect only** — they observe the data but cannot transform it. They run _after_ all user callbacks in the chain, receiving the final (possibly transformed) data.
+
+### How it works
+
+```
+  User callback 1 → User callback 2 → ... → Default behavior (if not prevented)
+```
+
+1. Your callbacks run first, in registration order, chaining data as usual.
+2. After the last callback, Tepa checks whether any callback called `ctx.preventDefault()`.
+3. If not prevented, the default behavior runs (logging, metrics, etc.).
+4. The default behavior's return value is ignored — only your callbacks can transform data.
+
+### Suppressing default behavior
+
+Call `ctx.preventDefault()` on the `EventContext` (the 3rd argument) inside any callback to suppress the default behavior for that event:
+
+```typescript
+import type { PostStepPayload, CycleMetadata, EventContext } from "@tepa/types";
+
+events: {
+  postStep: [
+    (data: unknown, cycle: CycleMetadata, ctx: EventContext) => {
+      const { step, result } = data as PostStepPayload;
+
+      // Custom per-step logging — replace the built-in output
+      ctx.preventDefault();
+      myLogger.info(`${step.id}: ${result.status} (${result.durationMs}ms)`);
+    },
+  ],
+}
+```
+
+With `preventDefault()` called, Tepa's built-in per-step logging for `postStep` is skipped entirely. Your callback is now the only thing that runs for this event.
+
+### Coexisting with defaults
+
+If you want your callback to _add_ behavior alongside the defaults (not replace them), simply don't call `preventDefault()`:
+
+```typescript
+events: {
+  postStep: [
+    (data: unknown) => {
+      const { step, result } = data as PostStepPayload;
+      // Send to external monitoring — default console logging still runs afterward
+      metrics.trackStep(step.id, result.status, result.durationMs);
+    },
+  ],
+}
+```
+
+Both your callback and the built-in logging will run. This is the default — you opt _out_ of defaults, not in.
+
+### Checking prevention state
+
+The `EventContext` exposes `defaultPrevented` as a read-only boolean, so later callbacks in the chain can check whether an earlier callback already suppressed the default:
+
+```typescript
+events: {
+  postEvaluator: [
+    (data, cycle, ctx) => {
+      ctx.preventDefault(); // First callback suppresses default logging
+    },
+    (data, cycle, ctx) => {
+      console.log(ctx.defaultPrevented); // true — an earlier callback called preventDefault
+    },
+  ],
+}
+```
+
+Once `preventDefault()` is called, it cannot be undone for that event invocation.
+
+### Which events have default behaviors?
+
+| Event           | Default Behavior                                           |
+| --------------- | ---------------------------------------------------------- |
+| `prePlanner`    | Records stage start time                                   |
+| `postPlanner`   | Logs plan step count and planning duration                 |
+| `preExecutor`   | Records stage start time, resets step counter              |
+| `postStep`      | Logs per-step result (tool, status, duration, tokens)      |
+| `postExecutor`  | Logs execution summary (success count, duration, tokens)   |
+| `preEvaluator`  | Records stage start time                                   |
+| `postEvaluator` | Logs evaluation verdict, confidence, and budget (verbose)  |
+
+All default behaviors respect the configured `logging.level` — at `"minimal"`, they collect data but produce no console output. At `"standard"`, they print progress and timing. At `"verbose"`, they add token counts, output previews, and budget tracking. See [Configuration — Logging](./05-configuration.md#logging-configuration) for output examples at each level.
+
+### Accessing the default behavior factory
+
+For advanced use cases, the `createDefaultBehaviors` factory is exported from `@tepa/core`:
+
+```typescript
+import { createDefaultBehaviors } from "@tepa/core";
+```
+
+This lets you inspect, wrap, or extend individual default behaviors programmatically — though most users won't need this.
 
 ---
 

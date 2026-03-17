@@ -138,12 +138,12 @@ const tepa = new Tepa({
   tools: [...],
   events: {
     postPlanner: [
-      (plan, cycle) => {
+      (plan, cycle, ctx) => {
         console.log(`Cycle ${cycle.cycleNumber}: ${plan.steps.length} steps planned`);
       },
     ],
     postStep: [
-      (data, cycle) => {
+      (data, cycle, ctx) => {
         console.log(`Step ${data.step.id}: ${data.result.status}`);
       },
     ],
@@ -151,7 +151,7 @@ const tepa = new Tepa({
 });
 ```
 
-Every callback receives the pipeline data for that stage and a `CycleMetadata` object with `cycleNumber`, `totalCyclesUsed`, and `tokensUsed`.
+Every callback receives three arguments: the pipeline data for that stage, a `CycleMetadata` object with `cycleNumber`, `totalCyclesUsed`, and `tokensUsed`, and an `EventContext` that lets you control default behavior.
 
 Three things callbacks can do:
 
@@ -160,6 +160,8 @@ Three things callbacks can do:
 **Transform** — return a modified version of the data and it replaces the original for all subsequent callbacks in the chain. This means you can rewrite a plan before the Executor sees it, or adjust an evaluation verdict before it feeds back to the Planner.
 
 **Pause** — return a Promise. The framework awaits it. This is how human-in-the-loop workflows work: pause after planning, present the plan to a user for review, resume only after approval.
+
+Tepa also registers **default behaviors** for each event — built-in console logging that shows pipeline progress, timing, and token usage. These run automatically after your callbacks unless any callback calls `ctx.preventDefault()` to suppress them. This lets custom logging replace the defaults only when you explicitly opt out, and coexist with them otherwise. See [Event System Patterns — Default Behaviors and `preventDefault()`](./07-event-system-patterns.md#default-behaviors-and-preventdefault) for details.
 
 For deeper patterns — approval gates, safety filters, progress tracking, custom termination logic — see [Event System Patterns](./07-event-system-patterns.md).
 

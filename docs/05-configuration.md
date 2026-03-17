@@ -261,30 +261,48 @@ Increase this for pipelines that depend on external services with occasional tra
 
 The `level` setting controls how much the pipeline prints to the console. All three levels collect the same structured `LogEntry` data internally — the difference is only what appears on screen during a run.
 
+Default logging is implemented as **event default behaviors** — they run automatically after any user event callbacks. If you need to replace the default logging for a specific event, call `ctx.preventDefault()` in your event callback. See [Event System Patterns — Default Behaviors and `preventDefault()`](./07-event-system-patterns.md#default-behaviors-and-preventdefault) for details.
+
 ### `"minimal"`
 
 No console output. Log entries are still collected and available in `result.logs` after the run completes. Use this for production environments or when you're capturing logs programmatically.
 
 ### `"standard"` (default)
 
-Prints a line for each significant event — cycle starts, step executions, tool calls:
+Prints a pipeline banner, per-step progress with timing, stage summaries, and a final summary with model names:
 
 ```
-[cycle 1] [step step_1] (file_read) Reading source files
-[cycle 1] [step step_2] Analyzing code structure
-[cycle 1] [step step_3] (file_write) Writing report
+▶ Pipeline started — goal: "List the files in ./src..."
+  Tools: 4 | Limits: 5 cycles, 64000 tokens
+──────────────────────────────────────────────
+[cycle 1] Planning ··· 2 steps (5.4s)
+[cycle 1]   → step 1/2 (directory_list) ✓ 922ms
+[cycle 1]   → step 2/2 (file_write) ✓ 4.4s
+[cycle 1] Execution ··· 2/2 succeeded (5.3s)
+[cycle 1] Evaluation ··· pass · confidence 0.92 (2.3s)
+──────────────────────────────────────────────
+✔ Pipeline completed — pass · 1 cycle · 3774 tokens · 14.4s
+  Models: claude-sonnet-4-6, claude-haiku-4-5
 ```
-
-Format: `[cycle {N}] [step {ID}] ({tool}) {message}`
 
 ### `"verbose"`
 
-Everything in `"standard"`, plus duration and token usage for each entry:
+Everything in `"standard"`, plus token counts per step, output previews, token budget percentage, and a per-model token breakdown:
 
 ```
-[cycle 1] [step step_1] (file_read) Reading source files (245ms) [1200 tokens]
-[cycle 1] [step step_2] Analyzing code structure (1830ms) [3400 tokens]
-[cycle 1] [step step_3] (file_write) Writing report (520ms) [2100 tokens]
+▶ Pipeline started — goal: "List the files in ./src..."
+  Tools: 4 | Limits: 5 cycles, 64000 tokens
+──────────────────────────────────────────────
+[cycle 1] Planning ··· 3 steps (1285 tokens, 1.1s)
+[cycle 1]   → step 1/3 (directory_list) ✓ 1.3s [802 tokens] [{"name":"config.js"...
+[cycle 1]   → step 2/3 ✓ 9.3s [556 tokens] ## Analysis...
+[cycle 1]   → step 3/3 (file_write) ✓ 3.0s [1495 tokens] {"path":"./summary.md"...
+[cycle 1] Execution ··· 3/3 succeeded (2853 tokens, 13.6s)
+[cycle 1] Evaluation ··· pass · confidence 0.97 (1381 tokens, 2.6s)
+           Budget: 6915/64000 (10.8%)
+──────────────────────────────────────────────
+✔ Pipeline completed — pass · 1 cycle · 5534/64000 tokens (8.6%) · 22.8s
+  Models: claude-sonnet-4-6: 2681, claude-haiku-4-5: 2853
 ```
 
 Use this during development and debugging to understand where time and tokens are going.
