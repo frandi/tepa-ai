@@ -1,6 +1,6 @@
 {
   "name": "@tepa/types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared TypeScript type definitions for the Tepa agent pipeline",
   "license": "MIT",
   "author": "Frandi <frandi.tech@gmail.com>",

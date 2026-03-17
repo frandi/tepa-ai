@@ -1,6 +1,6 @@
 {
   "name": "@tepa/provider-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Base LLM provider with centralized retry logic and structured logging",
   "license": "MIT",
   "author": "Frandi <frandi.tech@gmail.com>",
@@ -54,7 +54,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tepa/types": "^0.1.0"
+    "@tepa/types": "^0.1.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

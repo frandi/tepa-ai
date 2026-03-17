@@ -1,6 +1,6 @@
 {
   "name": "@tepa/provider-openai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenAI LLM provider for the Tepa autonomous agent",
   "license": "MIT",
   "author": "Frandi <frandi.tech@gmail.com>",
@@ -55,8 +55,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tepa/types": "^0.1.0",
-    "@tepa/provider-core": "^0.1.0",
+    "@tepa/types": "^0.1.1",
+    "@tepa/provider-core": "^0.1.1",
     "openai": "^4.x"
   },
   "devDependencies": {
