@@ -6,10 +6,10 @@
   "author": "Frandi <frandi.tech@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/frandi/tepa-ai.git",
+    "url": "git+https://github.com/frandi/tepa-ai.git",
     "directory": "packages/tools"
   },
-  "homepage": "https://github.com/frandi/tepa-ai/tree/main/packages/tools#readme",
+  "homepage": "https://tepa-ai.dev",
   "bugs": {
     "url": "https://github.com/frandi/tepa-ai/issues"
   },
