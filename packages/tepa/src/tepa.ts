@@ -24,6 +24,7 @@ import { TokenTracker } from "./utils/token-tracker.js";
 import { Logger } from "./utils/logger.js";
 import { TepaTokenBudgetExceeded, TepaError } from "./utils/errors.js";
 import { EventBus } from "./events/event-bus.js";
+import { createDefaultBehaviors } from "./events/default-behaviors.js";
 
 /** Options for constructing a Tepa pipeline instance. */
 export interface TepaOptions {
@@ -124,7 +125,8 @@ export class Tepa {
     const scratchpad = new Scratchpad();
     const tokenTracker = new TokenTracker(this.config.limits.maxTokens);
     const logger = new Logger(this.config.logging);
-    const eventBus = new EventBus(this.eventMap);
+    const defaults = createDefaultBehaviors(logger, this.config);
+    const eventBus = new EventBus(this.eventMap, defaults);
 
     const planner = new Planner(
       this.provider,
@@ -140,6 +142,16 @@ export class Tepa {
     let lastResults: ExecutionResult[] = [];
     let lastEvaluation: EvaluationResult | undefined;
     let cyclesUsed = 0;
+    let resultStatus: "pass" | "fail" | "terminated" = "fail";
+
+    const pipelineStart = Date.now();
+
+    logger.banner("start", {
+      goal: prompt.goal,
+      maxCycles: this.config.limits.maxCycles,
+      maxTokens: this.config.limits.maxTokens,
+      toolCount: this.tools.length,
+    });
 
     try {
       for (let cycle = 1; cycle <= this.config.limits.maxCycles; cycle++) {
@@ -160,12 +172,7 @@ export class Tepa {
           plannerInput.feedback,
           scratchpad,
         );
-        tokenTracker.add(planResult.tokensUsed);
-
-        logger.log({
-          cycle,
-          message: `Plan generated with ${planResult.plan.steps.length} steps (${planResult.tokensUsed} tokens)`,
-        });
+        tokenTracker.add(planResult.tokensUsed, this.config.model.planner);
 
         const plan = await eventBus.run("postPlanner", planResult.plan, cycleMeta);
 
@@ -190,13 +197,8 @@ export class Tepa {
           eventBus,
           cycleMeta,
         );
-        tokenTracker.add(executorOutput.tokensUsed);
+        tokenTracker.add(executorOutput.tokensUsed, this.config.model.executor);
         allLogs.push(...executorOutput.logs);
-
-        logger.log({
-          cycle,
-          message: `Execution complete: ${executorOutput.results.filter((r) => r.status === "success").length}/${executorOutput.results.length} steps succeeded (${executorOutput.tokensUsed} tokens)`,
-        });
 
         const executorResult = await eventBus.run("postExecutor", executorOutput, cycleMeta);
         lastResults = executorResult.results;
@@ -225,16 +227,18 @@ export class Tepa {
           evaluatorInput.results,
           evaluatorInput.scratchpad,
         );
-        tokenTracker.add(evaluation.tokensUsed);
+        tokenTracker.add(evaluation.tokensUsed, this.config.model.evaluator);
 
-        logger.log({
-          cycle,
-          message: `Evaluation: ${evaluation.verdict} (confidence: ${evaluation.confidence}, ${evaluation.tokensUsed} tokens)`,
-        });
+        // Update cycle metadata with latest token count for postEvaluator
+        const updatedCycleMeta: CycleMetadata = {
+          ...cycleMeta,
+          tokensUsed: tokenTracker.getUsed(),
+        };
 
-        lastEvaluation = await eventBus.run("postEvaluator", evaluation, cycleMeta);
+        lastEvaluation = await eventBus.run("postEvaluator", evaluation, updatedCycleMeta);
 
         if (lastEvaluation.verdict === "pass") {
+          resultStatus = "pass";
           return {
             status: "pass",
             cycles: cyclesUsed,
@@ -250,6 +254,7 @@ export class Tepa {
       }
 
       // Max cycles exhausted
+      resultStatus = "fail";
       return {
         status: "fail",
         cycles: cyclesUsed,
@@ -262,6 +267,7 @@ export class Tepa {
       };
     } catch (error) {
       if (error instanceof TepaTokenBudgetExceeded) {
+        resultStatus = "terminated";
         return {
           status: "terminated",
           cycles: cyclesUsed,
@@ -275,6 +281,7 @@ export class Tepa {
       // Pipeline component errors (planner parse failures, cycle errors, etc.)
       // return a structured failure rather than crashing
       if (error instanceof TepaError) {
+        resultStatus = "fail";
         return {
           status: "fail",
           cycles: cyclesUsed,
@@ -288,6 +295,17 @@ export class Tepa {
       throw new TepaError(
         `Pipeline failed: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      const durationMs = Date.now() - pipelineStart;
+      logger.banner("end", {
+        status: resultStatus,
+        cycles: cyclesUsed,
+        tokensUsed: tokenTracker.getUsed(),
+        maxTokens: this.config.limits.maxTokens,
+        durationMs,
+        models: tokenTracker.getModels(),
+        tokensByModel: tokenTracker.getByModel(),
+      });
     }
   }
 }

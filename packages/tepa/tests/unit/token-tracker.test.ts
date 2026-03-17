@@ -57,4 +57,43 @@ describe("TokenTracker", () => {
     tracker.add(50);
     expect(tracker.isExhausted()).toBe(true);
   });
+
+  it("tracks tokens by model name", () => {
+    const tracker = new TokenTracker(10000);
+    tracker.add(500, "claude-sonnet-4-6");
+    tracker.add(300, "claude-haiku-4-5");
+    tracker.add(200, "claude-sonnet-4-6");
+
+    const byModel = tracker.getByModel();
+    expect(byModel.get("claude-sonnet-4-6")).toBe(700);
+    expect(byModel.get("claude-haiku-4-5")).toBe(300);
+    expect(tracker.getUsed()).toBe(1000);
+  });
+
+  it("returns unique model names in order of first use", () => {
+    const tracker = new TokenTracker(10000);
+    tracker.add(100, "model-a");
+    tracker.add(200, "model-b");
+    tracker.add(300, "model-a");
+
+    expect(tracker.getModels()).toEqual(["model-a", "model-b"]);
+  });
+
+  it("getByModel returns a copy", () => {
+    const tracker = new TokenTracker(10000);
+    tracker.add(100, "model-a");
+    const byModel = tracker.getByModel();
+    byModel.set("model-a", 999);
+    expect(tracker.getByModel().get("model-a")).toBe(100);
+  });
+
+  it("add without model still tracks total but not per-model", () => {
+    const tracker = new TokenTracker(10000);
+    tracker.add(100);
+    tracker.add(200, "model-a");
+
+    expect(tracker.getUsed()).toBe(300);
+    expect(tracker.getByModel().size).toBe(1);
+    expect(tracker.getByModel().get("model-a")).toBe(200);
+  });
 });

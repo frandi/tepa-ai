@@ -9,6 +9,7 @@ export {
 
 // Events
 export { EventBus } from "./events/event-bus.js";
+export { createDefaultBehaviors } from "./events/default-behaviors.js";
 
 // Config
 export { defineConfig } from "./config/define-config.js";
