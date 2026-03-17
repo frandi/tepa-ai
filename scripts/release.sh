@@ -130,6 +130,9 @@ else
   else
     git tag -a "$TAG" -m "Release $TAG"
     success "Created tag $TAG"
+
+    git push origin "$TAG"
+    success "Pushed tag $TAG to remote"
   fi
 fi
 
@@ -147,9 +150,6 @@ else
     --title "$TAG" \
     --notes-file "$NOTES_FILE"
   success "Created GitHub Release $TAG"
-
-  git push origin "$TAG"
-  success "Pushed tag $TAG to remote"
 fi
 
 # ─── Cleanup ─────────────────────────────────────────────────
