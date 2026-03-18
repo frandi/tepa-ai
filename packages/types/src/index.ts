@@ -29,12 +29,15 @@ export type {
 
 export type {
   EventName,
+  EventContext,
   EventCallback,
   EventRegistration,
   EventMap,
   CycleMetadata,
   PreStepPayload,
   PostStepPayload,
+  DefaultBehaviorCallback,
+  DefaultBehaviorMap,
 } from "./event.js";
 
 export type { TepaResult, OutputArtifact, LogEntry } from "./result.js";

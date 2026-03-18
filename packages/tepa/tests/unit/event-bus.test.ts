@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { CycleMetadata, EventMap } from "@tepa/types";
+import type { CycleMetadata, EventMap, EventContext, DefaultBehaviorMap } from "@tepa/types";
 import { EventBus } from "../../src/events/event-bus.js";
 
 const baseCycle: CycleMetadata = {
@@ -43,7 +43,7 @@ describe("EventBus", () => {
       const data = { key: "value" };
       const result = await bus.run("preExecutor", data, baseCycle);
       expect(result).toBe(data);
-      expect(spy).toHaveBeenCalledWith(data, baseCycle);
+      expect(spy).toHaveBeenCalledWith(data, baseCycle, expect.any(Object));
     });
 
     it("callback returning void passes data through unchanged", async () => {
@@ -208,8 +208,213 @@ describe("EventBus", () => {
 
       await bus.run("prePlanner", "data", cycle);
 
-      expect(spy1).toHaveBeenCalledWith("data", cycle);
-      expect(spy2).toHaveBeenCalledWith("data", cycle);
+      expect(spy1).toHaveBeenCalledWith("data", cycle, expect.any(Object));
+      expect(spy2).toHaveBeenCalledWith("data", cycle, expect.any(Object));
+    });
+  });
+
+  describe("run — EventContext and preventDefault", () => {
+    it("passes EventContext as 3rd argument to callbacks", async () => {
+      const spy = vi.fn();
+      const events: EventMap = {
+        postPlanner: [spy],
+      };
+      const bus = new EventBus(events);
+
+      await bus.run("postPlanner", "data", baseCycle);
+
+      expect(spy).toHaveBeenCalledWith(
+        "data",
+        baseCycle,
+        expect.objectContaining({
+          eventName: "postPlanner",
+          defaultPrevented: false,
+          preventDefault: expect.any(Function),
+        }),
+      );
+    });
+
+    it("EventContext.eventName matches the event being fired", async () => {
+      let capturedContext: EventContext | undefined;
+      const events: EventMap = {
+        preStep: [
+          (_data: unknown, _cycle: unknown, ctx?: EventContext) => {
+            capturedContext = ctx;
+          },
+        ],
+      };
+      const bus = new EventBus(events);
+
+      await bus.run("preStep", {}, baseCycle);
+
+      expect(capturedContext?.eventName).toBe("preStep");
+    });
+
+    it("default behavior runs when no user callbacks are registered", async () => {
+      const defaultSpy = vi.fn();
+      const defaults: DefaultBehaviorMap = {
+        postPlanner: defaultSpy,
+      };
+      const bus = new EventBus(undefined, defaults);
+
+      await bus.run("postPlanner", "plan-data", baseCycle);
+
+      expect(defaultSpy).toHaveBeenCalledWith("plan-data", baseCycle);
+    });
+
+    it("default behavior runs after user callbacks", async () => {
+      const order: string[] = [];
+      const events: EventMap = {
+        postPlanner: [
+          () => {
+            order.push("user");
+          },
+        ],
+      };
+      const defaults: DefaultBehaviorMap = {
+        postPlanner: () => {
+          order.push("default");
+        },
+      };
+      const bus = new EventBus(events, defaults);
+
+      await bus.run("postPlanner", "data", baseCycle);
+
+      expect(order).toEqual(["user", "default"]);
+    });
+
+    it("default behavior receives the final transformed data", async () => {
+      const defaultSpy = vi.fn();
+      const events: EventMap = {
+        postPlanner: [(data: unknown) => (data as number) + 10],
+      };
+      const defaults: DefaultBehaviorMap = {
+        postPlanner: defaultSpy,
+      };
+      const bus = new EventBus(events, defaults);
+
+      await bus.run("postPlanner", 5, baseCycle);
+
+      expect(defaultSpy).toHaveBeenCalledWith(15, baseCycle);
+    });
+
+    it("preventDefault() suppresses the default behavior", async () => {
+      const defaultSpy = vi.fn();
+      const events: EventMap = {
+        postStep: [
+          (_data: unknown, _cycle: unknown, ctx?: EventContext) => {
+            ctx?.preventDefault();
+          },
+        ],
+      };
+      const defaults: DefaultBehaviorMap = {
+        postStep: defaultSpy,
+      };
+      const bus = new EventBus(events, defaults);
+
+      await bus.run("postStep", "data", baseCycle);
+
+      expect(defaultSpy).not.toHaveBeenCalled();
+    });
+
+    it("preventDefault() in one callback suppresses default even if later callbacks don't call it", async () => {
+      const defaultSpy = vi.fn();
+      const events: EventMap = {
+        postExecutor: [
+          (_data: unknown, _cycle: unknown, ctx?: EventContext) => {
+            ctx?.preventDefault();
+          },
+          () => {
+            // second callback does not call preventDefault
+          },
+        ],
+      };
+      const defaults: DefaultBehaviorMap = {
+        postExecutor: defaultSpy,
+      };
+      const bus = new EventBus(events, defaults);
+
+      await bus.run("postExecutor", "data", baseCycle);
+
+      expect(defaultSpy).not.toHaveBeenCalled();
+    });
+
+    it("not calling preventDefault() allows default behavior to run", async () => {
+      const defaultSpy = vi.fn();
+      const events: EventMap = {
+        postPlanner: [
+          () => {
+            // user callback, does NOT call preventDefault
+          },
+        ],
+      };
+      const defaults: DefaultBehaviorMap = {
+        postPlanner: defaultSpy,
+      };
+      const bus = new EventBus(events, defaults);
+
+      await bus.run("postPlanner", "data", baseCycle);
+
+      expect(defaultSpy).toHaveBeenCalledOnce();
+    });
+
+    it("default behavior does NOT transform data (side-effect only)", async () => {
+      const defaults: DefaultBehaviorMap = {
+        postPlanner: () => {
+          // side effect only, return value ignored
+        },
+      };
+      const bus = new EventBus(undefined, defaults);
+
+      const result = await bus.run("postPlanner", "original", baseCycle);
+
+      expect(result).toBe("original");
+    });
+
+    it("defaultPrevented reflects state after preventDefault() is called", async () => {
+      let beforePrevent = false;
+      let afterPrevent = false;
+
+      const events: EventMap = {
+        postPlanner: [
+          (_data: unknown, _cycle: unknown, ctx?: EventContext) => {
+            beforePrevent = ctx?.defaultPrevented ?? false;
+            ctx?.preventDefault();
+            afterPrevent = ctx?.defaultPrevented ?? false;
+          },
+        ],
+      };
+      const bus = new EventBus(events);
+
+      await bus.run("postPlanner", "data", baseCycle);
+
+      expect(beforePrevent).toBe(false);
+      expect(afterPrevent).toBe(true);
+    });
+
+    it("backward compatibility: callbacks with 2 args still work", async () => {
+      const events: EventMap = {
+        prePlanner: [(data: unknown, _cycle: CycleMetadata) => `${data as string}_ok`],
+      };
+      const bus = new EventBus(events);
+
+      const result = await bus.run("prePlanner", "test", baseCycle);
+      expect(result).toBe("test_ok");
+    });
+
+    it("async default behavior is awaited", async () => {
+      let executed = false;
+      const defaults: DefaultBehaviorMap = {
+        postEvaluator: async () => {
+          await new Promise((r) => setTimeout(r, 10));
+          executed = true;
+        },
+      };
+      const bus = new EventBus(undefined, defaults);
+
+      await bus.run("postEvaluator", "data", baseCycle);
+
+      expect(executed).toBe(true);
     });
   });
 });

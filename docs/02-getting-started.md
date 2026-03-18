@@ -122,7 +122,24 @@ Save this as `pipeline.js`, then run it:
     node pipeline.js
     ```
 
-No plan to write. No retry logic to implement. No output to parse. Tepa planned the steps, executed them using the tools you registered, evaluated the result against your `expectedOutput`, and gave you a verdict.
+You should see output like this in your terminal:
+
+```
+▶ Pipeline started — goal: "List the files in ./src and write a brief summary of the pro..."
+  Tools: 4 | Limits: 5 cycles, 64000 tokens
+──────────────────────────────────────────────
+[cycle 1] Planning ··· 2 steps (5.4s)
+[cycle 1]   → step 1/2 (directory_list) ✓ 922ms
+[cycle 1]   → step 2/2 (file_write) ✓ 4.4s
+[cycle 1] Execution ··· 2/2 succeeded (5.3s)
+[cycle 1] Evaluation ··· pass · confidence 0.92 (2.3s)
+──────────────────────────────────────────────
+✔ Pipeline completed — pass · 1 cycle · 3774 tokens · 14.4s
+  Models: claude-sonnet-4-6, claude-haiku-4-5
+pass
+```
+
+No plan to write. No retry logic to implement. No output to parse. Tepa planned the steps, executed them using the tools you registered, evaluated the result against your `expectedOutput`, and gave you a verdict — with real-time progress visible in the console.
 
 ### Swapping Providers
 

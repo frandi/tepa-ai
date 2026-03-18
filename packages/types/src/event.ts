@@ -28,9 +28,16 @@ export interface CycleMetadata {
   tokensUsed: number;
 }
 
+export interface EventContext {
+  readonly eventName: EventName;
+  preventDefault(): void;
+  readonly defaultPrevented: boolean;
+}
+
 export type EventCallback<TData = unknown> = (
   data: TData,
   cycle: CycleMetadata,
+  context?: EventContext,
 ) => TData | void | Promise<TData | void>;
 
 export interface EventRegistration<TData = unknown> {
@@ -40,4 +47,13 @@ export interface EventRegistration<TData = unknown> {
 
 export type EventMap = {
   [K in EventName]?: Array<EventCallback | EventRegistration>;
+};
+
+export type DefaultBehaviorCallback<TData = unknown> = (
+  data: TData,
+  cycle: CycleMetadata,
+) => void | Promise<void>;
+
+export type DefaultBehaviorMap = {
+  [K in EventName]?: DefaultBehaviorCallback;
 };
