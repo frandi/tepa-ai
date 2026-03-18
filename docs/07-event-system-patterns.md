@@ -138,15 +138,15 @@ Once `preventDefault()` is called, it cannot be undone for that event invocation
 
 ### Which events have default behaviors?
 
-| Event           | Default Behavior                                           |
-| --------------- | ---------------------------------------------------------- |
-| `prePlanner`    | Records stage start time                                   |
-| `postPlanner`   | Logs plan step count and planning duration                 |
-| `preExecutor`   | Records stage start time, resets step counter              |
-| `postStep`      | Logs per-step result (tool, status, duration, tokens)      |
-| `postExecutor`  | Logs execution summary (success count, duration, tokens)   |
-| `preEvaluator`  | Records stage start time                                   |
-| `postEvaluator` | Logs evaluation verdict, confidence, and budget (verbose)  |
+| Event           | Default Behavior                                          |
+| --------------- | --------------------------------------------------------- |
+| `prePlanner`    | Records stage start time                                  |
+| `postPlanner`   | Logs plan step count and planning duration                |
+| `preExecutor`   | Records stage start time, resets step counter             |
+| `postStep`      | Logs per-step result (tool, status, duration, tokens)     |
+| `postExecutor`  | Logs execution summary (success count, duration, tokens)  |
+| `preEvaluator`  | Records stage start time                                  |
+| `postEvaluator` | Logs evaluation verdict, confidence, and budget (verbose) |
 
 All default behaviors respect the configured `logging.level` — at `"minimal"`, they collect data but produce no console output. At `"standard"`, they print progress and timing. At `"verbose"`, they add token counts, output previews, and budget tracking. See [Configuration — Logging](./05-configuration.md#logging-configuration) for output examples at each level.
 
