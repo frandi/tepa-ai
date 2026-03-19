@@ -14,7 +14,7 @@ dotenv.config({ path: path.join(demoRoot, ".env") });
 import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import { fileReadTool, fileWriteTool, directoryListTool, scratchpadTool } from "@tepa/tools";
-import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
+import { OpenAIProvider, OpenAIModels } from "@tepa/provider-openai";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -52,13 +52,12 @@ async function main() {
   // Create the Tepa pipeline
   const tepa = new Tepa({
     tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
-    provider: new AnthropicProvider(),
+    provider: new OpenAIProvider(),
     config: {
       model: {
-        planner: AnthropicModels.Claude_Sonnet_4_6,
-        executor: AnthropicModels.Claude_Haiku_4_5,
-        evaluator: AnthropicModels.Claude_Sonnet_4_6,
-        // No allowedModels — planner has full access to all Anthropic models
+        planner: OpenAIModels.GPT_5,
+        executor: OpenAIModels.GPT_5_Mini,
+        evaluator: OpenAIModels.GPT_5,
       },
       limits: {
         maxCycles: 3,
@@ -182,10 +181,10 @@ main().catch((error) => {
 
   if (/api key/i.test(message) || /authentication failed/i.test(message)) {
     console.error(
-      "\nTo fix this, set up your Anthropic API key:\n" +
-        "  1. Get your key at https://console.anthropic.com/settings/keys\n" +
+      "\nTo fix this, set up your OpenAI API key:\n" +
+        "  1. Get your key at https://platform.openai.com/api-keys\n" +
         "  2. Create a .env file in this demo directory with:\n" +
-        "     ANTHROPIC_API_KEY=sk-ant-...\n",
+        "     OPENAI_API_KEY=sk-...\n",
     );
   }
 

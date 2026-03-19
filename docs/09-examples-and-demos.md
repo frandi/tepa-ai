@@ -452,7 +452,7 @@ This demo uses the fewest tools — it's primarily an LLM reasoning task. The sc
 ```typescript
 const tepa = new Tepa({
   tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
-  provider: new AnthropicProvider(),
+  provider: new OpenAIProvider(),
   config: {
     limits: {
       maxCycles: 3,
