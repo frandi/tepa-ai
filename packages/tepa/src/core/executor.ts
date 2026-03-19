@@ -376,6 +376,7 @@ export class Executor {
           model: step.model ?? this.model,
           systemPrompt: buildToolUseSystemPrompt(),
           tools: [toolSchema],
+          toolChoice: { name: toolName },
         });
 
         totalTokens += response.tokensUsed.input + response.tokensUsed.output;

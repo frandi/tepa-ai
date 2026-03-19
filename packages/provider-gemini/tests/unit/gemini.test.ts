@@ -38,11 +38,19 @@ function makeSuccessResponse(
   finishReason = "STOP",
 ) {
   return {
-    text,
-    candidates: [{ finishReason }],
+    candidates: [
+      {
+        content: { parts: [{ text }], role: "model" },
+        finishReason,
+      },
+    ],
     usageMetadata: {
       promptTokenCount: promptTokens,
       candidatesTokenCount: candidateTokens,
+    },
+    // SDK getter — used by doComplete()
+    get functionCalls() {
+      return undefined;
     },
   };
 }
@@ -95,7 +103,7 @@ describe("GeminiProvider", () => {
       await provider.complete([{ role: "user", content: "Hi" }], { model: "" });
 
       const callArgs = mockGenerateContent.mock.calls[0]![0];
-      expect(callArgs.model).toBe("gemini-3-flash-preview");
+      expect(callArgs.model).toBe("gemini-2.5-flash");
     });
 
     it("uses default maxOutputTokens when not specified", async () => {
@@ -343,7 +351,7 @@ describe("GeminiProvider", () => {
 
       const ids = models.map((m) => m.id);
       expect(ids).toContain("gemini-3-flash-preview");
-      expect(ids).toContain("gemini-3-pro-preview");
+      expect(ids).toContain("gemini-3.1-pro-preview");
     });
 
     it("returns models with valid tier and description", () => {
