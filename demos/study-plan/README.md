@@ -40,10 +40,10 @@ This demo uses two event hooks to insert human checkpoints:
 
 ## Running
 
-Requires an `ANTHROPIC_API_KEY` environment variable. Create a `.env` file in this directory:
+Requires an `OPENAI_API_KEY` environment variable. Create a `.env` file in this directory:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
 ```
 
 Then use the run script, which cleans previously generated output before starting:
