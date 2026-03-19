@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
 import {
   toOpenAIInput,
@@ -9,6 +9,7 @@ import {
   extractToolUse,
   type ResponseOutput,
 } from "./formatting.js";
+import { OPENAI_MODEL_CATALOG } from "./models.js";
 
 const DEFAULT_MODEL = "gpt-5-mini";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -21,6 +22,7 @@ export interface OpenAIProviderOptions extends BaseLLMProviderOptions {
 /** LLM provider implementation for OpenAI models using the Responses API. */
 export class OpenAIProvider extends BaseLLMProvider {
   protected readonly providerName = "openai";
+  protected readonly models: ModelInfo[] = OPENAI_MODEL_CATALOG;
   private readonly client: OpenAI;
 
   constructor(options: OpenAIProviderOptions = {}) {

@@ -14,7 +14,7 @@ dotenv.config({ path: path.join(demoRoot, ".env") });
 import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import { fileReadTool, fileWriteTool, directoryListTool, scratchpadTool } from "@tepa/tools";
-import { AnthropicProvider } from "@tepa/provider-anthropic";
+import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -54,6 +54,12 @@ async function main() {
     tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
     provider: new AnthropicProvider(),
     config: {
+      model: {
+        planner: AnthropicModels.Claude_Sonnet_4_6,
+        executor: AnthropicModels.Claude_Haiku_4_5,
+        evaluator: AnthropicModels.Claude_Sonnet_4_6,
+        // No allowedModels — planner has full access to all Anthropic models
+      },
       limits: {
         maxCycles: 3,
         maxTokens: 250_000,

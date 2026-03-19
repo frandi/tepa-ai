@@ -171,10 +171,15 @@ To create a custom provider with built-in retry and logging support:
 
 ```typescript
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 
 export class MyProvider extends BaseLLMProvider {
   protected readonly providerName = "my-provider";
+
+  protected readonly models: ModelInfo[] = [
+    { id: "my-model-fast", tier: "fast", description: "Fast model for simple tasks." },
+    { id: "my-model-pro", tier: "advanced", description: "Capable model for complex reasoning." },
+  ];
 
   constructor(options?: BaseLLMProviderOptions) {
     super(options);

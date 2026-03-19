@@ -4,6 +4,7 @@ import type {
   LLMResponse,
   LLMMessage,
   LLMRequestOptions,
+  ModelInfo,
   ToolDefinition,
   TepaPrompt,
   CycleMetadata,
@@ -62,6 +63,11 @@ function makeEvalJson(verdict: "pass" | "fail", extra: Record<string, unknown> =
   return JSON.stringify({ ...base, ...extra });
 }
 
+const defaultModelCatalog: ModelInfo[] = [
+  { id: "claude-haiku-4-5", tier: "fast", description: "Fast model." },
+  { id: "claude-sonnet-4-6", tier: "balanced", description: "Balanced model." },
+];
+
 function createMockProvider(responses: LLMResponse[]): LLMProvider {
   let callIndex = 0;
   return {
@@ -73,6 +79,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
+    getModels: vi.fn(() => defaultModelCatalog),
   };
 }
 

@@ -15,6 +15,7 @@ export { createDefaultBehaviors } from "./events/default-behaviors.js";
 export { defineConfig } from "./config/define-config.js";
 export { loadConfig } from "./config/loader.js";
 export { DEFAULT_CONFIG } from "./config/defaults.js";
+export { resolveModelCatalog } from "./config/model-catalog.js";
 
 // Prompt
 export { validatePrompt } from "./prompt/validator.js";

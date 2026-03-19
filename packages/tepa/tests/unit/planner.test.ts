@@ -10,16 +10,19 @@ import type {
   TepaPrompt,
   Plan,
 } from "@tepa/types";
-import type { ModelConfig } from "@tepa/types";
+import type { ModelInfo } from "@tepa/types";
 import { Planner, _extractJson, _validatePlanStructure } from "../../src/core/planner.js";
 import { Scratchpad } from "../../src/core/scratchpad.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
 
-const defaultModelConfig: ModelConfig = {
-  planner: "claude-sonnet-4-20250514",
-  executor: "claude-haiku-4-5",
-  evaluator: "claude-sonnet-4-20250514",
-};
+const defaultModelCatalog: ModelInfo[] = [
+  { id: "claude-haiku-4-5", tier: "fast", description: "Fast model for simple tasks." },
+  {
+    id: "claude-sonnet-4-20250514",
+    tier: "balanced",
+    description: "Balanced model for planning and analysis.",
+  },
+];
 
 // --- Helpers ---
 
@@ -34,6 +37,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
+    getModels: vi.fn(() => defaultModelCatalog),
   };
 }
 
@@ -223,6 +227,62 @@ describe("validatePlanStructure", () => {
     };
     expect(() => _validatePlanStructure(data)).toThrow('unknown dependency "step_99"');
   });
+
+  it("accepts step model that is in the allowed set", () => {
+    const allowed = new Set(["model-a", "model-b"]);
+    const data = {
+      reasoning: "ok",
+      estimatedTokens: 100,
+      steps: [
+        {
+          id: "step_1",
+          description: "d",
+          tools: [],
+          expectedOutcome: "e",
+          dependencies: [],
+          model: "model-a",
+        },
+      ],
+    };
+    expect(() => _validatePlanStructure(data, allowed)).not.toThrow();
+  });
+
+  it("rejects step model not in the allowed set", () => {
+    const allowed = new Set(["model-a", "model-b"]);
+    const data = {
+      reasoning: "ok",
+      estimatedTokens: 100,
+      steps: [
+        {
+          id: "step_1",
+          description: "d",
+          tools: [],
+          expectedOutcome: "e",
+          dependencies: [],
+          model: "model-z",
+        },
+      ],
+    };
+    expect(() => _validatePlanStructure(data, allowed)).toThrow("not in the allowed model catalog");
+  });
+
+  it("skips model validation when allowedModelIds is not provided", () => {
+    const data = {
+      reasoning: "ok",
+      estimatedTokens: 100,
+      steps: [
+        {
+          id: "step_1",
+          description: "d",
+          tools: [],
+          expectedOutcome: "e",
+          dependencies: [],
+          model: "any-model",
+        },
+      ],
+    };
+    expect(() => _validatePlanStructure(data)).not.toThrow();
+  });
 });
 
 describe("Planner", () => {
@@ -239,7 +299,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
@@ -259,7 +320,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(samplePrompt);
@@ -277,7 +339,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(samplePrompt);
@@ -291,7 +354,13 @@ describe("Planner", () => {
 
     it("uses the specified model", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(provider, registry, "claude-haiku-3", defaultModelConfig);
+      const planner = new Planner(
+        provider,
+        registry,
+        "claude-haiku-3",
+        defaultModelCatalog,
+        "claude-haiku-4-5",
+      );
 
       await planner.plan(samplePrompt);
 
@@ -315,7 +384,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(promptWithArray);
@@ -353,7 +423,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(
@@ -371,7 +442,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(samplePrompt, "Missing test execution step");
@@ -388,7 +460,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
       const scratchpad = new Scratchpad();
       scratchpad.write("_execution_summary", [
@@ -415,7 +488,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(samplePrompt, "Some feedback");
@@ -429,7 +503,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(samplePrompt, "Some feedback");
@@ -451,7 +526,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
@@ -471,7 +547,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await planner.plan(samplePrompt);
@@ -496,7 +573,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await expect(planner.plan(samplePrompt)).rejects.toSatisfy((err: unknown) => {
@@ -513,7 +591,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(samplePrompt);
@@ -529,7 +608,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(samplePrompt);
@@ -545,7 +625,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(samplePrompt);
@@ -573,7 +654,8 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       await expect(planner.plan(samplePrompt)).rejects.toThrow(TepaCycleError);
@@ -603,13 +685,56 @@ describe("Planner", () => {
         provider,
         registry,
         "claude-sonnet-4-20250514",
-        defaultModelConfig,
+        defaultModelCatalog,
+        "claude-haiku-4-5",
       );
 
       const { plan } = await planner.plan(samplePrompt);
 
       expect(plan.steps[0]!.tools).toEqual([]);
       expect(plan.steps).toHaveLength(2);
+    });
+  });
+
+  describe("plan — model catalog in system prompt", () => {
+    it("includes all catalog model descriptions in the system prompt", async () => {
+      const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
+      const planner = new Planner(
+        provider,
+        registry,
+        "claude-sonnet-4-20250514",
+        defaultModelCatalog,
+        "claude-haiku-4-5",
+      );
+
+      await planner.plan(samplePrompt);
+
+      const callArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const options = callArgs[1] as LLMRequestOptions;
+      expect(options.systemPrompt).toContain("claude-haiku-4-5");
+      expect(options.systemPrompt).toContain("claude-sonnet-4-20250514");
+      expect(options.systemPrompt).toContain("[fast]");
+      expect(options.systemPrompt).toContain("[balanced]");
+      expect(options.systemPrompt).toContain("(DEFAULT)");
+    });
+
+    it("marks the default model with (DEFAULT)", async () => {
+      const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
+      const planner = new Planner(
+        provider,
+        registry,
+        "claude-sonnet-4-20250514",
+        defaultModelCatalog,
+        "claude-haiku-4-5",
+      );
+
+      await planner.plan(samplePrompt);
+
+      const callArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const options = callArgs[1] as LLMRequestOptions;
+      // DEFAULT should be next to the default model, not the other one
+      expect(options.systemPrompt).toMatch(/claude-haiku-4-5.*\(DEFAULT\)/);
+      expect(options.systemPrompt).not.toMatch(/claude-sonnet-4-20250514.*\(DEFAULT\)/);
     });
   });
 });

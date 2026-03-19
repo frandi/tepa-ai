@@ -6,9 +6,14 @@ import type {
   LLMRequestOptions,
   TepaPrompt,
   ExecutionResult,
+  ModelInfo,
 } from "@tepa/types";
 import { Evaluator, _parseEvalResult } from "../../src/core/evaluator.js";
 import { Scratchpad } from "../../src/core/scratchpad.js";
+
+const defaultModelCatalog: ModelInfo[] = [
+  { id: "test-model", tier: "fast", description: "Test model." },
+];
 
 // --- Helpers ---
 
@@ -23,6 +28,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
+    getModels: vi.fn(() => defaultModelCatalog),
   };
 }
 

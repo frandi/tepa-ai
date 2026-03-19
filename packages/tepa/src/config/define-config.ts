@@ -7,6 +7,7 @@ const modelConfigSchema = z.object({
   planner: z.string().min(1),
   executor: z.string().min(1),
   evaluator: z.string().min(1),
+  allowedModels: z.array(z.string().min(1)).optional(),
 });
 
 const limitsConfigSchema = z.object({

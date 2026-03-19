@@ -5,6 +5,7 @@ import type {
   LLMResponse,
   LLMLogEntry,
   LLMLogCallback,
+  ModelInfo,
 } from "@tepa/types";
 import { createFileLogWriter } from "./file-log-writer.js";
 
@@ -49,6 +50,9 @@ export abstract class BaseLLMProvider implements LLMProvider {
   /** Provider identifier, e.g. "anthropic", "openai", "gemini" */
   protected abstract readonly providerName: string;
 
+  /** Model catalog this provider supports. */
+  protected abstract readonly models: ModelInfo[];
+
   /** Execute the actual API call. Providers implement this without retry logic. */
   protected abstract doComplete(
     messages: LLMMessage[],
@@ -86,6 +90,11 @@ export abstract class BaseLLMProvider implements LLMProvider {
   /** Get the path to the log file, if file logging is enabled. */
   getLogFilePath(): string | undefined {
     return this._logFilePath;
+  }
+
+  /** Return the models this provider supports (defensive copy). */
+  getModels(): ModelInfo[] {
+    return [...this.models];
   }
 
   async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse> {

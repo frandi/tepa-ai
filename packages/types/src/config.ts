@@ -2,6 +2,8 @@ export interface ModelConfig {
   planner: string;
   executor: string;
   evaluator: string;
+  /** Optional whitelist of model IDs the planner may assign to steps. If omitted, all provider models are available. */
+  allowedModels?: string[];
 }
 
 export interface LimitsConfig {

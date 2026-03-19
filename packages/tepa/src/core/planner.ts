@@ -4,7 +4,7 @@ import type {
   ToolRegistry,
   ToolSchema,
   TepaPrompt,
-  ModelConfig,
+  ModelInfo,
   Plan,
   PlanStep,
 } from "@tepa/types";
@@ -12,9 +12,34 @@ import type { Scratchpad } from "./scratchpad.js";
 import { TepaCycleError } from "../utils/errors.js";
 
 /**
+ * Render the model catalog section for the planner system prompt.
+ */
+function renderModelCatalog(modelCatalog: ModelInfo[], defaultModelId: string): string {
+  const tierOrder: Record<string, number> = { fast: 0, balanced: 1, advanced: 2 };
+  const sorted = [...modelCatalog].sort(
+    (a, b) => (tierOrder[a.tier] ?? 99) - (tierOrder[b.tier] ?? 99),
+  );
+
+  return sorted
+    .map((m) => {
+      const caps =
+        m.capabilities && m.capabilities.length > 0
+          ? ` Capabilities: ${m.capabilities.join(", ")}.`
+          : "";
+      const def = m.id === defaultModelId ? " (DEFAULT)" : "";
+      return `- "${m.id}" [${m.tier}]: ${m.description}${caps}${def}`;
+    })
+    .join("\n");
+}
+
+/**
  * Build the system prompt for initial planning.
  */
-function buildPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConfig): string {
+function buildPlanSystemPrompt(
+  toolSchemas: ToolSchema[],
+  modelCatalog: ModelInfo[],
+  defaultModelId: string,
+): string {
   const toolList = toolSchemas
     .map((t) => {
       const params = Object.entries(t.parameters)
@@ -26,6 +51,8 @@ function buildPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConf
       return `  - ${t.name}: ${t.description}\n${params}`;
     })
     .join("\n\n");
+
+  const modelList = renderModelCatalog(modelCatalog, defaultModelId);
 
   return `You are a planning agent. Your job is to analyze a goal and produce a structured execution plan.
 
@@ -40,9 +67,8 @@ Given a goal, context, and expected output, you must:
 4. Estimate the total token usage for executing the plan.
 5. Provide your reasoning for the plan structure.
 
-Available models (from least to most capable):
-- "${modelConfig.executor}" (default for all steps — fast, cheap, good for simple tool parameter construction)
-- "${modelConfig.planner}" (more capable — use for complex reasoning, synthesis, and analysis steps)
+Available models (ordered by capability tier):
+${modelList}
 
 You MUST respond with ONLY a valid JSON object in this exact format (no markdown, no code fences, no extra text):
 
@@ -56,7 +82,7 @@ You MUST respond with ONLY a valid JSON object in this exact format (no markdown
       "tools": ["tool_name"],
       "expectedOutcome": "What this step should produce",
       "dependencies": [],
-      "model": "${modelConfig.executor}"
+      "model": "${defaultModelId}"
     }
   ]
 }
@@ -70,23 +96,28 @@ Rules:
 - Dependencies must be DIRECT only — if step_3 depends on step_2 which depends on step_1, step_3 should list only ["step_2"], not ["step_1", "step_2"], unless it directly needs step_1's output.
 - IMPORTANT: The executor only provides each step with the outputs of its declared dependencies. If a step needs data from a prior step, that step MUST be listed in dependencies.
 - Use LLM reasoning steps (empty tools array) as data-distillation boundaries: have a reasoning step summarize/extract key findings from raw data before downstream steps consume it.
-- Each step can optionally specify a "model" to override the default executor model. Use the more capable model ("${modelConfig.planner}") for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model ("${modelConfig.executor}") for simple tool parameter construction steps. If "model" is omitted, the default executor model is used.`;
+- Each step can optionally specify a "model" to override the default model. Use a more capable model (higher tier) for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model for simple tool parameter construction steps. If "model" is omitted, the default model is used.
+- The "model" field MUST be one of the model IDs listed above. Do not invent model names.`;
 }
 
 /**
  * Build the system prompt for revised planning (with evaluator feedback).
  */
-function buildRevisedPlanSystemPrompt(toolSchemas: ToolSchema[], modelConfig: ModelConfig): string {
+function buildRevisedPlanSystemPrompt(
+  toolSchemas: ToolSchema[],
+  modelCatalog: ModelInfo[],
+  defaultModelId: string,
+): string {
   const toolList = toolSchemas.map((t) => `  - ${t.name}: ${t.description}`).join("\n");
+  const modelList = renderModelCatalog(modelCatalog, defaultModelId);
 
   return `You are a planning agent revising a previously failed plan.
 
 Available tools:
 ${toolList}
 
-Available models (from least to most capable):
-- "${modelConfig.executor}" (default for all steps — fast, cheap, good for simple tool parameter construction)
-- "${modelConfig.planner}" (more capable — use for complex reasoning, synthesis, and analysis steps)
+Available models (ordered by capability tier):
+${modelList}
 
 You will receive the original goal and feedback from an evaluator describing what went wrong. Your job is to produce a MINIMAL revised plan that addresses the feedback. Do not regenerate the entire plan from scratch — only add, modify, or replace the steps necessary to fix the issues identified.
 
@@ -102,7 +133,7 @@ You MUST respond with ONLY a valid JSON object in this exact format (no markdown
       "tools": ["tool_name"],
       "expectedOutcome": "What this step should produce",
       "dependencies": [],
-      "model": "${modelConfig.executor}"
+      "model": "${defaultModelId}"
     }
   ]
 }
@@ -115,7 +146,8 @@ Rules:
 - Dependencies must be DIRECT only — if step_3 depends on step_2 which depends on step_1, step_3 should list only ["step_2"], not ["step_1", "step_2"], unless it directly needs step_1's output.
 - IMPORTANT: The executor only provides each step with the outputs of its declared dependencies. If a step needs data from a prior step, that step MUST be listed in dependencies.
 - Use LLM reasoning steps (empty tools array) as data-distillation boundaries: have a reasoning step summarize/extract key findings from raw data before downstream steps consume it.
-- Each step can optionally specify a "model" to override the default executor model. Use the more capable model ("${modelConfig.planner}") for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model ("${modelConfig.executor}") for simple tool parameter construction steps. If "model" is omitted, the default executor model is used.`;
+- Each step can optionally specify a "model" to override the default model. Use a more capable model (higher tier) for LLM reasoning steps that require complex analysis, synthesis, or summarization. Use the default model for simple tool parameter construction steps. If "model" is omitted, the default model is used.
+- The "model" field MUST be one of the model IDs listed above. Do not invent model names.`;
 }
 
 /**
@@ -187,8 +219,9 @@ function extractJson(text: string): string {
 
 /**
  * Validate that a parsed object conforms to the Plan structure.
+ * When allowedModelIds is provided, also validates step model references.
  */
-function validatePlanStructure(data: unknown): Plan {
+function validatePlanStructure(data: unknown, allowedModelIds?: Set<string>): Plan {
   if (typeof data !== "object" || data === null) {
     throw new Error("Plan must be a JSON object");
   }
@@ -256,6 +289,13 @@ function validatePlanStructure(data: unknown): Plan {
 
     if (s.model !== undefined && typeof s.model !== "string") {
       throw new Error(`Step "${s.id}" model must be a string if provided`);
+    }
+
+    if (typeof s.model === "string" && allowedModelIds && !allowedModelIds.has(s.model)) {
+      throw new Error(
+        `Step "${s.id}" uses model "${s.model}" which is not in the allowed model catalog. ` +
+          `Available: ${[...allowedModelIds].join(", ")}`,
+      );
     }
 
     steps.push({
@@ -331,18 +371,23 @@ export class Planner {
   private readonly provider: LLMProvider;
   private readonly registry: ToolRegistry;
   private readonly model: string;
-  private readonly modelConfig: ModelConfig;
+  private readonly modelCatalog: ModelInfo[];
+  private readonly defaultModelId: string;
+  private readonly allowedModelIds: Set<string>;
 
   constructor(
     provider: LLMProvider,
     registry: ToolRegistry,
     model: string,
-    modelConfig: ModelConfig,
+    modelCatalog: ModelInfo[],
+    defaultModelId: string,
   ) {
     this.provider = provider;
     this.registry = registry;
     this.model = model;
-    this.modelConfig = modelConfig;
+    this.modelCatalog = modelCatalog;
+    this.defaultModelId = defaultModelId;
+    this.allowedModelIds = new Set(modelCatalog.map((m) => m.id));
   }
 
   /**
@@ -359,8 +404,8 @@ export class Planner {
     const hasFeedback = feedback !== undefined && feedback.length > 0;
 
     const systemPrompt = hasFeedback
-      ? buildRevisedPlanSystemPrompt(toolSchemas, this.modelConfig)
-      : buildPlanSystemPrompt(toolSchemas, this.modelConfig);
+      ? buildRevisedPlanSystemPrompt(toolSchemas, this.modelCatalog, this.defaultModelId)
+      : buildPlanSystemPrompt(toolSchemas, this.modelCatalog, this.defaultModelId);
 
     const userMessage = hasFeedback
       ? buildRevisedPlanUserMessage(prompt, feedback, scratchpad)
@@ -414,7 +459,7 @@ export class Planner {
       throw new Error(`Invalid JSON: ${jsonStr.slice(0, 200)}`);
     }
 
-    const plan = validatePlanStructure(parsed);
+    const plan = validatePlanStructure(parsed, this.allowedModelIds);
     validateToolReferences(plan, this.registry);
 
     return plan;
@@ -429,4 +474,5 @@ export {
   buildRevisedPlanUserMessage as _buildRevisedPlanUserMessage,
   extractJson as _extractJson,
   validatePlanStructure as _validatePlanStructure,
+  renderModelCatalog as _renderModelCatalog,
 };

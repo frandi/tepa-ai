@@ -9,6 +9,7 @@ import type {
   ToolSchema,
   Plan,
   TepaPrompt,
+  ModelInfo,
 } from "@tepa/types";
 import type { CycleMetadata } from "@tepa/types";
 import {
@@ -20,6 +21,10 @@ import {
 import { Scratchpad } from "../../src/core/scratchpad.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
+
+const defaultModelCatalog: ModelInfo[] = [
+  { id: "test-model", tier: "fast", description: "Test model." },
+];
 
 // --- Helpers ---
 
@@ -34,6 +39,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
+    getModels: vi.fn(() => defaultModelCatalog),
   };
 }
 
