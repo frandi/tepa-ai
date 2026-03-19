@@ -33,10 +33,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
       });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("OPENAI_API_KEY")
-      ) {
+      if (error instanceof Error && error.message.includes("OPENAI_API_KEY")) {
         throw new Error(
           "No OpenAI API key configured.\n" +
             "  1. Get your key at https://platform.openai.com/api-keys\n" +
