@@ -22,6 +22,8 @@ demos/student-progress/
 ├── class-5b/                 # Mock data directory
 │   ├── grades.csv            # 1,344 rows — 28 students × 6 subjects × 8 assignments
 │   └── attendance.csv        # 1,764 rows — 28 students × 63 school days
+├── run.sh                    # Cleans previous output and runs (Linux/macOS)
+├── run.ps1                   # Cleans previous output and runs (Windows PowerShell)
 └── package.json
 ```
 
@@ -52,12 +54,22 @@ The CSV files contain realistic data designed to produce meaningful analysis:
 
 ## Running
 
-Requires an `ANTHROPIC_API_KEY` environment variable:
+Requires an `ANTHROPIC_API_KEY` environment variable. Create a `.env` file in this directory:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Then use the run script, which cleans previously generated output before starting:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+# Linux/macOS
 cd demos/student-progress
-npm start
+./run.sh
+
+# Windows PowerShell
+cd demos\student-progress
+.\run.ps1
 ```
 
 Or from the repo root:

@@ -29,11 +29,13 @@ npm install
 # 3. Build all packages
 npm run build
 
-# 4. Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
+# 4. Set your API key (create a .env file in the demo directory)
+echo "ANTHROPIC_API_KEY=sk-ant-..." > demos/api-client-gen/.env
 ```
 
-All three demos use the Anthropic provider. Each demo directory has its own `run.sh` script — always use `run.sh` rather than `npm start` directly, because it cleans up any previously generated output files before running so the pipeline always starts from a clean state.
+All three demos use the Anthropic provider. Each demo directory has a `run.sh` (Linux/macOS) and `run.ps1` (Windows PowerShell) script — always use the run script rather than `npm start` directly, because it cleans up any previously generated output files before running so the pipeline always starts from a clean state.
+
+If the API key is missing or misconfigured, the demos will show a clear error message with setup instructions.
 
 ---
 
@@ -144,8 +146,13 @@ The key observation: cycle 2 doesn't re-generate everything. The Planner reads `
 ### Running
 
 ```bash
+# Linux/macOS
 cd demos/api-client-gen
 ./run.sh
+
+# Windows PowerShell
+cd demos\api-client-gen
+.\run.ps1
 ```
 
 ---
@@ -264,8 +271,13 @@ const tepa = new Tepa({
 ### Running
 
 ```bash
+# Linux/macOS
 cd demos/student-progress
 ./run.sh
+
+# Windows PowerShell
+cd demos\student-progress
+.\run.ps1
 ```
 
 ---
@@ -454,8 +466,13 @@ const tepa = new Tepa({
 ### Running
 
 ```bash
+# Linux/macOS
 cd demos/study-plan
 ./run.sh
+
+# Windows PowerShell
+cd demos\study-plan
+.\run.ps1
 ```
 
 ---

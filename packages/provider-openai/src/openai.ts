@@ -27,10 +27,17 @@ export class OpenAIProvider extends BaseLLMProvider {
 
   constructor(options: OpenAIProviderOptions = {}) {
     super(options);
-    this.client = new OpenAI({
-      apiKey: options.apiKey,
-      timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
-    });
+    try {
+      this.client = new OpenAI({
+        apiKey: options.apiKey,
+        timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("OPENAI_API_KEY")) {
+        throw new Error("No OpenAI API key configured.", { cause: error });
+      }
+      throw error;
+    }
   }
 
   protected async doComplete(
@@ -79,10 +86,9 @@ export class OpenAIProvider extends BaseLLMProvider {
 
   protected mapError(error: unknown): unknown {
     if (error instanceof OpenAI.AuthenticationError) {
-      return new Error(
-        "Authentication failed. Did you set the OPENAI_API_KEY environment variable?",
-        { cause: error },
-      );
+      return new Error("OpenAI authentication failed: the provided API key is invalid.", {
+        cause: error,
+      });
     }
     return error;
   }
