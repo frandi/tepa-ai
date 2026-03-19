@@ -18,22 +18,19 @@ export const GEMINI_MODEL_CATALOG: ModelInfo[] = [
   {
     id: GeminiModels.Gemini_3_1_Pro_Preview,
     tier: "advanced",
-    description:
-      "Advanced intelligence, complex problem-solving. Preview — may change.",
+    description: "Advanced intelligence, complex problem-solving. Preview — may change.",
     capabilities: ["tool_use"],
   },
   {
     id: GeminiModels.Gemini_3_Flash_Preview,
     tier: "fast",
-    description:
-      "Frontier-class performance rivaling larger models. Preview — may change.",
+    description: "Frontier-class performance rivaling larger models. Preview — may change.",
     capabilities: ["tool_use"],
   },
   {
     id: GeminiModels.Gemini_3_1_Flash_Lite_Preview,
     tier: "fast",
-    description:
-      "Fastest 3.x variant, budget-friendly. Preview — may change.",
+    description: "Fastest 3.x variant, budget-friendly. Preview — may change.",
     capabilities: ["tool_use"],
   },
   // --- Gemini 2.5 stable ---
@@ -46,8 +43,7 @@ export const GEMINI_MODEL_CATALOG: ModelInfo[] = [
   {
     id: GeminiModels.Gemini_2_5_Flash,
     tier: "fast",
-    description:
-      "Best price-performance stable model for low-latency, high-volume tasks.",
+    description: "Best price-performance stable model for low-latency, high-volume tasks.",
     capabilities: ["tool_use"],
   },
   {

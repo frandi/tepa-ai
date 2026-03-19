@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { toGeminiContents, toGeminiTools, toGeminiToolConfig, toFinishReason, extractText } from "../../src/formatting.js";
+import {
+  toGeminiContents,
+  toGeminiTools,
+  toGeminiToolConfig,
+  toFinishReason,
+  extractText,
+} from "../../src/formatting.js";
 import type { LLMMessage, ToolChoice, ToolSchema } from "@tepa/types";
 
 describe("toGeminiContents", () => {
@@ -38,18 +44,14 @@ describe("toGeminiContents", () => {
       {
         role: "assistant",
         content: "",
-        toolUse: [
-          { id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } },
-        ],
+        toolUse: [{ id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } }],
       },
     ];
     const result = toGeminiContents(messages);
     expect(result).toEqual([
       {
         role: "model",
-        parts: [
-          { functionCall: { name: "get_weather", args: { city: "Tokyo" } } },
-        ],
+        parts: [{ functionCall: { name: "get_weather", args: { city: "Tokyo" } } }],
       },
     ]);
   });
@@ -59,9 +61,7 @@ describe("toGeminiContents", () => {
       {
         role: "assistant",
         content: "Let me check the weather.",
-        toolUse: [
-          { id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } },
-        ],
+        toolUse: [{ id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } }],
       },
     ];
     const result = toGeminiContents(messages);
@@ -142,9 +142,7 @@ describe("toGeminiContents", () => {
       {
         role: "assistant",
         content: "",
-        toolUse: [
-          { id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } },
-        ],
+        toolUse: [{ id: "gemini-call-0", name: "get_weather", input: { city: "Tokyo" } }],
       },
       {
         role: "user",
@@ -167,9 +165,7 @@ describe("toGeminiContents", () => {
       },
       {
         role: "user",
-        parts: [
-          { functionResponse: { name: "get_weather", response: { temperature: 22 } } },
-        ],
+        parts: [{ functionResponse: { name: "get_weather", response: { temperature: 22 } } }],
       },
     ]);
   });
