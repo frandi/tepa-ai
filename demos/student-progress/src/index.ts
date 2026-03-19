@@ -20,7 +20,7 @@ import {
   scratchpadTool,
   logObserveTool,
 } from "@tepa/tools";
-import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
+import { GeminiProvider, GeminiModels } from "@tepa/provider-gemini";
 
 async function main() {
   // Load prompt from YAML file
@@ -49,18 +49,18 @@ async function main() {
       scratchpadTool,
       logObserveTool,
     ],
-    provider: new AnthropicProvider(),
+    provider: new GeminiProvider(),
     config: {
       model: {
-        planner: AnthropicModels.Claude_Sonnet_4_6,
-        executor: AnthropicModels.Claude_Haiku_4_5,
-        evaluator: AnthropicModels.Claude_Sonnet_4_6,
-        // Cost-conscious: only haiku and sonnet for data analysis tasks
-        allowedModels: [AnthropicModels.Claude_Haiku_4_5, AnthropicModels.Claude_Sonnet_4_6],
+        planner: GeminiModels.Gemini_2_5_Pro,
+        executor: GeminiModels.Gemini_2_5_Flash,
+        evaluator: GeminiModels.Gemini_2_5_Pro,
+        // Cost-conscious: stable 2.5 models for data analysis tasks
+        allowedModels: [GeminiModels.Gemini_2_5_Flash, GeminiModels.Gemini_2_5_Pro],
       },
       limits: {
         maxCycles: 3,
-        maxTokens: 250_000,
+        maxTokens: 1_000_000,
       },
       logging: {
         level: "verbose",
@@ -161,10 +161,10 @@ main().catch((error) => {
 
   if (/api key/i.test(message) || /authentication failed/i.test(message)) {
     console.error(
-      "\nTo fix this, set up your Anthropic API key:\n" +
-        "  1. Get your key at https://console.anthropic.com/settings/keys\n" +
+      "\nTo fix this, set up your Gemini API key:\n" +
+        "  1. Get your key at https://aistudio.google.com/apikey\n" +
         "  2. Create a .env file in this demo directory with:\n" +
-        "     ANTHROPIC_API_KEY=sk-ant-...\n",
+        "     GEMINI_API_KEY=...\n",
     );
   }
 
