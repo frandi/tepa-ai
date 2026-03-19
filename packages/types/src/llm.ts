@@ -12,6 +12,16 @@ export interface ModelInfo {
   capabilities?: string[];
 }
 
+/**
+ * Controls whether the LLM must, may, or must not call tools.
+ *
+ * - `"auto"` – model decides (default when tools are provided).
+ * - `"any"`  – model must call at least one tool.
+ * - `"none"` – model must not call any tool.
+ * - `{ name: string }` – model must call the specified tool.
+ */
+export type ToolChoice = "auto" | "any" | "none" | { name: string };
+
 export interface LLMRequestOptions {
   model: string;
   maxTokens?: number;
@@ -19,11 +29,36 @@ export interface LLMRequestOptions {
   systemPrompt?: string;
   /** Tool schemas to provide for native tool use. */
   tools?: ToolSchema[];
+  /**
+   * Controls tool-calling behavior. Defaults to `"auto"` when tools are provided.
+   *
+   * TODO: Currently only implemented by provider-gemini. Anthropic and OpenAI
+   * providers need to map this to their respective tool_choice parameters.
+   */
+  toolChoice?: ToolChoice;
 }
 
+/** A tool result sent back to the LLM after tool execution. */
+export interface LLMToolResultBlock {
+  /** The tool-call ID this result corresponds to. */
+  toolUseId: string;
+  /** Name of the tool that was called. */
+  name: string;
+  /** Serialised result (typically JSON string). */
+  result: string;
+}
+
+// TODO: The toolUse and toolResult fields are currently only handled by
+// provider-gemini's toGeminiContents(). The Anthropic and OpenAI provider
+// formatters (toAnthropicMessages, toOpenAIInput) still ignore these fields
+// and need to be updated to support multi-turn tool-use conversations.
 export interface LLMMessage {
   role: "user" | "assistant";
   content: string;
+  /** Tool calls made by the assistant (present on assistant messages). */
+  toolUse?: LLMToolUseBlock[];
+  /** Tool results provided by the user (present on user messages). */
+  toolResult?: LLMToolResultBlock[];
 }
 
 /** A tool invocation returned by the LLM in its response. */

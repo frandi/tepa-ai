@@ -3,6 +3,8 @@ export interface ParameterDef {
   description: string;
   required?: boolean;
   default?: unknown;
+  /** Allowed values (for string parameters). */
+  enum?: string[];
 }
 
 export interface ToolDefinition {
