@@ -6,7 +6,8 @@ import {
   toFinishReason,
   extractText,
 } from "../../src/formatting.js";
-import type { LLMMessage, ToolChoice, ToolSchema } from "@tepa/types";
+import type { LLMMessage, ToolSchema } from "@tepa/types";
+import type { GeminiToolDeclarations } from "../../src/formatting.js";
 
 describe("toGeminiContents", () => {
   it("converts a single user message", () => {
@@ -214,7 +215,7 @@ describe("toGeminiTools", () => {
       },
     ];
     const result = toGeminiTools(tools);
-    const decl = (result[0] as any).functionDeclarations[0];
+    const decl = (result[0] as GeminiToolDeclarations).functionDeclarations[0];
     expect(decl.parameters.properties.unit).toEqual({
       type: "STRING",
       description: "Unit",
@@ -233,12 +234,12 @@ describe("toGeminiTools", () => {
       },
     ];
     const result = toGeminiTools(tools);
-    const decl = (result[0] as any).functionDeclarations[0];
+    const decl = (result[0] as GeminiToolDeclarations).functionDeclarations[0];
     expect(decl.parameters.properties.query).toEqual({
       type: "STRING",
       description: "Query",
     });
-    expect(decl.parameters.properties.query.enum).toBeUndefined();
+    expect((decl.parameters.properties.query as Record<string, unknown>).enum).toBeUndefined();
   });
 });
 

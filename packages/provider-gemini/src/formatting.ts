@@ -124,10 +124,24 @@ export function extractToolUse(response: Record<string, unknown>): LLMToolUseBlo
   return blocks;
 }
 
+export interface GeminiFunctionDeclaration {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, unknown>;
+    required: string[];
+  };
+}
+
+export interface GeminiToolDeclarations {
+  functionDeclarations: GeminiFunctionDeclaration[];
+}
+
 /**
  * Convert Tepa ToolSchema to Gemini function declarations.
  */
-export function toGeminiTools(tools: ToolSchema[]): Record<string, unknown>[] {
+export function toGeminiTools(tools: ToolSchema[]): GeminiToolDeclarations[] {
   const functionDeclarations = tools.map((tool) => {
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
