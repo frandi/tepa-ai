@@ -72,7 +72,23 @@ export class AnthropicProvider extends BaseLLMProvider {
   protected mapError(error: unknown): unknown {
     if (error instanceof Anthropic.AuthenticationError) {
       return new Error(
-        "Authentication failed. Did you set the ANTHROPIC_API_KEY environment variable?",
+        "Authentication failed. Did you set the ANTHROPIC_API_KEY environment variable?\n" +
+          "  1. Get your key at https://console.anthropic.com/settings/keys\n" +
+          "  2. Create a .env file with: ANTHROPIC_API_KEY=sk-ant-...\n" +
+          "  Or pass it directly: new AnthropicProvider({ apiKey: '...' })",
+        { cause: error },
+      );
+    }
+    // The SDK throws a generic Error when no API key is configured at all
+    if (
+      error instanceof Error &&
+      error.message.includes("Could not resolve authentication method")
+    ) {
+      return new Error(
+        "No Anthropic API key configured.\n" +
+          "  1. Get your key at https://console.anthropic.com/settings/keys\n" +
+          "  2. Create a .env file with: ANTHROPIC_API_KEY=sk-ant-...\n" +
+          "  Or pass it directly: new AnthropicProvider({ apiKey: '...' })",
         { cause: error },
       );
     }

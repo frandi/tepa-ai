@@ -177,6 +177,6 @@ async function main() {
 
 main().catch((error) => {
   rl.close();
-  console.error("Demo failed:", error);
+  console.error("\nDemo failed:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

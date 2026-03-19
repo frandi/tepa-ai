@@ -83,7 +83,24 @@ export class GeminiProvider extends BaseLLMProvider {
   protected mapError(error: unknown): unknown {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
       return new Error(
-        "Authentication failed. Did you set the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable?",
+        "Authentication failed. Did you set the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable?\n" +
+          "  1. Get your key at https://aistudio.google.com/apikey\n" +
+          "  2. Create a .env file with: GEMINI_API_KEY=...\n" +
+          "  Or pass it directly: new GeminiProvider({ apiKey: '...' })",
+        { cause: error },
+      );
+    }
+    // The SDK may throw a generic error when no API key is configured
+    if (
+      error instanceof Error &&
+      /api.?key/i.test(error.message) &&
+      !error.message.includes("Did you set")
+    ) {
+      return new Error(
+        "No Gemini API key configured.\n" +
+          "  1. Get your key at https://aistudio.google.com/apikey\n" +
+          "  2. Create a .env file with: GEMINI_API_KEY=...\n" +
+          "  Or pass it directly: new GeminiProvider({ apiKey: '...' })",
         { cause: error },
       );
     }

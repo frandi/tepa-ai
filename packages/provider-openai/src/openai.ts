@@ -27,10 +27,26 @@ export class OpenAIProvider extends BaseLLMProvider {
 
   constructor(options: OpenAIProviderOptions = {}) {
     super(options);
-    this.client = new OpenAI({
-      apiKey: options.apiKey,
-      timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
-    });
+    try {
+      this.client = new OpenAI({
+        apiKey: options.apiKey,
+        timeout: 15 * 60 * 1000, // 15 minutes – pipeline calls can be long
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("OPENAI_API_KEY")
+      ) {
+        throw new Error(
+          "No OpenAI API key configured.\n" +
+            "  1. Get your key at https://platform.openai.com/api-keys\n" +
+            "  2. Create a .env file with: OPENAI_API_KEY=sk-...\n" +
+            "  Or pass it directly: new OpenAIProvider({ apiKey: '...' })",
+          { cause: error },
+        );
+      }
+      throw error;
+    }
   }
 
   protected async doComplete(
@@ -80,7 +96,10 @@ export class OpenAIProvider extends BaseLLMProvider {
   protected mapError(error: unknown): unknown {
     if (error instanceof OpenAI.AuthenticationError) {
       return new Error(
-        "Authentication failed. Did you set the OPENAI_API_KEY environment variable?",
+        "Authentication failed. Did you set the OPENAI_API_KEY environment variable?\n" +
+          "  1. Get your key at https://platform.openai.com/api-keys\n" +
+          "  2. Create a .env file with: OPENAI_API_KEY=sk-...\n" +
+          "  Or pass it directly: new OpenAIProvider({ apiKey: '...' })",
         { cause: error },
       );
     }

@@ -279,6 +279,31 @@ describe("AnthropicProvider", () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
+    it("provides helpful message when no API key is configured at all", async () => {
+      const noKeyError = new Error(
+        "Could not resolve authentication method. Expected either apiKey or authToken to be set.",
+      );
+      mockCreate.mockRejectedValue(noKeyError);
+
+      const fastProvider = new AnthropicProvider({
+        apiKey: "test-key",
+        retryBaseDelayMs: 1,
+        defaultLog: false,
+      });
+
+      await expect(
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "claude-sonnet-4-20250514",
+        }),
+      ).rejects.toThrow("No Anthropic API key configured.");
+
+      await expect(
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "claude-sonnet-4-20250514",
+        }),
+      ).rejects.toThrow("Create a .env file with: ANTHROPIC_API_KEY=sk-ant-");
+    });
+
     it("throws after exhausting all retries", async () => {
       const rateLimitError = new (
         Anthropic as unknown as Record<string, new () => Error>

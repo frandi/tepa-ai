@@ -278,6 +278,29 @@ describe("GeminiProvider", () => {
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     });
 
+    it("provides helpful message when SDK throws generic API key error", async () => {
+      const genericKeyError = new Error("Please provide an API key via apiKey or GEMINI_API_KEY");
+      mockGenerateContent.mockRejectedValue(genericKeyError);
+
+      const fastProvider = new GeminiProvider({
+        apiKey: "test-key",
+        retryBaseDelayMs: 1,
+        defaultLog: false,
+      });
+
+      await expect(
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "gemini-3-flash-preview",
+        }),
+      ).rejects.toThrow("No Gemini API key configured.");
+
+      await expect(
+        fastProvider.complete([{ role: "user", content: "Hi" }], {
+          model: "gemini-3-flash-preview",
+        }),
+      ).rejects.toThrow("Create a .env file with: GEMINI_API_KEY=");
+    });
+
     it("does not retry on 400 bad request errors", async () => {
       const badRequestError = new ApiError(400, "bad request");
       mockGenerateContent.mockRejectedValue(badRequestError);

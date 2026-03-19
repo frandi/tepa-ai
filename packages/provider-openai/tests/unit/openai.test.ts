@@ -281,6 +281,24 @@ describe("OpenAIProvider", () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
+    it("provides helpful message when SDK throws on missing API key", () => {
+      const OpenAIMock = vi.mocked(OpenAI);
+      OpenAIMock.mockImplementationOnce(() => {
+        throw new Error(
+          "The OPENAI_API_KEY environment variable is missing or empty; either provide it, or instantiate the OpenAI client with an apiKey option, like new OpenAI({ apiKey: 'My API Key' }).",
+        );
+      });
+
+      try {
+        new OpenAIProvider({ defaultLog: false });
+        expect.unreachable("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain("No OpenAI API key configured.");
+        expect((error as Error).message).toContain("Create a .env file with: OPENAI_API_KEY=sk-");
+      }
+    });
+
     it("throws after exhausting all retries", async () => {
       const rateLimitError = new (
         OpenAI as unknown as Record<string, new () => Error>
