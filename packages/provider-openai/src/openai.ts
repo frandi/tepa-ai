@@ -34,13 +34,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       });
     } catch (error) {
       if (error instanceof Error && error.message.includes("OPENAI_API_KEY")) {
-        throw new Error(
-          "No OpenAI API key configured.\n" +
-            "  1. Get your key at https://platform.openai.com/api-keys\n" +
-            "  2. Create a .env file with: OPENAI_API_KEY=sk-...\n" +
-            "  Or pass it directly: new OpenAIProvider({ apiKey: '...' })",
-          { cause: error },
-        );
+        throw new Error("No OpenAI API key configured.", { cause: error });
       }
       throw error;
     }
@@ -92,13 +86,9 @@ export class OpenAIProvider extends BaseLLMProvider {
 
   protected mapError(error: unknown): unknown {
     if (error instanceof OpenAI.AuthenticationError) {
-      return new Error(
-        "Authentication failed. Did you set the OPENAI_API_KEY environment variable?\n" +
-          "  1. Get your key at https://platform.openai.com/api-keys\n" +
-          "  2. Create a .env file with: OPENAI_API_KEY=sk-...\n" +
-          "  Or pass it directly: new OpenAIProvider({ apiKey: '...' })",
-        { cause: error },
-      );
+      return new Error("OpenAI authentication failed: the provided API key is invalid.", {
+        cause: error,
+      });
     }
     return error;
   }

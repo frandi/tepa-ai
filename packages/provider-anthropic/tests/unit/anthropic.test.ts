@@ -273,13 +273,13 @@ describe("AnthropicProvider", () => {
         fastProvider.complete([{ role: "user", content: "Hi" }], {
           model: "claude-sonnet-4-20250514",
         }),
-      ).rejects.toThrow("Did you set the ANTHROPIC_API_KEY environment variable?");
+      ).rejects.toThrow("Anthropic authentication failed: the provided API key is invalid.");
 
       // Only 1 attempt, no retries
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
-    it("provides helpful message when no API key is configured at all", async () => {
+    it("provides clear message when no API key is configured at all", async () => {
       const noKeyError = new Error(
         "Could not resolve authentication method. Expected either apiKey or authToken to be set.",
       );
@@ -296,12 +296,6 @@ describe("AnthropicProvider", () => {
           model: "claude-sonnet-4-20250514",
         }),
       ).rejects.toThrow("No Anthropic API key configured.");
-
-      await expect(
-        fastProvider.complete([{ role: "user", content: "Hi" }], {
-          model: "claude-sonnet-4-20250514",
-        }),
-      ).rejects.toThrow("Create a .env file with: ANTHROPIC_API_KEY=sk-ant-");
     });
 
     it("throws after exhausting all retries", async () => {

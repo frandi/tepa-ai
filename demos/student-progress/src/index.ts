@@ -156,6 +156,17 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("\nDemo failed:", error instanceof Error ? error.message : error);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("\nDemo failed:", message);
+
+  if (/api key/i.test(message) || /authentication failed/i.test(message)) {
+    console.error(
+      "\nTo fix this, set up your Anthropic API key:\n" +
+        "  1. Get your key at https://console.anthropic.com/settings/keys\n" +
+        "  2. Create a .env file in this demo directory with:\n" +
+        "     ANTHROPIC_API_KEY=sk-ant-...\n",
+    );
+  }
+
   process.exit(1);
 });

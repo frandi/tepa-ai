@@ -35,7 +35,7 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." > demos/api-client-gen/.env
 
 All three demos use the Anthropic provider. Each demo directory has a `run.sh` (Linux/macOS) and `run.ps1` (Windows PowerShell) script — always use the run script rather than `npm start` directly, because it cleans up any previously generated output files before running so the pipeline always starts from a clean state.
 
-If the API key is missing or misconfigured, the pipeline will show a clear error message with setup instructions rather than a cryptic SDK error.
+If the API key is missing or misconfigured, the demos will show a clear error message with setup instructions.
 
 ---
 

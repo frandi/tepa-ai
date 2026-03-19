@@ -273,12 +273,12 @@ describe("GeminiProvider", () => {
         fastProvider.complete([{ role: "user", content: "Hi" }], {
           model: "gemini-3-flash-preview",
         }),
-      ).rejects.toThrow("Did you set the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable?");
+      ).rejects.toThrow("Gemini authentication failed: the provided API key is invalid.");
 
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     });
 
-    it("provides helpful message when SDK throws generic API key error", async () => {
+    it("provides clear message when SDK throws generic API key error", async () => {
       const genericKeyError = new Error("Please provide an API key via apiKey or GEMINI_API_KEY");
       mockGenerateContent.mockRejectedValue(genericKeyError);
 
@@ -293,12 +293,6 @@ describe("GeminiProvider", () => {
           model: "gemini-3-flash-preview",
         }),
       ).rejects.toThrow("No Gemini API key configured.");
-
-      await expect(
-        fastProvider.complete([{ role: "user", content: "Hi" }], {
-          model: "gemini-3-flash-preview",
-        }),
-      ).rejects.toThrow("Create a .env file with: GEMINI_API_KEY=");
     });
 
     it("does not retry on 400 bad request errors", async () => {
