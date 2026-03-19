@@ -1,19 +1,68 @@
-import type { LLMMessage, LLMToolUseBlock, ToolSchema } from "@tepa/types";
+import type { LLMMessage, LLMToolUseBlock, ToolChoice, ToolSchema } from "@tepa/types";
+
+export interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args: Record<string, unknown> };
+  functionResponse?: { name: string; response: Record<string, unknown> };
+}
 
 export interface GeminiContent {
   role: "user" | "model";
-  parts: { text: string }[];
+  parts: GeminiPart[];
 }
 
 /**
  * Convert Tepa LLMMessage array to Gemini contents format.
- * Maps "assistant" role to "model".
+ *
+ * Handles three message shapes:
+ * 1. Plain text messages → `{ text }` parts
+ * 2. Assistant messages with `toolUse` → `{ functionCall }` parts
+ * 3. User messages with `toolResult` → `{ functionResponse }` parts
  */
 export function toGeminiContents(messages: LLMMessage[]): GeminiContent[] {
-  return messages.map((msg) => ({
-    role: msg.role === "assistant" ? "model" : "user",
-    parts: [{ text: msg.content }],
-  }));
+  return messages.map((msg) => {
+    const role: "user" | "model" = msg.role === "assistant" ? "model" : "user";
+
+    // Assistant message with tool calls
+    if (msg.role === "assistant" && msg.toolUse && msg.toolUse.length > 0) {
+      const parts: GeminiPart[] = [];
+      if (msg.content) {
+        parts.push({ text: msg.content });
+      }
+      for (const tool of msg.toolUse) {
+        parts.push({
+          functionCall: {
+            name: tool.name,
+            args: tool.input,
+          },
+        });
+      }
+      return { role, parts };
+    }
+
+    // User message with tool results
+    if (msg.role === "user" && msg.toolResult && msg.toolResult.length > 0) {
+      const parts: GeminiPart[] = [];
+      for (const result of msg.toolResult) {
+        let response: Record<string, unknown>;
+        try {
+          response = JSON.parse(result.result);
+        } catch {
+          response = { result: result.result };
+        }
+        parts.push({
+          functionResponse: {
+            name: result.name,
+            response,
+          },
+        });
+      }
+      return { role, parts };
+    }
+
+    // Plain text message
+    return { role, parts: [{ text: msg.content }] };
+  });
 }
 
 /**
@@ -32,10 +81,21 @@ export function toFinishReason(
 }
 
 /**
- * Extract text from a Gemini response.
+ * Extract text from a Gemini response by reading text parts directly
+ * from candidates. This avoids the SDK's `response.text` getter which
+ * logs a warning when the response also contains functionCall parts.
  */
-export function extractText(response: { text?: string }): string {
-  return response.text ?? "";
+export function extractText(response: Record<string, unknown>): string {
+  const resp = response as {
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+    }[];
+  };
+  const parts = resp.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .filter((p) => typeof p.text === "string")
+    .map((p) => p.text!)
+    .join("");
 }
 
 /**
@@ -73,10 +133,14 @@ export function toGeminiTools(tools: ToolSchema[]): Record<string, unknown>[] {
     const required: string[] = [];
 
     for (const [name, param] of Object.entries(tool.parameters)) {
-      properties[name] = {
+      const prop: Record<string, unknown> = {
         type: param.type.toUpperCase(),
         description: param.description,
       };
+      if (param.enum && param.enum.length > 0) {
+        prop.enum = param.enum;
+      }
+      properties[name] = prop;
       if (param.required !== false) {
         required.push(name);
       }
@@ -94,4 +158,32 @@ export function toGeminiTools(tools: ToolSchema[]): Record<string, unknown>[] {
   });
 
   return [{ functionDeclarations }];
+}
+
+/**
+ * Convert Tepa ToolChoice to Gemini toolConfig.
+ * Returns undefined when no config is needed (defaults to AUTO).
+ */
+export function toGeminiToolConfig(
+  toolChoice: ToolChoice | undefined,
+): Record<string, unknown> | undefined {
+  if (toolChoice === undefined || toolChoice === "auto") {
+    return undefined;
+  }
+
+  if (toolChoice === "any") {
+    return { functionCallingConfig: { mode: "ANY" } };
+  }
+
+  if (toolChoice === "none") {
+    return { functionCallingConfig: { mode: "NONE" } };
+  }
+
+  // { name: "tool_name" } — force a specific tool
+  return {
+    functionCallingConfig: {
+      mode: "ANY",
+      allowedFunctionNames: [toolChoice.name],
+    },
+  };
 }
