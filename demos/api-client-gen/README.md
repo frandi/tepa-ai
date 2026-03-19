@@ -26,6 +26,8 @@ demos/api-client-gen/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── vitest.config.ts
+├── run.sh                    # Cleans previous output and runs (Linux/macOS)
+├── run.ps1                   # Cleans previous output and runs (Windows PowerShell)
 └── package.json
 ```
 
@@ -40,12 +42,22 @@ demos/api-client-gen/
 
 ## Running
 
-Requires an `ANTHROPIC_API_KEY` environment variable:
+Requires an `ANTHROPIC_API_KEY` environment variable. Create a `.env` file in this directory:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Then use the run script, which cleans previously generated output before starting:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+# Linux/macOS
 cd demos/api-client-gen
-npm start
+./run.sh
+
+# Windows PowerShell
+cd demos\api-client-gen
+.\run.ps1
 ```
 
 Or from the repo root:

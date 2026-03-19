@@ -19,7 +19,8 @@ demos/study-plan/
 │   └── index.ts              # Entry script — configures Tepa with human-in-the-loop events
 ├── prompts/
 │   └── task.yaml             # Prompt defining the goal and expected output
-├── run.sh                    # Cleans previous output and runs the demo
+├── run.sh                    # Cleans previous output and runs (Linux/macOS)
+├── run.ps1                   # Cleans previous output and runs (Windows PowerShell)
 └── package.json
 ```
 
@@ -39,12 +40,22 @@ This demo uses two event hooks to insert human checkpoints:
 
 ## Running
 
-Requires an `ANTHROPIC_API_KEY` environment variable:
+Requires an `ANTHROPIC_API_KEY` environment variable. Create a `.env` file in this directory:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Then use the run script, which cleans previously generated output before starting:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+# Linux/macOS
 cd demos/study-plan
-npm start
+./run.sh
+
+# Windows PowerShell
+cd demos\study-plan
+.\run.ps1
 ```
 
 Or from the repo root:
