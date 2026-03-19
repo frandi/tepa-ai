@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as fs from "node:fs";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "../../src/base-provider.js";
 
 vi.mock("node:fs", async () => {
@@ -14,6 +14,9 @@ vi.mock("node:fs", async () => {
 
 class TestProvider extends BaseLLMProvider {
   protected readonly providerName = "test";
+  protected readonly models: ModelInfo[] = [
+    { id: "test-model", tier: "fast", description: "Test model." },
+  ];
 
   doCompleteFn =
     vi.fn<(messages: LLMMessage[], options: LLMRequestOptions) => Promise<LLMResponse>>();
@@ -289,6 +292,22 @@ describe("BaseLLMProvider", () => {
 
       // Base delay * 2^0 = 50ms
       expect(elapsed).toBeGreaterThanOrEqual(40);
+    });
+  });
+
+  describe("getModels", () => {
+    it("returns the provider model catalog", () => {
+      const models = provider.getModels();
+      expect(models).toHaveLength(1);
+      expect(models[0]!.id).toBe("test-model");
+      expect(models[0]!.tier).toBe("fast");
+    });
+
+    it("returns a defensive copy", () => {
+      const models1 = provider.getModels();
+      const models2 = provider.getModels();
+      expect(models1).not.toBe(models2);
+      expect(models1).toEqual(models2);
     });
   });
 });

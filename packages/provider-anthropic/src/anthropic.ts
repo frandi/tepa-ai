@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
 import {
   toAnthropicMessages,
@@ -8,6 +8,7 @@ import {
   extractText,
   extractToolUse,
 } from "./formatting.js";
+import { ANTHROPIC_MODEL_CATALOG } from "./models.js";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -20,6 +21,7 @@ export interface AnthropicProviderOptions extends BaseLLMProviderOptions {
 /** LLM provider implementation for Anthropic Claude models. */
 export class AnthropicProvider extends BaseLLMProvider {
   protected readonly providerName = "anthropic";
+  protected readonly models: ModelInfo[] = ANTHROPIC_MODEL_CATALOG;
   private readonly client: Anthropic;
 
   constructor(options: AnthropicProviderOptions = {}) {

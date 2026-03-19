@@ -64,4 +64,22 @@ describe("defineConfig", () => {
   it("throws TepaConfigError for empty model name", () => {
     expect(() => defineConfig({ model: { planner: "" } })).toThrow(TepaConfigError);
   });
+
+  it("accepts allowedModels as an array of strings", () => {
+    const config = defineConfig({
+      model: { allowedModels: ["claude-haiku-4-5", "claude-sonnet-4-6"] },
+    });
+    expect(config.model.allowedModels).toEqual(["claude-haiku-4-5", "claude-sonnet-4-6"]);
+  });
+
+  it("allows omitting allowedModels (undefined by default)", () => {
+    const config = defineConfig();
+    expect(config.model.allowedModels).toBeUndefined();
+  });
+
+  it("throws TepaConfigError for empty-string entries in allowedModels", () => {
+    expect(() => defineConfig({ model: { allowedModels: ["valid", ""] } })).toThrow(
+      TepaConfigError,
+    );
+  });
 });

@@ -15,10 +15,29 @@ All provider types live in `@tepa/types`. The core interface is intentionally mi
 ```typescript
 interface LLMProvider {
   complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>;
+  getModels(): ModelInfo[];
 }
 ```
 
-A single method. The pipeline never touches provider SDKs directly — it only talks through this interface. This is why swapping providers is a one-line change and why a custom provider integrates without touching the core.
+Two methods. `complete()` is the LLM call. `getModels()` returns the provider's **model catalog** — the set of models it supports, each with metadata the Planner uses to make intelligent model assignments for individual steps. The pipeline never touches provider SDKs directly — it only talks through this interface.
+
+### `ModelInfo`
+
+```typescript
+interface ModelInfo {
+  id: string;
+  description: string;
+  tier: "fast" | "balanced" | "advanced";
+  capabilities?: string[];
+}
+```
+
+| Field          | Description                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `id`           | Model identifier as passed to the provider API (e.g. `"claude-sonnet-4-6"`)                                  |
+| `description`  | Human-readable description rendered in the Planner's system prompt                                           |
+| `tier`         | Capability tier — helps the Planner pick fast models for simple tasks, advanced models for complex reasoning |
+| `capabilities` | Optional list (e.g. `["tool_use", "vision"]`) for future programmatic filtering                              |
 
 ### `LLMMessage`
 
@@ -94,12 +113,14 @@ npm install @tepa/provider-anthropic
 ```
 
 ```typescript
-import { AnthropicProvider } from "@tepa/provider-anthropic";
+import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
 
 const provider = new AnthropicProvider({
   apiKey: process.env.ANTHROPIC_API_KEY, // omit to read from env automatically
 });
 ```
+
+**Model catalog:** `Claude_Haiku_4_5` (fast), `Claude_Sonnet_4_6` (balanced), `Claude_Opus_4_6` (advanced). Use `AnthropicModels.*` constants for type-safe config references.
 
 **Options:**
 
@@ -137,12 +158,14 @@ npm install @tepa/provider-openai
 ```
 
 ```typescript
-import { OpenAIProvider } from "@tepa/provider-openai";
+import { OpenAIProvider, OpenAIModels } from "@tepa/provider-openai";
 
 const provider = new OpenAIProvider({
   apiKey: process.env.OPENAI_API_KEY,
 });
 ```
+
+**Model catalog:** `GPT_5_Mini` (fast), `GPT_5` (advanced). Use `OpenAIModels.*` constants for type-safe config references.
 
 **Options:**
 
@@ -180,12 +203,14 @@ npm install @tepa/provider-gemini
 ```
 
 ```typescript
-import { GeminiProvider } from "@tepa/provider-gemini";
+import { GeminiProvider, GeminiModels } from "@tepa/provider-gemini";
 
 const provider = new GeminiProvider({
   apiKey: process.env.GEMINI_API_KEY, // also reads GOOGLE_API_KEY
 });
 ```
+
+**Model catalog:** `Gemini_3_Flash_Preview` (fast), `Gemini_3_Pro_Preview` (advanced). Use `GeminiModels.*` constants for type-safe config references.
 
 **Options:**
 
@@ -410,16 +435,22 @@ When `includeContent` is `true`, the `request` object includes the full `message
 
 ## Creating a Custom Provider
 
-Adding a new LLM provider means extending `BaseLLMProvider` from `@tepa/provider-core` and implementing four methods. By extending rather than implementing `LLMProvider` directly, your provider gets retry logic, exponential backoff, rate limit handling, and the full logging system for free.
+Adding a new LLM provider means extending `BaseLLMProvider` from `@tepa/provider-core` and implementing four methods plus a model catalog. By extending rather than implementing `LLMProvider` directly, your provider gets retry logic, exponential backoff, rate limit handling, the full logging system, and `getModels()` for free.
 
-### The Four Methods
+### The Required Members
 
 ```typescript
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 
 class MyProvider extends BaseLLMProvider {
   protected readonly providerName = "my-provider";
+
+  // Required: declare the models this provider supports
+  protected readonly models: ModelInfo[] = [
+    { id: "my-model-fast", tier: "fast", description: "Fast and cheap for simple tasks." },
+    { id: "my-model-pro", tier: "advanced", description: "Most capable for complex reasoning." },
+  ];
 
   constructor(options: { apiKey: string } & BaseLLMProviderOptions) {
     super(options);
@@ -449,7 +480,7 @@ class MyProvider extends BaseLLMProvider {
 }
 ```
 
-`BaseLLMProvider` wraps `doComplete()` in the retry loop automatically — you implement the API call, the framework handles retrying it.
+`BaseLLMProvider` wraps `doComplete()` in the retry loop and exposes `getModels()` from your `models` array automatically — you implement the API call and catalog, the framework handles the rest.
 
 ### `BaseLLMProviderOptions`
 
@@ -493,11 +524,20 @@ If the API returns a `Retry-After` header (via `getRetryAfterMs()`), that value 
 If you don't need retry logic or logging, implement `LLMProvider` directly:
 
 ```typescript
-import type { LLMProvider, LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type {
+  LLMProvider,
+  LLMMessage,
+  LLMRequestOptions,
+  LLMResponse,
+  ModelInfo,
+} from "@tepa/types";
 
 const myProvider: LLMProvider = {
   async complete(messages, options): Promise<LLMResponse> {
     // Make the API call and return an LLMResponse
+  },
+  getModels(): ModelInfo[] {
+    return [{ id: "my-model", tier: "balanced", description: "My custom model." }];
   },
 };
 ```

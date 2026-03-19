@@ -566,6 +566,7 @@ interface ModelConfig {
   planner: string; // Model for planning phase
   executor: string; // Default model for step execution
   evaluator: string; // Model for evaluation phase
+  allowedModels?: string[]; // Optional whitelist for per-step model assignment
 }
 
 interface LimitsConfig {

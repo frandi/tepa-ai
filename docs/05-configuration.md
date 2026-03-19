@@ -16,15 +16,18 @@ interface TepaConfig {
 
 ### `ModelConfig`
 
-Assigns a model to each pipeline stage.
+Assigns a model to each pipeline stage and optionally constrains which models the Planner can assign to individual steps.
 
 ```typescript
 interface ModelConfig {
   planner: string;
   executor: string;
   evaluator: string;
+  allowedModels?: string[];
 }
 ```
+
+The `allowedModels` field is an optional whitelist of model IDs the Planner may assign to plan steps. When omitted, the Planner can choose from all models in the provider's catalog. When set, only those models (plus the executor, which is always auto-included) are available. See [Model Catalog and Allowed Models](#model-catalog-and-allowed-models) below.
 
 ### `LimitsConfig`
 
@@ -66,6 +69,8 @@ interface LoggingConfig {
 | `logging.level`        | `"standard"`          | Console output verbosity.                                           |
 
 The defaults follow a cost-efficiency pattern: a more capable model for planning and evaluation (where reasoning quality matters most), and a faster, cheaper model for execution (where the task is often just constructing tool call parameters). You only need to override what you want to change.
+
+> **Tip:** Each provider exports type-safe model constants so you don't need to memorize string IDs. See [Model Catalog and Allowed Models](#model-catalog-and-allowed-models) below.
 
 These defaults are exported as `DEFAULT_CONFIG` from `@tepa/core` if you need to reference them programmatically.
 
@@ -165,7 +170,27 @@ const tepa = new Tepa({
 });
 ```
 
-Model strings must match what your LLM provider accepts. If you're using the OpenAI provider, these would be OpenAI model names; if using Gemini, Gemini model names. The config passes them through without validating against the provider.
+Model strings must match what your LLM provider accepts. At pipeline startup, Tepa validates that `planner`, `executor`, and `evaluator` all exist in the provider's model catalog — a mismatch throws a `TepaConfigError` with a clear message listing the available models.
+
+Each provider exports type-safe constants to avoid typos:
+
+```typescript
+import { AnthropicModels } from "@tepa/provider-anthropic";
+
+const tepa = new Tepa({
+  provider: new AnthropicProvider(),
+  tools: [...],
+  config: {
+    model: {
+      planner: AnthropicModels.Claude_Sonnet_4_6,
+      executor: AnthropicModels.Claude_Haiku_4_5,
+      evaluator: AnthropicModels.Claude_Sonnet_4_6,
+    },
+  },
+});
+```
+
+String literals still work — the constants are just regular strings with autocomplete support.
 
 ### Per-Step Model Overrides
 
@@ -198,6 +223,67 @@ Beyond the three stage-level models, individual plan steps can override the exec
 During execution, a step's `model` field takes precedence over `config.model.executor`. Steps without a `model` field use the executor default. This gives the Planner fine-grained control — using the cheaper model for straightforward tool calls and the more capable model for complex reasoning steps.
 
 Per-step overrides are generated automatically by the Planner based on step complexity. You don't set them manually — you configure which models are available, and the Planner decides how to use them.
+
+### Model Catalog and Allowed Models
+
+Each provider declares a **model catalog** — the set of models it supports, with metadata (tier, description, capabilities) that helps the Planner make intelligent choices. The Planner's system prompt includes this catalog so it can assign the most appropriate model to each step.
+
+By default, the Planner has access to **all** models in the provider's catalog. Use `allowedModels` to restrict this to a subset:
+
+```typescript
+import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
+
+// Cost-conscious: only allow haiku and sonnet for step assignment
+const tepa = new Tepa({
+  provider: new AnthropicProvider(),
+  tools: [...],
+  config: {
+    model: {
+      planner: AnthropicModels.Claude_Sonnet_4_6,
+      executor: AnthropicModels.Claude_Haiku_4_5,
+      evaluator: AnthropicModels.Claude_Sonnet_4_6,
+      allowedModels: [
+        AnthropicModels.Claude_Haiku_4_5,
+        AnthropicModels.Claude_Sonnet_4_6,
+      ],
+    },
+  },
+});
+```
+
+```typescript
+// Full access: allow the Planner to use Opus for complex reasoning steps
+const tepa = new Tepa({
+  provider: new AnthropicProvider(),
+  tools: [...],
+  config: {
+    model: {
+      planner: AnthropicModels.Claude_Sonnet_4_6,
+      executor: AnthropicModels.Claude_Haiku_4_5,
+      evaluator: AnthropicModels.Claude_Sonnet_4_6,
+      allowedModels: [
+        AnthropicModels.Claude_Haiku_4_5,
+        AnthropicModels.Claude_Sonnet_4_6,
+        AnthropicModels.Claude_Opus_4_6,
+      ],
+    },
+  },
+});
+```
+
+**Key behaviors:**
+
+- **Omit `allowedModels`** — the Planner sees the full provider catalog (default, zero-config).
+- **Set `allowedModels`** — only those models appear in the Planner's prompt. The `executor` model is always auto-included even if you forget to list it.
+- **Validation** — every entry in `allowedModels` is validated against the provider catalog at startup. Typos throw a `TepaConfigError`.
+
+**Available model constants by provider:**
+
+| Provider  | Import                                            | Constants                                                  |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------- |
+| Anthropic | `AnthropicModels` from `@tepa/provider-anthropic` | `Claude_Haiku_4_5`, `Claude_Sonnet_4_6`, `Claude_Opus_4_6` |
+| OpenAI    | `OpenAIModels` from `@tepa/provider-openai`       | `GPT_5_Mini`, `GPT_5`                                      |
+| Gemini    | `GeminiModels` from `@tepa/provider-gemini`       | `Gemini_3_Flash_Preview`, `Gemini_3_Pro_Preview`           |
 
 ---
 
@@ -339,6 +425,7 @@ Validation rules by field:
 | Field                                                | Rule                                          |
 | ---------------------------------------------------- | --------------------------------------------- |
 | `model.planner`, `model.executor`, `model.evaluator` | Non-empty string                              |
+| `model.allowedModels`                                | Optional array of non-empty strings           |
 | `limits.maxCycles`                                   | Positive integer (> 0)                        |
 | `limits.maxTokens`                                   | Positive integer (> 0)                        |
 | `limits.toolTimeout`                                 | Positive integer (> 0)                        |

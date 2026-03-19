@@ -302,4 +302,26 @@ describe("AnthropicProvider", () => {
       expect(mockCreate).toHaveBeenCalledTimes(3);
     });
   });
+
+  describe("getModels", () => {
+    it("returns the Anthropic model catalog", () => {
+      const models = provider.getModels();
+      expect(models.length).toBeGreaterThanOrEqual(3);
+
+      const ids = models.map((m) => m.id);
+      expect(ids).toContain("claude-haiku-4-5");
+      expect(ids).toContain("claude-sonnet-4-6");
+      expect(ids).toContain("claude-opus-4-6");
+    });
+
+    it("returns models with valid tier and description", () => {
+      const models = provider.getModels();
+      const validTiers = ["fast", "balanced", "advanced"];
+      for (const m of models) {
+        expect(validTiers).toContain(m.tier);
+        expect(m.description.length).toBeGreaterThan(0);
+        expect(m.id.length).toBeGreaterThan(0);
+      }
+    });
+  });
 });

@@ -302,4 +302,25 @@ describe("OpenAIProvider", () => {
       expect(mockCreate).toHaveBeenCalledTimes(3);
     });
   });
+
+  describe("getModels", () => {
+    it("returns the OpenAI model catalog", () => {
+      const models = provider.getModels();
+      expect(models.length).toBeGreaterThanOrEqual(2);
+
+      const ids = models.map((m) => m.id);
+      expect(ids).toContain("gpt-5-mini");
+      expect(ids).toContain("gpt-5");
+    });
+
+    it("returns models with valid tier and description", () => {
+      const models = provider.getModels();
+      const validTiers = ["fast", "balanced", "advanced"];
+      for (const m of models) {
+        expect(validTiers).toContain(m.tier);
+        expect(m.description.length).toBeGreaterThan(0);
+        expect(m.id.length).toBeGreaterThan(0);
+      }
+    });
+  });
 });

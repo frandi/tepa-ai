@@ -113,6 +113,18 @@ Reads a `.yaml`, `.yml`, or `.json` file, parses it, and passes it through `defi
 
 ---
 
+### `resolveModelCatalog()`
+
+```typescript
+import { resolveModelCatalog } from "@tepa/core";
+
+function resolveModelCatalog(providerModels: ModelInfo[], modelConfig: ModelConfig): ModelInfo[];
+```
+
+Filters the provider's model catalog based on `modelConfig.allowedModels`. Validates that `planner`, `executor`, and `evaluator` model IDs exist in the catalog. Auto-includes the `executor` model. Throws [`TepaConfigError`](#tepaconfigerror) on invalid model references. Called internally by `Tepa.run()` but exported for programmatic use.
+
+---
+
 ### `parsePromptFile()`
 
 ```typescript
@@ -252,7 +264,8 @@ new Planner(
   provider: LLMProvider,
   registry: ToolRegistry,
   model: string,
-  modelConfig: ModelConfig
+  modelCatalog: ModelInfo[],
+  defaultModelId: string
 )
 ```
 
@@ -500,10 +513,24 @@ interface ModelConfig {
   planner: string;
   executor: string;
   evaluator: string;
+  allowedModels?: string[];
 }
 ```
 
-Assigns a model identifier to each pipeline component. Values are provider-specific model strings (e.g., `"claude-sonnet-4-6"`, `"gpt-5-mini"`).
+Assigns a model identifier to each pipeline component. Values are provider-specific model strings (e.g., `"claude-sonnet-4-6"`, `"gpt-5-mini"`). The optional `allowedModels` whitelist constrains which models the Planner can assign to individual steps — see [Configuration — Model Catalog and Allowed Models](./05-configuration.md#model-catalog-and-allowed-models).
+
+#### `ModelInfo`
+
+```typescript
+interface ModelInfo {
+  id: string;
+  description: string;
+  tier: "fast" | "balanced" | "advanced";
+  capabilities?: string[];
+}
+```
+
+Metadata describing a model available from a provider. Returned by `LLMProvider.getModels()` and rendered in the Planner's system prompt to guide per-step model selection.
 
 #### `LimitsConfig`
 
@@ -712,10 +739,11 @@ The read-only subset of `ToolDefinition` (without `execute`) sent to LLM provide
 ```typescript
 interface LLMProvider {
   complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>;
+  getModels(): ModelInfo[];
 }
 ```
 
-The core interface that all provider implementations must satisfy.
+The core interface that all provider implementations must satisfy. `getModels()` returns the provider's model catalog — used by the pipeline to populate the Planner's system prompt and validate per-step model assignments.
 
 #### `LLMMessage`
 
@@ -1190,6 +1218,7 @@ new BaseLLMProvider(options?: BaseLLMProviderOptions)
 | Member             | Signature                                                                                                 | Description                                            |
 | ------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `providerName`     | `protected abstract readonly providerName: string`                                                        | Identifier used in log entries                         |
+| `models`           | `protected abstract readonly models: ModelInfo[]`                                                         | Model catalog this provider supports                   |
 | `doComplete`       | `protected abstract doComplete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | The actual API call                                    |
 | `isRetryable`      | `protected abstract isRetryable(error: unknown): boolean`                                                 | Whether an error should trigger a retry                |
 | `isRateLimitError` | `protected abstract isRateLimitError(error: unknown): boolean`                                            | Whether an error is a rate limit (uses longer backoff) |
@@ -1200,6 +1229,7 @@ new BaseLLMProvider(options?: BaseLLMProviderOptions)
 | Method           | Signature                                                                                  | Description                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
 | `complete`       | `async complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>` | Call with retry logic. Delegates to `doComplete`       |
+| `getModels`      | `getModels(): ModelInfo[]`                                                                 | Return the model catalog (defensive copy)              |
 | `onLog`          | `onLog(callback: LLMLogCallback): void`                                                    | Register an additional log listener                    |
 | `getLogEntries`  | `getLogEntries(): LLMLogEntry[]`                                                           | Get a copy of accumulated log history                  |
 | `getLogFilePath` | `getLogFilePath(): string \| undefined`                                                    | Path to the JSONL log file, if file logging is enabled |
@@ -1309,6 +1339,32 @@ Default model: `"claude-haiku-4-5"` | Default max tokens: `64000`
 
 ---
 
+### `AnthropicModels`
+
+```typescript
+import { AnthropicModels } from "@tepa/provider-anthropic";
+```
+
+Type-safe model ID constants:
+
+| Constant            | Value                 |
+| ------------------- | --------------------- |
+| `Claude_Haiku_4_5`  | `"claude-haiku-4-5"`  |
+| `Claude_Sonnet_4_6` | `"claude-sonnet-4-6"` |
+| `Claude_Opus_4_6`   | `"claude-opus-4-6"`   |
+
+---
+
+### `ANTHROPIC_MODEL_CATALOG`
+
+```typescript
+import { ANTHROPIC_MODEL_CATALOG } from "@tepa/provider-anthropic";
+```
+
+The full `ModelInfo[]` catalog array used internally by `AnthropicProvider.getModels()`. Exported for inspection or testing.
+
+---
+
 ### `createProvider()`
 
 ```typescript
@@ -1359,6 +1415,25 @@ Default model: `"gpt-5-mini"` | Default max tokens: `64000`
 
 ---
 
+### `OpenAIModels`
+
+```typescript
+import { OpenAIModels } from "@tepa/provider-openai";
+```
+
+| Constant     | Value          |
+| ------------ | -------------- |
+| `GPT_5_Mini` | `"gpt-5-mini"` |
+| `GPT_5`      | `"gpt-5"`      |
+
+---
+
+### `OPENAI_MODEL_CATALOG`
+
+The full `ModelInfo[]` catalog array. Exported for inspection or testing.
+
+---
+
 ## `@tepa/provider-gemini`
 
 Google Gemini provider implementation.
@@ -1390,3 +1465,22 @@ interface GeminiProviderOptions extends BaseLLMProviderOptions {
 | `apiKey` | `process.env.GEMINI_API_KEY` or `process.env.GOOGLE_API_KEY` | Gemini API key |
 
 Default model: `"gemini-3-flash-preview"` | Default max tokens: `64000`
+
+---
+
+### `GeminiModels`
+
+```typescript
+import { GeminiModels } from "@tepa/provider-gemini";
+```
+
+| Constant                 | Value                      |
+| ------------------------ | -------------------------- |
+| `Gemini_3_Flash_Preview` | `"gemini-3-flash-preview"` |
+| `Gemini_3_Pro_Preview`   | `"gemini-3-pro-preview"`   |
+
+---
+
+### `GEMINI_MODEL_CATALOG`
+
+The full `ModelInfo[]` catalog array. Exported for inspection or testing.

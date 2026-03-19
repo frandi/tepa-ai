@@ -20,7 +20,7 @@ import {
   scratchpadTool,
   logObserveTool,
 } from "@tepa/tools";
-import { AnthropicProvider } from "@tepa/provider-anthropic";
+import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
 
 async function main() {
   // Load prompt from YAML file
@@ -51,6 +51,13 @@ async function main() {
     ],
     provider: new AnthropicProvider(),
     config: {
+      model: {
+        planner: AnthropicModels.Claude_Sonnet_4_6,
+        executor: AnthropicModels.Claude_Haiku_4_5,
+        evaluator: AnthropicModels.Claude_Sonnet_4_6,
+        // Cost-conscious: only haiku and sonnet for data analysis tasks
+        allowedModels: [AnthropicModels.Claude_Haiku_4_5, AnthropicModels.Claude_Sonnet_4_6],
+      },
       limits: {
         maxCycles: 3,
         maxTokens: 250_000,

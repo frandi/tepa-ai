@@ -1,5 +1,17 @@
 import type { ToolSchema } from "./tool.js";
 
+/** Metadata describing a model available from a provider. */
+export interface ModelInfo {
+  /** Model identifier as passed to provider API (e.g. "claude-sonnet-4-6"). */
+  id: string;
+  /** Human-readable description for the planner prompt. */
+  description: string;
+  /** Capability tier: helps the planner pick appropriate models per step. */
+  tier: "fast" | "balanced" | "advanced";
+  /** Optional list of capabilities (e.g. "tool_use", "vision", "long_context"). */
+  capabilities?: string[];
+}
+
 export interface LLMRequestOptions {
   model: string;
   maxTokens?: number;
@@ -37,6 +49,8 @@ export interface LLMResponse {
 
 export interface LLMProvider {
   complete(messages: LLMMessage[], options: LLMRequestOptions): Promise<LLMResponse>;
+  /** Return the models this provider supports. */
+  getModels(): ModelInfo[];
 }
 
 export type LLMLogStatus = "success" | "error" | "retry";

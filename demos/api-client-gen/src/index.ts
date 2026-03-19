@@ -19,7 +19,7 @@ import {
   shellExecuteTool,
   httpRequestTool,
 } from "@tepa/tools";
-import { AnthropicProvider } from "@tepa/provider-anthropic";
+import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
 
 async function main() {
   // Load prompt from YAML file
@@ -52,6 +52,17 @@ async function main() {
     ],
     provider,
     config: {
+      model: {
+        planner: AnthropicModels.Claude_Sonnet_4_6,
+        executor: AnthropicModels.Claude_Haiku_4_5,
+        evaluator: AnthropicModels.Claude_Sonnet_4_6,
+        // Allow the planner to assign Opus for complex reasoning steps
+        allowedModels: [
+          AnthropicModels.Claude_Haiku_4_5,
+          AnthropicModels.Claude_Sonnet_4_6,
+          AnthropicModels.Claude_Opus_4_6,
+        ],
+      },
       limits: {
         maxCycles: 3,
         maxTokens: 400_000,

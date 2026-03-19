@@ -1,5 +1,5 @@
 import { GoogleGenAI, ApiError } from "@google/genai";
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from "@tepa/types";
+import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
 import {
   toGeminiContents,
@@ -8,6 +8,7 @@ import {
   extractText,
   extractToolUse,
 } from "./formatting.js";
+import { GEMINI_MODEL_CATALOG } from "./models.js";
 
 const DEFAULT_MODEL = "gemini-3-flash-preview";
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -20,6 +21,7 @@ export interface GeminiProviderOptions extends BaseLLMProviderOptions {
 /** LLM provider implementation for Google Gemini models. */
 export class GeminiProvider extends BaseLLMProvider {
   protected readonly providerName = "gemini";
+  protected readonly models: ModelInfo[] = GEMINI_MODEL_CATALOG;
   private readonly client: GoogleGenAI;
 
   constructor(options: GeminiProviderOptions = {}) {

@@ -8,9 +8,15 @@ import type {
   TepaPrompt,
   Plan,
   EvaluationResult,
+  ModelInfo,
 } from "@tepa/types";
 import { Tepa, type EvaluatorInput } from "../../src/tepa.js";
 import { TepaError } from "../../src/utils/errors.js";
+
+const defaultModelCatalog: ModelInfo[] = [
+  { id: "claude-haiku-4-5", tier: "fast", description: "Fast model." },
+  { id: "claude-sonnet-4-6", tier: "balanced", description: "Balanced model." },
+];
 
 // --- Helpers ---
 
@@ -76,6 +82,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
+    getModels: vi.fn(() => defaultModelCatalog),
   };
 }
 
@@ -580,6 +587,7 @@ describe("Tepa", () => {
         complete: vi.fn(async () => {
           throw new TypeError("Something unexpected");
         }),
+        getModels: () => defaultModelCatalog,
       };
 
       const tool = createMockTool("tool_a", "ok");
