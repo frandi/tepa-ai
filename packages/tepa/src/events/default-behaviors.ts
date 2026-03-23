@@ -146,10 +146,9 @@ export function createDefaultBehaviors(
         logger.debug(`${prefix}   ${evaluation.tokensUsed} tokens`);
       }
 
-      // Budget info at debug level
-      const totalTokens = cycle.tokensUsed + evaluation.tokensUsed;
-      const pct = ((totalTokens / config.limits.maxTokens) * 100).toFixed(1);
-      logger.debug(`           Budget: ${totalTokens}/${config.limits.maxTokens} (${pct}%)`);
+      // Budget info at debug level (cycle.tokensUsed already includes evaluation tokens)
+      const pct = ((cycle.tokensUsed / config.limits.maxTokens) * 100).toFixed(1);
+      logger.debug(`           Budget: ${cycle.tokensUsed}/${config.limits.maxTokens} (${pct}%)`);
     },
   };
 }

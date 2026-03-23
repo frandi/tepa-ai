@@ -43,7 +43,13 @@ function makeToolUseResponse(
 }
 
 function makePlanJson(
-  steps: Array<{ id: string; description: string; tools: string[]; dependencies?: string[] }>,
+  steps: Array<{
+    id: string;
+    description: string;
+    tools: string[];
+    dependencies?: string[];
+    model?: string;
+  }>,
 ): string {
   return JSON.stringify({
     reasoning: "Test plan",
@@ -514,6 +520,61 @@ describe("Pipeline Integration", () => {
       const result = await tepa.run(samplePrompt);
 
       expect(result.tokensUsed).toBe(120);
+    });
+
+    it("attributes executor tokens to correct models when steps use per-step model overrides", async () => {
+      // Planner uses default model (claude-haiku-4-5): 10+10 = 20 tokens
+      // Step 1 (reasoning, model override "claude-sonnet-4-6"): 30+40 = 70 tokens
+      // Step 2 (tool, default executor model "claude-haiku-4-5"): 10+10 = 20 tokens
+      // Evaluator uses default model (claude-haiku-4-5): 10+10 = 20 tokens
+      // Total: 130 tokens
+      // By model: claude-haiku-4-5 = planner(20) + step_2(20) + evaluator(20) = 60
+      //           claude-sonnet-4-6 = step_1(70)
+      const provider = createMockProvider([
+        // Planner
+        makeResponse(
+          makePlanJson([
+            {
+              id: "step_1",
+              description: "Analyze data",
+              tools: [],
+              model: "claude-sonnet-4-6",
+            },
+            {
+              id: "step_2",
+              description: "Write report",
+              tools: ["tool_a"],
+              dependencies: ["step_1"],
+            },
+          ]),
+        ),
+        // Step 1 (reasoning with model override) — 30 input, 40 output
+        makeResponse("detailed analysis", 30, 40),
+        // Step 2 (tool with default model) — 10 input, 10 output
+        makeToolUseResponse("tool_a", { input: "report" }),
+        // Evaluator
+        makeResponse(makeEvalJson("pass")),
+      ]);
+
+      const tool = createMockTool("tool_a", "ok");
+
+      const tepa = new Tepa({
+        tools: [tool],
+        provider,
+        config: { limits: { maxTokens: 100_000 } },
+      });
+
+      const result = await tepa.run(samplePrompt);
+
+      expect(result.tokensUsed).toBe(130);
+
+      // Verify the provider was called with the correct model for each step
+      const completeCalls = (provider.complete as ReturnType<typeof vi.fn>).mock.calls;
+      // Call 0: planner (default model)
+      // Call 1: step_1 (model override "claude-sonnet-4-6")
+      expect(completeCalls[1]![1].model).toBe("claude-sonnet-4-6");
+      // Call 2: step_2 (default executor model "claude-haiku-4-5")
+      expect(completeCalls[2]![1].model).toBe("claude-haiku-4-5");
     });
   });
 });

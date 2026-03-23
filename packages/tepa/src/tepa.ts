@@ -223,7 +223,9 @@ export class Tepa {
           eventBus,
           cycleMeta,
         );
-        tokenTracker.add(executorOutput.tokensUsed, this.config.model.executor);
+        for (const [model, tokens] of executorOutput.tokensByModel) {
+          tokenTracker.add(tokens, model);
+        }
         allLogs.push(...executorOutput.logs);
 
         const executorResult = await eventBus.run("postExecutor", executorOutput, cycleMeta);
