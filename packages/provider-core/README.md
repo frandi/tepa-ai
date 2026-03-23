@@ -19,6 +19,7 @@ const provider = new AnthropicProvider({
   defaultLog: true, // enable file logging (default: true)
   logDir: ".tepa/logs", // directory for log files (default: ".tepa/logs")
   includeContent: false, // include full message content in logs (default: false)
+  logger: myLogger, // optional TepaLogger for human-readable log output
 });
 ```
 
@@ -164,6 +165,35 @@ interface LLMLogEntry {
   };
 }
 ```
+
+### Pluggable Logger (TepaLogger)
+
+Pass any logger satisfying the `TepaLogger` interface to get human-readable log output from the provider. This is separate from the structured `LLMLogEntry` callback system — it provides a unified log stream alongside your application's logger:
+
+```typescript
+import pino from "pino";
+
+const logger = pino({ level: "debug" });
+const provider = new AnthropicProvider({ logger });
+
+// Provider now logs through pino:
+//   debug: successful LLM completions
+//   warn:  retry attempts
+//   error: failed requests
+```
+
+The `TepaLogger` interface is intentionally minimal — most logging libraries satisfy it natively:
+
+```typescript
+interface TepaLogger {
+  debug(msg: string, meta?: Record<string, unknown>): void;
+  info(msg: string, meta?: Record<string, unknown>): void;
+  warn(msg: string, meta?: Record<string, unknown>): void;
+  error(msg: string, meta?: Record<string, unknown>): void;
+}
+```
+
+Pass the same logger to both the provider and `Tepa` for fully unified log output.
 
 ## Extending BaseLLMProvider
 

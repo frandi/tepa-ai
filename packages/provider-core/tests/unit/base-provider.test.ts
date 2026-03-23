@@ -265,6 +265,71 @@ describe("BaseLLMProvider", () => {
     });
   });
 
+  describe("TepaLogger integration", () => {
+    it("calls logger.debug on successful completion", async () => {
+      const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 1, logger });
+      p.doCompleteFn.mockResolvedValue(testResponse);
+
+      await p.complete(testMessages, testOptions);
+
+      expect(logger.debug).toHaveBeenCalledTimes(1);
+      expect(logger.debug).toHaveBeenCalledWith(
+        "LLM request completed",
+        expect.objectContaining({
+          provider: "test",
+          model: "test-model",
+        }),
+      );
+    });
+
+    it("calls logger.warn on retry", async () => {
+      const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 1, logger });
+      const error = new Error("transient");
+      p.doCompleteFn.mockRejectedValueOnce(error).mockResolvedValueOnce(testResponse);
+      p.isRetryableFn.mockReturnValue(true);
+
+      await p.complete(testMessages, testOptions);
+
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        "LLM request retrying",
+        expect.objectContaining({
+          provider: "test",
+          attempt: 1,
+        }),
+      );
+      expect(logger.debug).toHaveBeenCalledTimes(1); // success after retry
+    });
+
+    it("calls logger.error on non-retryable failure", async () => {
+      const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 1, logger });
+      p.doCompleteFn.mockRejectedValue(new Error("fatal"));
+      p.isRetryableFn.mockReturnValue(false);
+
+      await expect(p.complete(testMessages, testOptions)).rejects.toThrow("fatal");
+
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      expect(logger.error).toHaveBeenCalledWith(
+        "LLM request failed",
+        expect.objectContaining({
+          provider: "test",
+          error: "fatal",
+        }),
+      );
+    });
+
+    it("works without logger (no crashes)", async () => {
+      const p = new TestProvider({ defaultLog: false, retryBaseDelayMs: 1 });
+      p.doCompleteFn.mockResolvedValue(testResponse);
+
+      const result = await p.complete(testMessages, testOptions);
+      expect(result).toEqual(testResponse);
+    });
+  });
+
   describe("retry delay computation", () => {
     it("uses retry-after when available", async () => {
       const error = new Error("rate limited");

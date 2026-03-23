@@ -1,8 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { CycleMetadata, Plan, PostStepPayload, EvaluationResult } from "@tepa/types";
+import { describe, it, expect, beforeEach } from "vitest";
+import type {
+  TepaLogger,
+  CycleMetadata,
+  Plan,
+  PostStepPayload,
+  EvaluationResult,
+} from "@tepa/types";
 import type { ExecutorOutput } from "../../src/core/executor.js";
 import { createDefaultBehaviors } from "../../src/events/default-behaviors.js";
-import { Logger } from "../../src/utils/logger.js";
+import { LogEntryCollector } from "../../src/utils/logger.js";
 
 const baseCycle: CycleMetadata = {
   cycleNumber: 1,
@@ -14,24 +20,39 @@ const defaultConfig = {
   model: { planner: "test-planner", executor: "test-executor", evaluator: "test-evaluator" },
   limits: { maxCycles: 5, maxTokens: 64000, toolTimeout: 30000, retryAttempts: 1 },
   tools: [] as string[],
-  logging: { level: "standard" as const },
+  logging: { level: "info" as const },
 };
 
+function createMockLogger(): TepaLogger & { calls: Record<string, string[]> } {
+  const calls: Record<string, string[]> = { debug: [], info: [], warn: [], error: [] };
+  return {
+    calls,
+    debug(msg: string) {
+      calls.debug.push(msg);
+    },
+    info(msg: string) {
+      calls.info.push(msg);
+    },
+    warn(msg: string) {
+      calls.warn.push(msg);
+    },
+    error(msg: string) {
+      calls.error.push(msg);
+    },
+  };
+}
+
 describe("createDefaultBehaviors", () => {
-  let logger: Logger;
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let logger: ReturnType<typeof createMockLogger>;
+  let collector: LogEntryCollector;
 
   beforeEach(() => {
-    logger = new Logger({ level: "standard" });
-    consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleSpy.mockRestore();
+    logger = createMockLogger();
+    collector = new LogEntryCollector();
   });
 
   it("returns a DefaultBehaviorMap with handlers for all lifecycle events", () => {
-    const behaviors = createDefaultBehaviors(logger, defaultConfig);
+    const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
     expect(behaviors.prePlanner).toBeTypeOf("function");
     expect(behaviors.postPlanner).toBeTypeOf("function");
     expect(behaviors.preExecutor).toBeTypeOf("function");
@@ -42,8 +63,8 @@ describe("createDefaultBehaviors", () => {
   });
 
   describe("postPlanner", () => {
-    it("logs plan step count", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+    it("logs plan step count via logger.info", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       const plan: Plan = {
         steps: [
           {
@@ -68,13 +89,12 @@ describe("createDefaultBehaviors", () => {
       behaviors.prePlanner!(undefined, baseCycle);
       behaviors.postPlanner!(plan, baseCycle);
 
-      const output = consoleSpy.mock.calls[0]![0] as string;
-      expect(output).toContain("2 steps");
-      expect(output).toContain("Planning");
+      expect(logger.calls.info[0]).toContain("2 steps");
+      expect(logger.calls.info[0]).toContain("Planning");
     });
 
-    it("handles singular step count", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+    it("collects entries in LogEntryCollector", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       const plan: Plan = {
         steps: [
           { id: "s1", description: "step 1", tools: [], expectedOutcome: "ok", dependencies: [] },
@@ -85,17 +105,32 @@ describe("createDefaultBehaviors", () => {
 
       behaviors.postPlanner!(plan, baseCycle);
 
-      const output = consoleSpy.mock.calls[0]![0] as string;
-      expect(output).toContain("1 step");
-      expect(output).not.toContain("1 steps");
+      const entries = collector.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]!.message).toContain("planning");
+    });
+
+    it("handles singular step count", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
+      const plan: Plan = {
+        steps: [
+          { id: "s1", description: "step 1", tools: [], expectedOutcome: "ok", dependencies: [] },
+        ],
+        estimatedTokens: 500,
+        reasoning: "test",
+      };
+
+      behaviors.postPlanner!(plan, baseCycle);
+
+      expect(logger.calls.info[0]).toContain("1 step");
+      expect(logger.calls.info[0]).not.toContain("1 steps");
     });
   });
 
   describe("postStep", () => {
-    it("logs individual step results", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+    it("logs individual step results via logger.info", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
 
-      // Set up plan step count via postPlanner
       const plan: Plan = {
         steps: [
           {
@@ -117,9 +152,6 @@ describe("createDefaultBehaviors", () => {
         reasoning: "test",
       };
       behaviors.postPlanner!(plan, baseCycle);
-      consoleSpy.mockClear();
-
-      // Reset step counter via preExecutor
       behaviors.preExecutor!(undefined, baseCycle);
 
       const stepPayload: PostStepPayload = {
@@ -140,16 +172,49 @@ describe("createDefaultBehaviors", () => {
         cycle: 1,
       };
 
+      // Clear info calls from postPlanner
+      logger.calls.info = [];
       behaviors.postStep!(stepPayload, baseCycle);
 
-      const output = consoleSpy.mock.calls[0]![0] as string;
-      expect(output).toContain("step 1/2");
-      expect(output).toContain("directory_list");
-      expect(output).toContain("\u2713"); // checkmark
+      expect(logger.calls.info[0]).toContain("step 1/2");
+      expect(logger.calls.info[0]).toContain("directory_list");
+      expect(logger.calls.info[0]).toContain("+"); // success icon
+    });
+
+    it("logs token and output details at debug level", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
+
+      const plan: Plan = {
+        steps: [
+          { id: "s1", description: "a", tools: ["t1"], expectedOutcome: "ok", dependencies: [] },
+        ],
+        estimatedTokens: 500,
+        reasoning: "test",
+      };
+      behaviors.postPlanner!(plan, baseCycle);
+      behaviors.preExecutor!(undefined, baseCycle);
+
+      behaviors.postStep!(
+        {
+          step: plan.steps[0]!,
+          result: {
+            stepId: "s1",
+            status: "success",
+            output: "some output",
+            tokensUsed: 300,
+            durationMs: 100,
+          },
+          cycle: 1,
+        },
+        baseCycle,
+      );
+
+      expect(logger.calls.debug.some((m) => m.includes("300 tokens"))).toBe(true);
+      expect(logger.calls.debug.some((m) => m.includes("some output"))).toBe(true);
     });
 
     it("increments step counter across multiple steps", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
 
       const plan: Plan = {
         steps: [
@@ -161,7 +226,7 @@ describe("createDefaultBehaviors", () => {
       };
       behaviors.postPlanner!(plan, baseCycle);
       behaviors.preExecutor!(undefined, baseCycle);
-      consoleSpy.mockClear();
+      logger.calls.info = [];
 
       behaviors.postStep!(
         {
@@ -180,14 +245,14 @@ describe("createDefaultBehaviors", () => {
         baseCycle,
       );
 
-      expect(consoleSpy.mock.calls[0]![0] as string).toContain("step 1/2");
-      expect(consoleSpy.mock.calls[1]![0] as string).toContain("step 2/2");
+      expect(logger.calls.info[0]).toContain("step 1/2");
+      expect(logger.calls.info[1]).toContain("step 2/2");
     });
   });
 
   describe("postExecutor", () => {
     it("logs execution summary with success count", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       behaviors.preExecutor!(undefined, baseCycle);
 
       const output: ExecutorOutput = {
@@ -209,15 +274,14 @@ describe("createDefaultBehaviors", () => {
 
       behaviors.postExecutor!(output, baseCycle);
 
-      const logOutput = consoleSpy.mock.calls[0]![0] as string;
-      expect(logOutput).toContain("2/3 succeeded");
-      expect(logOutput).toContain("Execution");
+      const infoOutput = logger.calls.info.find((m) => m.includes("Execution"));
+      expect(infoOutput).toContain("2/3 succeeded");
     });
   });
 
   describe("postEvaluator", () => {
     it("logs evaluation verdict and confidence", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       behaviors.preEvaluator!(undefined, baseCycle);
 
       const evaluation: EvaluationResult = {
@@ -229,15 +293,13 @@ describe("createDefaultBehaviors", () => {
 
       behaviors.postEvaluator!(evaluation, baseCycle);
 
-      const logOutput = consoleSpy.mock.calls[0]![0] as string;
-      expect(logOutput).toContain("pass");
-      expect(logOutput).toContain("0.97");
-      expect(logOutput).toContain("Evaluation");
+      const infoOutput = logger.calls.info.find((m) => m.includes("Evaluation"));
+      expect(infoOutput).toContain("pass");
+      expect(infoOutput).toContain("0.97");
     });
 
-    it("calls budget in verbose mode", () => {
-      const verboseLogger = new Logger({ level: "verbose" });
-      const behaviors = createDefaultBehaviors(verboseLogger, defaultConfig);
+    it("logs budget info at debug level", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       behaviors.preEvaluator!(undefined, baseCycle);
 
       const evaluation: EvaluationResult = {
@@ -249,15 +311,14 @@ describe("createDefaultBehaviors", () => {
       const cycle: CycleMetadata = { cycleNumber: 1, totalCyclesUsed: 0, tokensUsed: 4000 };
       behaviors.postEvaluator!(evaluation, cycle);
 
-      const allOutput = consoleSpy.mock.calls.map((c) => c[0] as string).join("\n");
-      expect(allOutput).toContain("Budget:");
-      expect(allOutput).toContain("5200/64000");
+      expect(logger.calls.debug.some((m) => m.includes("Budget:"))).toBe(true);
+      expect(logger.calls.debug.some((m) => m.includes("5200/64000"))).toBe(true);
     });
   });
 
   describe("step counter reset", () => {
     it("resets step counter on preExecutor for new cycles", () => {
-      const behaviors = createDefaultBehaviors(logger, defaultConfig);
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
 
       const plan: Plan = {
         steps: [
@@ -268,7 +329,7 @@ describe("createDefaultBehaviors", () => {
       };
       behaviors.postPlanner!(plan, baseCycle);
       behaviors.preExecutor!(undefined, baseCycle);
-      consoleSpy.mockClear();
+      logger.calls.info = [];
 
       behaviors.postStep!(
         {
@@ -278,11 +339,11 @@ describe("createDefaultBehaviors", () => {
         },
         baseCycle,
       );
-      expect(consoleSpy.mock.calls[0]![0] as string).toContain("step 1/1");
+      expect(logger.calls.info[0]).toContain("step 1/1");
 
       // Simulate cycle 2 - preExecutor resets counter
       behaviors.preExecutor!(undefined, { cycleNumber: 2, totalCyclesUsed: 1, tokensUsed: 1000 });
-      consoleSpy.mockClear();
+      logger.calls.info = [];
 
       behaviors.postStep!(
         {
@@ -292,14 +353,13 @@ describe("createDefaultBehaviors", () => {
         },
         { cycleNumber: 2, totalCyclesUsed: 1, tokensUsed: 1000 },
       );
-      expect(consoleSpy.mock.calls[0]![0] as string).toContain("step 1/1");
+      expect(logger.calls.info[0]).toContain("step 1/1");
     });
   });
 
-  describe("minimal mode", () => {
-    it("does not print anything in minimal mode", () => {
-      const minimalLogger = new Logger({ level: "minimal" });
-      const behaviors = createDefaultBehaviors(minimalLogger, defaultConfig);
+  describe("collector entries", () => {
+    it("collects entries for all stage events", () => {
+      const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
 
       const plan: Plan = {
         steps: [{ id: "s1", description: "a", tools: [], expectedOutcome: "ok", dependencies: [] }],
@@ -310,11 +370,21 @@ describe("createDefaultBehaviors", () => {
       behaviors.prePlanner!(undefined, baseCycle);
       behaviors.postPlanner!(plan, baseCycle);
       behaviors.preExecutor!(undefined, baseCycle);
+      behaviors.postStep!(
+        {
+          step: plan.steps[0]!,
+          result: { stepId: "s1", status: "success", output: null, tokensUsed: 0, durationMs: 100 },
+          cycle: 1,
+        },
+        baseCycle,
+      );
       behaviors.postExecutor!({ results: [], logs: [], tokensUsed: 0 }, baseCycle);
       behaviors.preEvaluator!(undefined, baseCycle);
       behaviors.postEvaluator!({ verdict: "pass", confidence: 0.9, tokensUsed: 0 }, baseCycle);
 
-      expect(consoleSpy).not.toHaveBeenCalled();
+      const entries = collector.getEntries();
+      // postPlanner + postStep + postExecutor + postEvaluator = 4 entries
+      expect(entries).toHaveLength(4);
     });
   });
 });

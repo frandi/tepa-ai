@@ -42,9 +42,9 @@ describe("defineConfig", () => {
 
   it("overrides logging level", () => {
     const config = defineConfig({
-      logging: { level: "verbose" },
+      logging: { level: "debug" },
     });
-    expect(config.logging.level).toBe("verbose");
+    expect(config.logging.level).toBe("debug");
   });
 
   it("throws TepaConfigError for invalid maxCycles", () => {
@@ -56,7 +56,7 @@ describe("defineConfig", () => {
   });
 
   it("throws TepaConfigError for invalid logging level", () => {
-    expect(() => defineConfig({ logging: { level: "debug" as "standard" } })).toThrow(
+    expect(() => defineConfig({ logging: { level: "verbose" as "info" } })).toThrow(
       TepaConfigError,
     );
   });

@@ -13,8 +13,17 @@ export interface LimitsConfig {
   retryAttempts: number;
 }
 
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+export interface TepaLogger {
+  debug(msg: string, meta?: Record<string, unknown>): void;
+  info(msg: string, meta?: Record<string, unknown>): void;
+  warn(msg: string, meta?: Record<string, unknown>): void;
+  error(msg: string, meta?: Record<string, unknown>): void;
+}
+
 export interface LoggingConfig {
-  level: "minimal" | "standard" | "verbose";
+  level: LogLevel;
   output?: string;
 }
 

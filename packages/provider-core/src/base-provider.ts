@@ -6,6 +6,7 @@ import type {
   LLMLogEntry,
   LLMLogCallback,
   ModelInfo,
+  TepaLogger,
 } from "@tepa/types";
 import { createFileLogWriter } from "./file-log-writer.js";
 
@@ -20,6 +21,8 @@ export interface BaseLLMProviderOptions {
   logDir?: string;
   /** Include full message content in log entries. Default: false */
   includeContent?: boolean;
+  /** Optional external logger for human-readable log output. */
+  logger?: TepaLogger;
 }
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -34,11 +37,13 @@ export abstract class BaseLLMProvider implements LLMProvider {
   private readonly logCallbacks: LLMLogCallback[] = [];
   private readonly logHistory: LLMLogEntry[] = [];
   private readonly _logFilePath?: string;
+  private readonly logger?: TepaLogger;
 
   constructor(options: BaseLLMProviderOptions = {}) {
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.retryBaseDelayMs = options.retryBaseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS;
     this.includeContent = options.includeContent ?? false;
+    this.logger = options.logger;
 
     if (options.defaultLog !== false) {
       const writer = createFileLogWriter(options.logDir);
@@ -123,6 +128,14 @@ export abstract class BaseLLMProvider implements LLMProvider {
           },
         });
 
+        this.logger?.debug(`LLM request completed`, {
+          provider: this.providerName,
+          model: options.model,
+          durationMs,
+          tokensInput: response.tokensUsed.input,
+          tokensOutput: response.tokensUsed.output,
+        });
+
         return response;
       } catch (rawError) {
         const error = this.mapError(rawError);
@@ -144,6 +157,14 @@ export abstract class BaseLLMProvider implements LLMProvider {
               retryable,
             },
           });
+
+          this.logger?.error(`LLM request failed`, {
+            provider: this.providerName,
+            model: options.model,
+            durationMs,
+            error: error instanceof Error ? error.message : String(error),
+          });
+
           throw error;
         }
 
@@ -158,6 +179,14 @@ export abstract class BaseLLMProvider implements LLMProvider {
             message: error instanceof Error ? error.message : String(error),
             retryable: true,
           },
+        });
+
+        this.logger?.warn(`LLM request retrying`, {
+          provider: this.providerName,
+          model: options.model,
+          attempt: attempt + 1,
+          maxRetries: this.maxRetries,
+          error: error instanceof Error ? error.message : String(error),
         });
 
         const delay = this.computeDelay(error, attempt);

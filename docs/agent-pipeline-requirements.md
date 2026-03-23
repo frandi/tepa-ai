@@ -577,7 +577,7 @@ interface LimitsConfig {
 }
 
 interface LoggingConfig {
-  level: "minimal" | "standard" | "verbose";
+  level: "debug" | "info" | "warn" | "error";
   output?: string; // Optional log file path
 }
 ```
@@ -598,7 +598,7 @@ interface LoggingConfig {
     retryAttempts: 1,
   },
   tools: [],
-  logging: { level: "standard" },
+  logging: { level: "info" },
 }
 ```
 

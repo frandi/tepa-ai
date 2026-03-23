@@ -47,6 +47,7 @@ new Tepa(options: TepaOptions)
 - `provider: LLMProvider` — LLM provider for all components
 - `config?: DeepPartial<TepaConfig>` — Configuration (merged with defaults)
 - `events?: EventMap` — Event hook callbacks
+- `logger?: TepaLogger` — Optional external logger (pino, winston, etc.). If omitted, a built-in console logger is used
 
 **`tepa.run(prompt: TepaPrompt): Promise<TepaResult>`**
 
@@ -61,7 +62,7 @@ import { defineConfig } from "@tepa/core";
 
 const config = defineConfig({
   limits: { maxCycles: 10 },
-  logging: { level: "verbose" },
+  logging: { level: "debug" },
 });
 ```
 
@@ -121,7 +122,7 @@ Individual components are exported for advanced usage (most users only need `Tep
     retryAttempts: 1,
   },
   logging: {
-    level: "standard",
+    level: "info",
   },
 }
 ```

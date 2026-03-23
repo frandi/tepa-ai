@@ -148,7 +148,7 @@ Once `preventDefault()` is called, it cannot be undone for that event invocation
 | `preEvaluator`  | Records stage start time                                  |
 | `postEvaluator` | Logs evaluation verdict, confidence, and budget (verbose) |
 
-All default behaviors respect the configured `logging.level` — at `"minimal"`, they collect data but produce no console output. At `"standard"`, they print progress and timing. At `"verbose"`, they add token counts, output previews, and budget tracking. See [Configuration — Logging](./05-configuration.md#logging-configuration) for output examples at each level.
+All default behaviors respect the configured `logging.level` — at `"error"`, only errors are shown. At `"info"` (the default), they print pipeline banners, stage summaries, and step progress with timing. At `"debug"`, they add token counts, output previews, and budget tracking. The logger is pluggable — pass any logger satisfying the `TepaLogger` interface (e.g., pino, winston) via `TepaOptions.logger`. See [Configuration — Logging](./05-configuration.md#logging-configuration) for details.
 
 ### Accessing the default behavior factory
 
@@ -342,12 +342,12 @@ events: {
   postStep: [
     (data) => {
       const { step, result } = data as PostStepPayload;
-      const status = result.status === "success" ? "✓" : "✗";
+      const status = result.status === "success" ? "+" : "x";
       console.log(
         `${status} (${result.durationMs}ms, ${result.tokensUsed} tokens)`
       );
       if (result.error) {
-        console.log(`  → ${result.error}`);
+        console.log(`  -> ${result.error}`);
       }
     },
   ],
@@ -357,9 +357,9 @@ events: {
 Output during a run:
 
 ```
-[cycle 1] step_1: List files in ./src... ✓ (245ms, 1200 tokens)
-[cycle 1] step_2: Analyze project structure... ✓ (1830ms, 3400 tokens)
-[cycle 1] step_3: Write summary to ./summary.md... ✓ (520ms, 2100 tokens)
+[cycle 1] step_1: List files in ./src... + (245ms, 1200 tokens)
+[cycle 1] step_2: Analyze project structure... + (1830ms, 3400 tokens)
+[cycle 1] step_3: Write summary to ./summary.md... + (520ms, 2100 tokens)
 ```
 
 ---

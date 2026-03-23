@@ -23,7 +23,7 @@ export { parsePromptFile } from "./prompt/parser.js";
 
 // Utilities
 export { TokenTracker } from "./utils/token-tracker.js";
-export { Logger } from "./utils/logger.js";
+export { createConsoleLogger, LogEntryCollector } from "./utils/logger.js";
 
 // Core Components
 export { Planner } from "./core/planner.js";

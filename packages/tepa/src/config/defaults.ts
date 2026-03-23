@@ -14,6 +14,6 @@ export const DEFAULT_CONFIG: TepaConfig = {
   },
   tools: [],
   logging: {
-    level: "standard",
+    level: "info",
   },
 };
