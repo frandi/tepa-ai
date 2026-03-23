@@ -15,7 +15,7 @@ import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import { fileReadTool, fileWriteTool, directoryListTool, scratchpadTool } from "@tepa/tools";
 import { OpenAIProvider, OpenAIModels } from "@tepa/provider-openai";
-import { createSessionLogger, type SessionLogger } from "./logger.js";
+import { createDemoLogger, type DemoLogger } from "./logger.js";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -24,11 +24,11 @@ async function ask(question: string): Promise<string> {
   return answer.trim().toLowerCase();
 }
 
-let logger: SessionLogger | undefined;
+let logger: DemoLogger | undefined;
 let provider: OpenAIProvider | undefined;
 
 async function main() {
-  logger = createSessionLogger();
+  logger = createDemoLogger();
 
   logger.info("=== Tepa Demo: Study Plan (Human-in-the-Loop) ===\n");
 
@@ -56,10 +56,11 @@ async function main() {
   const depthMap = new Map<string, number>();
 
   // Create the LLM provider (logs all calls to a JSONL file)
-  provider = new OpenAIProvider();
+  provider = new OpenAIProvider({ logger });
 
   // Create the Tepa pipeline
   const tepa = new Tepa({
+    logger,
     tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
     provider,
     config: {
@@ -73,7 +74,7 @@ async function main() {
         maxTokens: 250_000,
       },
       logging: {
-        level: "verbose",
+        level: "debug",
       },
     },
     events: {
@@ -193,7 +194,7 @@ async function main() {
 
 main().catch((error) => {
   rl.close();
-  const log = logger ?? createSessionLogger();
+  const log = logger ?? createDemoLogger();
   const message = error instanceof Error ? error.message : String(error);
   log.error(`\nDemo failed: ${message}`);
 

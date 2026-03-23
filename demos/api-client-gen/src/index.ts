@@ -20,13 +20,13 @@ import {
   httpRequestTool,
 } from "@tepa/tools";
 import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
-import { createSessionLogger, type SessionLogger } from "./logger.js";
+import { createDemoLogger, type DemoLogger } from "./logger.js";
 
-let logger: SessionLogger | undefined;
+let logger: DemoLogger | undefined;
 let provider: AnthropicProvider | undefined;
 
 async function main() {
-  logger = createSessionLogger();
+  logger = createDemoLogger();
 
   // Load prompt from YAML file
   const promptPath = path.join(demoRoot, "prompts", "task.yaml");
@@ -44,10 +44,11 @@ async function main() {
   const depthMap = new Map<string, number>();
 
   // Create the LLM provider (logs all calls to a JSONL file)
-  provider = new AnthropicProvider();
+  provider = new AnthropicProvider({ logger });
 
   // Create the Tepa pipeline
   const tepa = new Tepa({
+    logger,
     tools: [
       fileReadTool,
       fileWriteTool,
@@ -74,7 +75,7 @@ async function main() {
         maxTokens: 400_000,
       },
       logging: {
-        level: "verbose",
+        level: "debug",
       },
     },
     events: {
@@ -173,7 +174,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  const log = logger ?? createSessionLogger();
+  const log = logger ?? createDemoLogger();
   const message = error instanceof Error ? error.message : String(error);
   log.error(`\nDemo failed: ${message}`);
 

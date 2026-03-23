@@ -2,17 +2,16 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import pino from "pino";
 import pretty from "pino-pretty";
+import type { TepaLogger } from "@tepa/types";
 
 const DEFAULT_LOG_DIR = ".tepa/logs";
 
-export interface SessionLogger {
-  info(msg: string): void;
-  error(msg: string): void;
+export interface DemoLogger extends TepaLogger {
   finalize(opts?: { llmLogPath?: string }): void;
   sessionLogPath: string;
 }
 
-export function createSessionLogger(opts?: { logDir?: string }): SessionLogger {
+export function createDemoLogger(opts?: { logDir?: string }): DemoLogger {
   const logDir = path.resolve(opts?.logDir ?? DEFAULT_LOG_DIR);
   fs.mkdirSync(logDir, { recursive: true });
 
@@ -36,30 +35,38 @@ export function createSessionLogger(opts?: { logDir?: string }): SessionLogger {
     hideObject: true,
   });
 
-  const logger = pino(
-    { level: "info" },
+  const pinoLogger = pino(
+    { level: "debug" },
     pino.multistream([
-      { stream: consoleStream, level: "info" },
-      { stream: fileStream, level: "info" },
+      { stream: consoleStream, level: "debug" },
+      { stream: fileStream, level: "debug" },
     ]),
   );
 
   return {
     sessionLogPath,
 
+    debug(msg: string) {
+      pinoLogger.debug(msg);
+    },
+
     info(msg: string) {
-      logger.info(msg);
+      pinoLogger.info(msg);
+    },
+
+    warn(msg: string) {
+      pinoLogger.warn(msg);
     },
 
     error(msg: string) {
-      logger.error(msg);
+      pinoLogger.error(msg);
     },
 
     finalize(finalOpts?: { llmLogPath?: string }) {
       if (finalOpts?.llmLogPath) {
-        logger.info(`LLM call log: ${finalOpts.llmLogPath}`);
+        pinoLogger.info(`LLM call log: ${finalOpts.llmLogPath}`);
       }
-      logger.info(`Session log: ${sessionLogPath}`);
+      pinoLogger.info(`Session log: ${sessionLogPath}`);
     },
   };
 }
