@@ -44,11 +44,13 @@ interface LimitsConfig {
 
 ### `LoggingConfig`
 
-Controls console output verbosity.
+Controls log level filtering.
 
 ```typescript
+type LogLevel = "debug" | "info" | "warn" | "error";
+
 interface LoggingConfig {
-  level: "minimal" | "standard" | "verbose";
+  level: LogLevel;
   output?: string;
 }
 ```
@@ -66,7 +68,7 @@ interface LoggingConfig {
 | `limits.maxTokens`     | `64_000`              | Total token budget across all LLM calls in all cycles.              |
 | `limits.toolTimeout`   | `30_000`              | Timeout for tool execution in milliseconds.                         |
 | `limits.retryAttempts` | `1`                   | Retry attempts for recoverable step failures.                       |
-| `logging.level`        | `"standard"`          | Console output verbosity.                                           |
+| `logging.level`        | `"info"`              | Log level filter (`"debug"`, `"info"`, `"warn"`, `"error"`).       |
 
 The defaults follow a cost-efficiency pattern: a more capable model for planning and evaluation (where reasoning quality matters most), and a faster, cheaper model for execution (where the task is often just constructing tool call parameters). You only need to override what you want to change.
 
@@ -92,7 +94,7 @@ const tepa = new Tepa({
       maxTokens: 400_000,
     },
     logging: {
-      level: "verbose",
+      level: "debug",
     },
   },
 });
@@ -145,7 +147,7 @@ limits:
   maxCycles: 3
   maxTokens: 200000
 logging:
-  level: verbose
+  level: debug
 ```
 
 Externalizing config is particularly useful when you're running Tepa pipelines across different environments (development, staging, production) with different limits and logging verbosity.
@@ -345,55 +347,82 @@ Increase this for pipelines that depend on external services with occasional tra
 
 ## Logging Configuration
 
-The `level` setting controls how much the pipeline prints to the console. All three levels collect the same structured `LogEntry` data internally — the difference is only what appears on screen during a run.
+Tepa uses standard semantic log levels: `"debug"`, `"info"`, `"warn"`, `"error"`. The `level` setting controls the minimum severity that produces output — messages below the configured level are suppressed.
 
 Default logging is implemented as **event default behaviors** — they run automatically after any user event callbacks. If you need to replace the default logging for a specific event, call `ctx.preventDefault()` in your event callback. See [Event System Patterns — Default Behaviors and `preventDefault()`](./07-event-system-patterns.md#default-behaviors-and-preventdefault) for details.
 
-### `"minimal"`
+### Log Levels
 
-No console output. Log entries are still collected and available in `result.logs` after the run completes. Use this for production environments or when you're capturing logs programmatically.
+| Level     | Shows                                                                 |
+| --------- | --------------------------------------------------------------------- |
+| `"debug"` | Everything: token counts, output previews, budget percentages         |
+| `"info"`  | Pipeline banners, stage summaries, step progress (default)            |
+| `"warn"`  | Warnings (e.g., retry attempts, approaching budget limits)            |
+| `"error"` | Errors only — silent operation otherwise                              |
 
-### `"standard"` (default)
-
-Prints a pipeline banner, per-step progress with timing, stage summaries, and a final summary with model names:
+### Example Output (`"info"` level)
 
 ```
-▶ Pipeline started — goal: "List the files in ./src..."
+> Pipeline started -- goal: "List the files in ./src..."
   Tools: 4 | Limits: 5 cycles, 64000 tokens
-──────────────────────────────────────────────
-[cycle 1] Planning ··· 2 steps (5.4s)
-[cycle 1]   → step 1/2 (directory_list) ✓ 922ms
-[cycle 1]   → step 2/2 (file_write) ✓ 4.4s
-[cycle 1] Execution ··· 2/2 succeeded (5.3s)
-[cycle 1] Evaluation ··· pass · confidence 0.92 (2.3s)
-──────────────────────────────────────────────
-✔ Pipeline completed — pass · 1 cycle · 3774 tokens · 14.4s
+----------------------------------------------
+[cycle 1] Planning ... 2 steps (5.4s)
+[cycle 1]   -> step 1/2 (directory_list) + 922ms
+[cycle 1]   -> step 2/2 (file_write) + 4.4s
+[cycle 1] Execution ... 2/2 succeeded (5.3s)
+[cycle 1] Evaluation ... pass | confidence 0.92 (2.3s)
+----------------------------------------------
+[OK] Pipeline completed -- pass | 1 cycle | 3774 tokens | 14.4s
   Models: claude-sonnet-4-6, claude-haiku-4-5
 ```
 
-### `"verbose"`
+At `"debug"` level, additional detail appears: token counts per step, output previews, budget percentages, and per-model token breakdowns.
 
-Everything in `"standard"`, plus token counts per step, output previews, token budget percentage, and a per-model token breakdown:
+### Pluggable Logger
 
-```
-▶ Pipeline started — goal: "List the files in ./src..."
-  Tools: 4 | Limits: 5 cycles, 64000 tokens
-──────────────────────────────────────────────
-[cycle 1] Planning ··· 3 steps (1285 tokens, 1.1s)
-[cycle 1]   → step 1/3 (directory_list) ✓ 1.3s [802 tokens] [{"name":"config.js"...
-[cycle 1]   → step 2/3 ✓ 9.3s [556 tokens] ## Analysis...
-[cycle 1]   → step 3/3 (file_write) ✓ 3.0s [1495 tokens] {"path":"./summary.md"...
-[cycle 1] Execution ··· 3/3 succeeded (2853 tokens, 13.6s)
-[cycle 1] Evaluation ··· pass · confidence 0.97 (1381 tokens, 2.6s)
-           Budget: 6915/64000 (10.8%)
-──────────────────────────────────────────────
-✔ Pipeline completed — pass · 1 cycle · 5534/64000 tokens (8.6%) · 22.8s
-  Models: claude-sonnet-4-6: 2681, claude-haiku-4-5: 2853
+Tepa's logging system is library-agnostic. By default, a built-in console logger is used. You can pass any logger that implements the `TepaLogger` interface:
+
+```typescript
+interface TepaLogger {
+  debug(msg: string, meta?: Record<string, unknown>): void;
+  info(msg: string, meta?: Record<string, unknown>): void;
+  warn(msg: string, meta?: Record<string, unknown>): void;
+  error(msg: string, meta?: Record<string, unknown>): void;
+}
 ```
 
-Use this during development and debugging to understand where time and tokens are going.
+Most popular logging libraries (pino, winston, console) already satisfy this interface out of the box:
 
-Regardless of the level setting, every entry is always available in the result:
+```typescript
+import pino from "pino";
+
+const logger = pino({ level: "debug" });
+
+const tepa = new Tepa({
+  provider: new AnthropicProvider({ logger }),
+  tools: [...],
+  logger,  // All pipeline logs route through pino
+  config: {
+    logging: { level: "debug" },
+  },
+});
+```
+
+Pass the same logger to both `Tepa` and your LLM provider for unified log output. If your logger library uses different method names (e.g., bunyan's `trace` instead of `debug`), write a thin adapter:
+
+```typescript
+const tepa = new Tepa({
+  logger: {
+    debug: (msg, meta) => bunyanLogger.trace(meta ?? {}, msg),
+    info:  (msg, meta) => bunyanLogger.info(meta ?? {}, msg),
+    warn:  (msg, meta) => bunyanLogger.warn(meta ?? {}, msg),
+    error: (msg, meta) => bunyanLogger.error(meta ?? {}, msg),
+  },
+  // ...
+});
+```
+
+Regardless of the logger or level setting, structured `LogEntry` data is always available in the result:
 
 ```typescript
 const result = await tepa.run(prompt);
@@ -412,12 +441,12 @@ When `defineConfig()` encounters invalid values, it throws a `TepaConfigError` w
 ```typescript
 defineConfig({
   limits: { maxCycles: -1 },
-  logging: { level: "debug" },
+  logging: { level: "verbose" },
 });
 // Throws TepaConfigError:
 // "Invalid configuration: limits.maxCycles: Number must be greater than 0;
-//  logging.level: Invalid enum value. Expected 'minimal' | 'standard' | 'verbose',
-//  received 'debug'"
+//  logging.level: Invalid enum value. Expected 'debug' | 'info' | 'warn' | 'error',
+//  received 'verbose'"
 ```
 
 Validation rules by field:
@@ -430,7 +459,7 @@ Validation rules by field:
 | `limits.maxTokens`                                   | Positive integer (> 0)                        |
 | `limits.toolTimeout`                                 | Positive integer (> 0)                        |
 | `limits.retryAttempts`                               | Non-negative integer (>= 0)                   |
-| `logging.level`                                      | One of `"minimal"`, `"standard"`, `"verbose"` |
+| `logging.level`                                      | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
 
 `TepaConfigError` is a subclass of `TepaError`, so you can catch it specifically:
 

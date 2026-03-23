@@ -113,7 +113,14 @@ The `criteria` entries are what drive self-correction. The requirement that test
 
 ### Configuration
 
+The demo creates a pino logger and passes it to both the provider and the pipeline. All pipeline and LLM logs route through pino for unified output to console and file:
+
 ```typescript
+import { createDemoLogger } from "./logger.js";
+
+const logger = createDemoLogger(); // pino instance satisfying TepaLogger
+const provider = new AnthropicProvider({ logger });
+
 const tepa = new Tepa({
   tools: [
     fileReadTool,
@@ -123,13 +130,14 @@ const tepa = new Tepa({
     shellExecuteTool,
     httpRequestTool,
   ],
-  provider: new AnthropicProvider(),
+  provider,
+  logger, // Pipeline logs also route through pino
   config: {
     limits: {
       maxCycles: 3, // Room for one attempt + two correction cycles
       maxTokens: 400_000, // Higher budget: code generation steps produce longer outputs
     },
-    logging: { level: "verbose" },
+    logging: { level: "debug" },
   },
 });
 ```
@@ -246,7 +254,14 @@ The scratchpad is essential in this demo — the Executor computes averages and 
 
 ### Configuration
 
+A pino logger is created and shared with both the provider and pipeline:
+
 ```typescript
+import { createDemoLogger } from "./logger.js";
+
+const logger = createDemoLogger();
+const provider = new GeminiProvider({ logger });
+
 const tepa = new Tepa({
   tools: [
     fileReadTool,
@@ -257,13 +272,14 @@ const tepa = new Tepa({
     scratchpadTool,
     logObserveTool,
   ],
-  provider: new AnthropicProvider(),
+  provider,
+  logger,
   config: {
     limits: {
       maxCycles: 3, // Allowed, but typically completes in 1
       maxTokens: 250_000, // Lower budget sufficient — no code generation
     },
-    logging: { level: "verbose" },
+    logging: { level: "debug" },
   },
 });
 ```
@@ -449,16 +465,24 @@ This demo uses the fewest tools — it's primarily an LLM reasoning task. The sc
 
 ### Configuration
 
+Like the other demos, the logger is created once and passed to both provider and pipeline:
+
 ```typescript
+import { createDemoLogger } from "./logger.js";
+
+const logger = createDemoLogger();
+const provider = new OpenAIProvider({ logger });
+
 const tepa = new Tepa({
   tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
-  provider: new OpenAIProvider(),
+  provider,
+  logger,
   config: {
     limits: {
       maxCycles: 3,
       maxTokens: 250_000,
     },
-    logging: { level: "verbose" },
+    logging: { level: "debug" },
   },
 });
 ```

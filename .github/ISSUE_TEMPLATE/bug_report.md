@@ -26,4 +26,4 @@ assignees: ""
 
 ## Logs (optional)
 
-<!-- If relevant, include pipeline output. Tip: set logging to "verbose" for more detail, or check .tepa/logs/ for request/response logs. -->
+<!-- If relevant, include pipeline output. Tip: set logging.level to "debug" for more detail, or check .tepa/logs/ for request/response logs. -->

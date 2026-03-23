@@ -61,9 +61,11 @@ export const myTool: ToolDefinition = {
 - `EventMap` — Map of event names to callback arrays
 - `CycleMetadata` — Cycle number, total cycles, tokens used
 
-### Config
+### Config & Logging
 
 - `ModelConfig` — Per-component model assignment
 - `LimitsConfig` — Max cycles, token budget, timeouts
 - `LoggingConfig` — Log level and output path
+- `LogLevel` — `"debug" | "info" | "warn" | "error"`
+- `TepaLogger` — Pluggable logger interface (compatible with pino, winston, console)
 - `DeepPartial<T>` — Deep partial utility type

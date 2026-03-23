@@ -589,7 +589,7 @@ When filing a bug report, include:
 - **What you expected** vs. **what happened**
 - **Minimal reproduction** — a prompt file + entry script that triggers the issue, or a failing test
 - **Environment** — Node.js version, package versions (`npm ls @tepa/core`), OS
-- **Logs** — set `logging.level` to `"verbose"` in your config and include the relevant output; if the issue involves LLM responses, check `.tepa/logs/` for the JSONL request/response log
+- **Logs** — set `logging.level` to `"debug"` in your config and include the relevant output; if the issue involves LLM responses, check `.tepa/logs/` for the JSONL request/response log
 
 For feature requests, describe the use case first, then the proposed solution. This helps the maintainers understand whether the feature fits the framework's scope before implementation detail is discussed.
 

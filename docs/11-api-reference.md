@@ -94,7 +94,7 @@ const DEFAULT_CONFIG: TepaConfig = {
   },
   tools: [],
   logging: {
-    level: "standard",
+    level: "info",
   },
 };
 ```
@@ -215,39 +215,56 @@ Tracks token usage against a budget.
 
 ---
 
-### `Logger`
+### `TepaLogger` (Interface)
 
 ```typescript
-import { Logger } from "@tepa/core";
+import type { TepaLogger } from "@tepa/types";
 ```
 
-#### Constructor
+The logging interface that all loggers must satisfy. Pass any compatible logger (pino, winston, console, or custom) via `TepaOptions.logger`:
 
 ```typescript
-new Logger(config: LoggingConfig)
+interface TepaLogger {
+  debug(msg: string, meta?: Record<string, unknown>): void;
+  info(msg: string, meta?: Record<string, unknown>): void;
+  warn(msg: string, meta?: Record<string, unknown>): void;
+  error(msg: string, meta?: Record<string, unknown>): void;
+}
 ```
 
-#### `log()`
+Most popular logging libraries already satisfy this interface out of the box.
+
+### `createConsoleLogger()`
 
 ```typescript
-log(entry: Omit<LogEntry, "timestamp">): void
+import { createConsoleLogger } from "@tepa/core";
 ```
 
-Records an entry and optionally prints to console based on the configured level:
-
-| Level        | Console output                                |
-| ------------ | --------------------------------------------- |
-| `"minimal"`  | None — entries are stored only                |
-| `"standard"` | `[cycle N][step X](tool) message`             |
-| `"verbose"`  | Standard format plus duration and token count |
-
-#### `getEntries()`
+Factory for the built-in console logger. Used as the default when no external logger is provided.
 
 ```typescript
-getEntries(): LogEntry[]
+createConsoleLogger(level: LogLevel): TepaLogger
 ```
 
-Returns all recorded log entries.
+| Level     | Output                                                        |
+| --------- | ------------------------------------------------------------- |
+| `"debug"` | Everything: token counts, output previews, budget percentages |
+| `"info"`  | Pipeline banners, stage summaries, step progress              |
+| `"warn"`  | Warnings only                                                 |
+| `"error"` | Errors only                                                   |
+
+### `LogEntryCollector`
+
+```typescript
+import { LogEntryCollector } from "@tepa/core";
+```
+
+Collects structured `LogEntry` records in memory for `result.logs`. Independent of the `TepaLogger` — always collects regardless of log level.
+
+| Method       | Signature                                  | Description                           |
+| ------------ | ------------------------------------------ | ------------------------------------- |
+| `add`        | `add(entry: Omit<LogEntry, "timestamp">)`  | Add an entry with auto-timestamp      |
+| `getEntries` | `getEntries(): LogEntry[]`                 | Returns a defensive copy of all entries |
 
 ---
 
@@ -550,11 +567,17 @@ interface LimitsConfig {
 | `toolTimeout`   | `30000` | Timeout per tool execution in milliseconds                     |
 | `retryAttempts` | `1`     | Number of retries on parse failures (planner/evaluator)        |
 
+#### `LogLevel`
+
+```typescript
+type LogLevel = "debug" | "info" | "warn" | "error";
+```
+
 #### `LoggingConfig`
 
 ```typescript
 interface LoggingConfig {
-  level: "minimal" | "standard" | "verbose";
+  level: LogLevel;
   output?: string;
 }
 ```
