@@ -6,4 +6,5 @@ export default defineWorkspace([
   "packages/provider-core",
   "packages/provider-anthropic",
   "packages/provider-openai",
+  "packages/provider-gemini",
 ]);

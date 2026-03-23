@@ -3,7 +3,6 @@ export { GeminiModels, GEMINI_MODEL_CATALOG } from "./models.js";
 export {
   toGeminiContents,
   toGeminiTools,
+  toGeminiToolConfig,
   toFinishReason,
-  extractText,
-  extractToolUse,
 } from "./formatting.js";

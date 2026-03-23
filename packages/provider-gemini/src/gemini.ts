@@ -1,16 +1,16 @@
 import { GoogleGenAI, ApiError } from "@google/genai";
 import type { LLMMessage, LLMRequestOptions, LLMResponse, ModelInfo } from "@tepa/types";
 import { BaseLLMProvider, type BaseLLMProviderOptions } from "@tepa/provider-core";
+import type { LLMToolUseBlock } from "@tepa/types";
 import {
   toGeminiContents,
   toGeminiTools,
+  toGeminiToolConfig,
   toFinishReason,
-  extractText,
-  extractToolUse,
 } from "./formatting.js";
 import { GEMINI_MODEL_CATALOG } from "./models.js";
 
-const DEFAULT_MODEL = "gemini-3-flash-preview";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const DEFAULT_MAX_TOKENS = 64_000;
 
 export interface GeminiProviderOptions extends BaseLLMProviderOptions {
@@ -48,15 +48,19 @@ export class GeminiProvider extends BaseLLMProvider {
       config.systemInstruction = options.systemPrompt;
     }
 
+    if (options.tools && options.tools.length > 0) {
+      config.tools = toGeminiTools(options.tools);
+      const toolConfig = toGeminiToolConfig(options.toolChoice);
+      if (toolConfig) {
+        config.toolConfig = toolConfig;
+      }
+    }
+
     const params: Record<string, unknown> = {
       model: options.model || DEFAULT_MODEL,
       contents,
       config,
     };
-
-    if (options.tools && options.tools.length > 0) {
-      params.tools = toGeminiTools(options.tools);
-    }
 
     const response = await this.client.models.generateContent(
       params as unknown as Parameters<typeof this.client.models.generateContent>[0],
@@ -66,11 +70,29 @@ export class GeminiProvider extends BaseLLMProvider {
     const finishReason = candidates[0]?.finishReason ?? null;
     const usage = response.usageMetadata ?? {};
 
-    const toolUse = extractToolUse(response as unknown as Record<string, unknown>);
+    // Use the SDK's own getters to extract text and function calls.
+    // Casting to Record<string, unknown> loses access to class getters
+    // like `text` and `functionCalls`, so we access them directly.
+    const fnCalls = response.functionCalls;
+    const toolUse: LLMToolUseBlock[] = fnCalls
+      ? fnCalls.map((fc, i) => ({
+          id: `gemini-call-${i}`,
+          name: fc.name!,
+          input: (fc.args as Record<string, unknown>) ?? {},
+        }))
+      : [];
     const hasToolUse = toolUse.length > 0;
 
+    // Extract text from parts directly to avoid the SDK warning about
+    // non-text parts when functionCall parts are present.
+    const parts = candidates[0]?.content?.parts ?? [];
+    const text = parts
+      .filter((p) => typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join("");
+
     return {
-      text: extractText(response),
+      text,
       tokensUsed: {
         input: usage.promptTokenCount ?? 0,
         output: usage.candidatesTokenCount ?? 0,
