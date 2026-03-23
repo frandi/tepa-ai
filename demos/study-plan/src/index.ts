@@ -15,6 +15,7 @@ import { Tepa, parsePromptFile } from "@tepa/core";
 import type { Plan, PlanStep, EvaluationResult, PostStepPayload } from "@tepa/types";
 import { fileReadTool, fileWriteTool, directoryListTool, scratchpadTool } from "@tepa/tools";
 import { OpenAIProvider, OpenAIModels } from "@tepa/provider-openai";
+import { createSessionLogger, type SessionLogger } from "./logger.js";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -23,8 +24,13 @@ async function ask(question: string): Promise<string> {
   return answer.trim().toLowerCase();
 }
 
+let logger: SessionLogger | undefined;
+let provider: OpenAIProvider | undefined;
+
 async function main() {
-  console.log("=== Tepa Demo: Study Plan (Human-in-the-Loop) ===\n");
+  logger = createSessionLogger();
+
+  logger.info("=== Tepa Demo: Study Plan (Human-in-the-Loop) ===\n");
 
   // Get user input
   const userInput = await rl.question("What would you like to study?\n> ");
@@ -42,17 +48,20 @@ async function main() {
   // Inject user input into the prompt
   prompt.context.userInput = userInput;
 
-  console.log(`\nGoal: ${prompt.goal}`);
-  console.log(`User input: ${userInput}`);
-  console.log(`Output: ${outputFile}\n`);
+  logger.info(`\nGoal: ${prompt.goal}`);
+  logger.info(`User input: ${userInput}`);
+  logger.info(`Output: ${outputFile}\n`);
 
   // Shared state for step visualization
   const depthMap = new Map<string, number>();
 
+  // Create the LLM provider (logs all calls to a JSONL file)
+  provider = new OpenAIProvider();
+
   // Create the Tepa pipeline
   const tepa = new Tepa({
     tools: [fileReadTool, fileWriteTool, directoryListTool, scratchpadTool],
-    provider: new OpenAIProvider(),
+    provider,
     config: {
       model: {
         planner: OpenAIModels.GPT_5,
@@ -75,11 +84,11 @@ async function main() {
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
           const model = step.model ? ` [${step.model}]` : "";
-          console.log(
+          logger!.info(
             `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
           );
           if (result.error) {
-            console.log(`${indent}  Error: ${result.error}`);
+            logger!.info(`${indent}  Error: ${result.error}`);
           }
         },
       ],
@@ -114,21 +123,22 @@ async function main() {
             }
           }
 
-          console.log(`\n--- Plan (${plan.steps.length} steps) ---`);
+          logger!.info(`\n--- Plan (${plan.steps.length} steps) ---`);
           for (const step of plan.steps) {
             const depth = depthMap.get(step.id) ?? 0;
             const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
             const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
             const model = step.model ? ` [${step.model}]` : "";
-            console.log(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
+            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
           }
-          console.log();
+          logger!.info("");
 
           // Human-in-the-loop: ask for plan approval
           const answer = await ask("\nDo you approve this plan? (yes/no): ");
+          logger!.info(`  [User response: ${answer}]`);
           if (answer !== "yes" && answer !== "y") {
-            console.log(
+            logger!.info(
               "  [Note] Plan revision is not yet supported. Continuing with current plan.\n",
             );
           }
@@ -138,16 +148,17 @@ async function main() {
         async (data: unknown) => {
           const result = data as EvaluationResult;
           const icon = result.verdict === "pass" ? "PASS" : "FAIL";
-          console.log(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
-          if (result.feedback) console.log(`  Feedback: ${result.feedback}`);
-          if (result.summary) console.log(`  Summary: ${result.summary}`);
-          console.log();
+          logger!.info(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
+          if (result.feedback) logger!.info(`  Feedback: ${result.feedback}`);
+          if (result.summary) logger!.info(`  Summary: ${result.summary}`);
+          logger!.info("");
 
           // Human-in-the-loop: ask whether to continue on failure
           if (result.verdict === "fail") {
             const answer = await ask("Continue with another cycle to improve? (yes/no): ");
+            logger!.info(`  [User response: ${answer}]`);
             if (answer !== "yes" && answer !== "y") {
-              console.log("  [User override] Accepting current results.\n");
+              logger!.info("  [User override] Accepting current results.\n");
               return { ...result, verdict: "pass" as const };
             }
           }
@@ -160,27 +171,34 @@ async function main() {
   const result = await tepa.run(prompt);
 
   // Print final result
-  console.log("\n=== Result ===");
-  console.log(`Status: ${result.status}`);
-  console.log(`Cycles: ${result.cycles}`);
-  console.log(`Tokens used: ${result.tokensUsed}`);
-  console.log(`Feedback: ${result.feedback}`);
+  logger.info("\n=== Result ===");
+  logger.info(`Status: ${result.status}`);
+  logger.info(`Cycles: ${result.cycles}`);
+  logger.info(`Tokens used: ${result.tokensUsed}`);
+  logger.info(`Feedback: ${result.feedback}`);
 
   if (result.logs.length > 0) {
-    console.log(`\nExecution log: ${result.logs.length} entries`);
+    logger.info(`\n--- Pipeline Log (${result.logs.length} entries) ---`);
+    for (const entry of result.logs) {
+      const stepInfo = entry.step ? ` [${entry.step}]` : "";
+      const toolInfo = entry.tool ? ` (${entry.tool})` : "";
+      logger.info(`  [cycle ${entry.cycle}]${stepInfo}${toolInfo} ${entry.message}`);
+    }
   }
 
+  logger.finalize({ llmLogPath: provider.getLogFilePath() });
   rl.close();
   process.exit(result.status === "pass" ? 0 : 1);
 }
 
 main().catch((error) => {
   rl.close();
+  const log = logger ?? createSessionLogger();
   const message = error instanceof Error ? error.message : String(error);
-  console.error("\nDemo failed:", message);
+  log.error(`\nDemo failed: ${message}`);
 
   if (/api key/i.test(message) || /authentication failed/i.test(message)) {
-    console.error(
+    log.error(
       "\nTo fix this, set up your OpenAI API key:\n" +
         "  1. Get your key at https://platform.openai.com/api-keys\n" +
         "  2. Create a .env file in this demo directory with:\n" +
@@ -188,5 +206,6 @@ main().catch((error) => {
     );
   }
 
+  log.finalize({ llmLogPath: provider?.getLogFilePath() });
   process.exit(1);
 });

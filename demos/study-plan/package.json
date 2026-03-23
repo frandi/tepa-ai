@@ -12,6 +12,8 @@
     "@tepa/provider-openai": "*",
     "@tepa/tools": "*",
     "dotenv": "^17.3.1",
+    "pino": "^9.0.0",
+    "pino-pretty": "^13.0.0",
     "@tepa/core": "*"
   },
   "devDependencies": {
