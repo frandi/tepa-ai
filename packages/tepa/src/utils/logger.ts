@@ -14,19 +14,35 @@ export function createConsoleLogger(level: LogLevel): TepaLogger {
   return {
     debug(msg: string, meta?: Record<string, unknown>): void {
       if (!shouldLog(level, "debug")) return;
-      meta ? console.log(msg, meta) : console.log(msg);
+      if (meta) {
+        console.log(msg, meta);
+      } else {
+        console.log(msg);
+      }
     },
     info(msg: string, meta?: Record<string, unknown>): void {
       if (!shouldLog(level, "info")) return;
-      meta ? console.log(msg, meta) : console.log(msg);
+      if (meta) {
+        console.log(msg, meta);
+      } else {
+        console.log(msg);
+      }
     },
     warn(msg: string, meta?: Record<string, unknown>): void {
       if (!shouldLog(level, "warn")) return;
-      meta ? console.warn(msg, meta) : console.warn(msg);
+      if (meta) {
+        console.warn(msg, meta);
+      } else {
+        console.warn(msg);
+      }
     },
     error(msg: string, meta?: Record<string, unknown>): void {
       if (!shouldLog(level, "error")) return;
-      meta ? console.error(msg, meta) : console.error(msg);
+      if (meta) {
+        console.error(msg, meta);
+      } else {
+        console.error(msg);
+      }
     },
   };
 }

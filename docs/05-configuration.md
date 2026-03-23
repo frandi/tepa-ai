@@ -68,7 +68,7 @@ interface LoggingConfig {
 | `limits.maxTokens`     | `64_000`              | Total token budget across all LLM calls in all cycles.              |
 | `limits.toolTimeout`   | `30_000`              | Timeout for tool execution in milliseconds.                         |
 | `limits.retryAttempts` | `1`                   | Retry attempts for recoverable step failures.                       |
-| `logging.level`        | `"info"`              | Log level filter (`"debug"`, `"info"`, `"warn"`, `"error"`).       |
+| `logging.level`        | `"info"`              | Log level filter (`"debug"`, `"info"`, `"warn"`, `"error"`).        |
 
 The defaults follow a cost-efficiency pattern: a more capable model for planning and evaluation (where reasoning quality matters most), and a faster, cheaper model for execution (where the task is often just constructing tool call parameters). You only need to override what you want to change.
 
@@ -353,12 +353,12 @@ Default logging is implemented as **event default behaviors** — they run autom
 
 ### Log Levels
 
-| Level     | Shows                                                                 |
-| --------- | --------------------------------------------------------------------- |
-| `"debug"` | Everything: token counts, output previews, budget percentages         |
-| `"info"`  | Pipeline banners, stage summaries, step progress (default)            |
-| `"warn"`  | Warnings (e.g., retry attempts, approaching budget limits)            |
-| `"error"` | Errors only — silent operation otherwise                              |
+| Level     | Shows                                                         |
+| --------- | ------------------------------------------------------------- |
+| `"debug"` | Everything: token counts, output previews, budget percentages |
+| `"info"`  | Pipeline banners, stage summaries, step progress (default)    |
+| `"warn"`  | Warnings (e.g., retry attempts, approaching budget limits)    |
+| `"error"` | Errors only — silent operation otherwise                      |
 
 ### Example Output (`"info"` level)
 
@@ -414,8 +414,8 @@ Pass the same logger to both `Tepa` and your LLM provider for unified log output
 const tepa = new Tepa({
   logger: {
     debug: (msg, meta) => bunyanLogger.trace(meta ?? {}, msg),
-    info:  (msg, meta) => bunyanLogger.info(meta ?? {}, msg),
-    warn:  (msg, meta) => bunyanLogger.warn(meta ?? {}, msg),
+    info: (msg, meta) => bunyanLogger.info(meta ?? {}, msg),
+    warn: (msg, meta) => bunyanLogger.warn(meta ?? {}, msg),
     error: (msg, meta) => bunyanLogger.error(meta ?? {}, msg),
   },
   // ...
@@ -451,14 +451,14 @@ defineConfig({
 
 Validation rules by field:
 
-| Field                                                | Rule                                          |
-| ---------------------------------------------------- | --------------------------------------------- |
-| `model.planner`, `model.executor`, `model.evaluator` | Non-empty string                              |
-| `model.allowedModels`                                | Optional array of non-empty strings           |
-| `limits.maxCycles`                                   | Positive integer (> 0)                        |
-| `limits.maxTokens`                                   | Positive integer (> 0)                        |
-| `limits.toolTimeout`                                 | Positive integer (> 0)                        |
-| `limits.retryAttempts`                               | Non-negative integer (>= 0)                   |
+| Field                                                | Rule                                            |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| `model.planner`, `model.executor`, `model.evaluator` | Non-empty string                                |
+| `model.allowedModels`                                | Optional array of non-empty strings             |
+| `limits.maxCycles`                                   | Positive integer (> 0)                          |
+| `limits.maxTokens`                                   | Positive integer (> 0)                          |
+| `limits.toolTimeout`                                 | Positive integer (> 0)                          |
+| `limits.retryAttempts`                               | Non-negative integer (>= 0)                     |
 | `logging.level`                                      | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
 
 `TepaConfigError` is a subclass of `TepaError`, so you can catch it specifically:

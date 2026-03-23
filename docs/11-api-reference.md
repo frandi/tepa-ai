@@ -261,10 +261,10 @@ import { LogEntryCollector } from "@tepa/core";
 
 Collects structured `LogEntry` records in memory for `result.logs`. Independent of the `TepaLogger` — always collects regardless of log level.
 
-| Method       | Signature                                  | Description                           |
-| ------------ | ------------------------------------------ | ------------------------------------- |
-| `add`        | `add(entry: Omit<LogEntry, "timestamp">)`  | Add an entry with auto-timestamp      |
-| `getEntries` | `getEntries(): LogEntry[]`                 | Returns a defensive copy of all entries |
+| Method       | Signature                                 | Description                             |
+| ------------ | ----------------------------------------- | --------------------------------------- |
+| `add`        | `add(entry: Omit<LogEntry, "timestamp">)` | Add an entry with auto-timestamp        |
+| `getEntries` | `getEntries(): LogEntry[]`                | Returns a defensive copy of all entries |
 
 ---
 

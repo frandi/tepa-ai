@@ -274,10 +274,13 @@ describe("BaseLLMProvider", () => {
       await p.complete(testMessages, testOptions);
 
       expect(logger.debug).toHaveBeenCalledTimes(1);
-      expect(logger.debug).toHaveBeenCalledWith("LLM request completed", expect.objectContaining({
-        provider: "test",
-        model: "test-model",
-      }));
+      expect(logger.debug).toHaveBeenCalledWith(
+        "LLM request completed",
+        expect.objectContaining({
+          provider: "test",
+          model: "test-model",
+        }),
+      );
     });
 
     it("calls logger.warn on retry", async () => {
@@ -290,10 +293,13 @@ describe("BaseLLMProvider", () => {
       await p.complete(testMessages, testOptions);
 
       expect(logger.warn).toHaveBeenCalledTimes(1);
-      expect(logger.warn).toHaveBeenCalledWith("LLM request retrying", expect.objectContaining({
-        provider: "test",
-        attempt: 1,
-      }));
+      expect(logger.warn).toHaveBeenCalledWith(
+        "LLM request retrying",
+        expect.objectContaining({
+          provider: "test",
+          attempt: 1,
+        }),
+      );
       expect(logger.debug).toHaveBeenCalledTimes(1); // success after retry
     });
 
@@ -306,10 +312,13 @@ describe("BaseLLMProvider", () => {
       await expect(p.complete(testMessages, testOptions)).rejects.toThrow("fatal");
 
       expect(logger.error).toHaveBeenCalledTimes(1);
-      expect(logger.error).toHaveBeenCalledWith("LLM request failed", expect.objectContaining({
-        provider: "test",
-        error: "fatal",
-      }));
+      expect(logger.error).toHaveBeenCalledWith(
+        "LLM request failed",
+        expect.objectContaining({
+          provider: "test",
+          error: "fatal",
+        }),
+      );
     });
 
     it("works without logger (no crashes)", async () => {

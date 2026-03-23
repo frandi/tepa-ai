@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import type {
   TepaLogger,
   CycleMetadata,
@@ -27,10 +27,18 @@ function createMockLogger(): TepaLogger & { calls: Record<string, string[]> } {
   const calls: Record<string, string[]> = { debug: [], info: [], warn: [], error: [] };
   return {
     calls,
-    debug(msg: string) { calls.debug.push(msg); },
-    info(msg: string) { calls.info.push(msg); },
-    warn(msg: string) { calls.warn.push(msg); },
-    error(msg: string) { calls.error.push(msg); },
+    debug(msg: string) {
+      calls.debug.push(msg);
+    },
+    info(msg: string) {
+      calls.info.push(msg);
+    },
+    warn(msg: string) {
+      calls.warn.push(msg);
+    },
+    error(msg: string) {
+      calls.error.push(msg);
+    },
   };
 }
 
@@ -59,8 +67,20 @@ describe("createDefaultBehaviors", () => {
       const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       const plan: Plan = {
         steps: [
-          { id: "s1", description: "step 1", tools: ["file_read"], expectedOutcome: "ok", dependencies: [] },
-          { id: "s2", description: "step 2", tools: ["file_write"], expectedOutcome: "ok", dependencies: [] },
+          {
+            id: "s1",
+            description: "step 1",
+            tools: ["file_read"],
+            expectedOutcome: "ok",
+            dependencies: [],
+          },
+          {
+            id: "s2",
+            description: "step 2",
+            tools: ["file_write"],
+            expectedOutcome: "ok",
+            dependencies: [],
+          },
         ],
         estimatedTokens: 1000,
         reasoning: "test",
@@ -113,8 +133,20 @@ describe("createDefaultBehaviors", () => {
 
       const plan: Plan = {
         steps: [
-          { id: "s1", description: "list files", tools: ["directory_list"], expectedOutcome: "ok", dependencies: [] },
-          { id: "s2", description: "write file", tools: ["file_write"], expectedOutcome: "ok", dependencies: [] },
+          {
+            id: "s1",
+            description: "list files",
+            tools: ["directory_list"],
+            expectedOutcome: "ok",
+            dependencies: [],
+          },
+          {
+            id: "s2",
+            description: "write file",
+            tools: ["file_write"],
+            expectedOutcome: "ok",
+            dependencies: [],
+          },
         ],
         estimatedTokens: 1000,
         reasoning: "test",
@@ -123,8 +155,20 @@ describe("createDefaultBehaviors", () => {
       behaviors.preExecutor!(undefined, baseCycle);
 
       const stepPayload: PostStepPayload = {
-        step: { id: "s1", description: "list files", tools: ["directory_list"], expectedOutcome: "ok", dependencies: [] },
-        result: { stepId: "s1", status: "success", output: "file1.js, file2.js", tokensUsed: 300, durationMs: 500 },
+        step: {
+          id: "s1",
+          description: "list files",
+          tools: ["directory_list"],
+          expectedOutcome: "ok",
+          dependencies: [],
+        },
+        result: {
+          stepId: "s1",
+          status: "success",
+          output: "file1.js, file2.js",
+          tokensUsed: 300,
+          durationMs: 500,
+        },
         cycle: 1,
       };
 
@@ -153,7 +197,13 @@ describe("createDefaultBehaviors", () => {
       behaviors.postStep!(
         {
           step: plan.steps[0]!,
-          result: { stepId: "s1", status: "success", output: "some output", tokensUsed: 300, durationMs: 100 },
+          result: {
+            stepId: "s1",
+            status: "success",
+            output: "some output",
+            tokensUsed: 300,
+            durationMs: 100,
+          },
           cycle: 1,
         },
         baseCycle,
@@ -208,7 +258,14 @@ describe("createDefaultBehaviors", () => {
       const output: ExecutorOutput = {
         results: [
           { stepId: "s1", status: "success", output: "ok", tokensUsed: 500, durationMs: 100 },
-          { stepId: "s2", status: "failure", output: null, error: "fail", tokensUsed: 200, durationMs: 50 },
+          {
+            stepId: "s2",
+            status: "failure",
+            output: null,
+            error: "fail",
+            tokensUsed: 200,
+            durationMs: 50,
+          },
           { stepId: "s3", status: "success", output: "ok", tokensUsed: 300, durationMs: 80 },
         ],
         logs: [],

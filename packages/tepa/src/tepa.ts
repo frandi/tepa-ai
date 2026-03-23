@@ -173,7 +173,9 @@ export class Tepa {
     logger.info(`> Pipeline started -- goal: "${goalPreview}"`);
     const bannerParts: string[] = [];
     if (this.tools.length > 0) bannerParts.push(`Tools: ${this.tools.length}`);
-    bannerParts.push(`Limits: ${this.config.limits.maxCycles} cycles, ${this.config.limits.maxTokens} tokens`);
+    bannerParts.push(
+      `Limits: ${this.config.limits.maxCycles} cycles, ${this.config.limits.maxTokens} tokens`,
+    );
     if (bannerParts.length > 0) logger.info(`  ${bannerParts.join(" | ")}`);
     logger.info(SEPARATOR);
 
