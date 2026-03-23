@@ -3,6 +3,8 @@ export type {
   ModelConfig,
   LimitsConfig,
   LoggingConfig,
+  LogLevel,
+  TepaLogger,
   DeepPartial,
 } from "./config.js";
 

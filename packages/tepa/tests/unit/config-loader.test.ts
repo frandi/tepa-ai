@@ -30,9 +30,9 @@ describe("loadConfig", () => {
   });
 
   it("loads .yml extension", async () => {
-    mockReadFile.mockResolvedValue("logging:\n  level: verbose\n");
+    mockReadFile.mockResolvedValue("logging:\n  level: debug\n");
     const config = await loadConfig("/path/to/config.yml");
-    expect(config.logging.level).toBe("verbose");
+    expect(config.logging.level).toBe("debug");
   });
 
   it("throws TepaConfigError for unreadable file", async () => {

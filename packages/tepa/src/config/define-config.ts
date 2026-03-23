@@ -18,7 +18,7 @@ const limitsConfigSchema = z.object({
 });
 
 const loggingConfigSchema = z.object({
-  level: z.enum(["minimal", "standard", "verbose"]),
+  level: z.enum(["debug", "info", "warn", "error"]),
   output: z.string().optional(),
 });
 

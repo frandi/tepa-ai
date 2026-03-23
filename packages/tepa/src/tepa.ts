@@ -1,5 +1,6 @@
 import type {
   TepaConfig,
+  TepaLogger,
   DeepPartial,
   TepaPrompt,
   TepaResult,
@@ -22,10 +23,17 @@ import { Executor, type ExecutorOutput } from "./core/executor.js";
 import { Evaluator } from "./core/evaluator.js";
 import { Scratchpad } from "./core/scratchpad.js";
 import { TokenTracker } from "./utils/token-tracker.js";
-import { Logger } from "./utils/logger.js";
+import { createConsoleLogger, LogEntryCollector } from "./utils/logger.js";
 import { TepaTokenBudgetExceeded, TepaError } from "./utils/errors.js";
 import { EventBus } from "./events/event-bus.js";
 import { createDefaultBehaviors } from "./events/default-behaviors.js";
+
+const SEPARATOR = "-".repeat(46);
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
 
 /** Options for constructing a Tepa pipeline instance. */
 export interface TepaOptions {
@@ -37,6 +45,8 @@ export interface TepaOptions {
   provider: LLMProvider;
   /** Optional event hook callbacks for pipeline lifecycle. */
   events?: EventMap;
+  /** Optional external logger. If omitted, a built-in console logger is used. */
+  logger?: TepaLogger;
 }
 
 /**
@@ -103,12 +113,14 @@ export class Tepa {
   private readonly provider: LLMProvider;
   private readonly tools: ToolDefinition[];
   private readonly eventMap?: EventMap;
+  private readonly externalLogger?: TepaLogger;
 
   constructor(options: TepaOptions) {
     this.config = defineConfig(options.config);
     this.provider = options.provider;
     this.tools = options.tools;
     this.eventMap = options.events;
+    this.externalLogger = options.logger;
   }
 
   /**
@@ -125,8 +137,9 @@ export class Tepa {
 
     const scratchpad = new Scratchpad();
     const tokenTracker = new TokenTracker(this.config.limits.maxTokens);
-    const logger = new Logger(this.config.logging);
-    const defaults = createDefaultBehaviors(logger, this.config);
+    const logger = this.externalLogger ?? createConsoleLogger(this.config.logging.level);
+    const collector = new LogEntryCollector();
+    const defaults = createDefaultBehaviors(logger, collector, this.config);
     const eventBus = new EventBus(this.eventMap, defaults);
 
     const providerModels = this.provider.getModels();
@@ -151,12 +164,18 @@ export class Tepa {
 
     const pipelineStart = Date.now();
 
-    logger.banner("start", {
-      goal: prompt.goal,
-      maxCycles: this.config.limits.maxCycles,
-      maxTokens: this.config.limits.maxTokens,
-      toolCount: this.tools.length,
-    });
+    // Start banner
+    const goalPreview = prompt.goal
+      ? prompt.goal.length > 60
+        ? prompt.goal.slice(0, 60) + "..."
+        : prompt.goal
+      : "";
+    logger.info(`> Pipeline started -- goal: "${goalPreview}"`);
+    const bannerParts: string[] = [];
+    if (this.tools.length > 0) bannerParts.push(`Tools: ${this.tools.length}`);
+    bannerParts.push(`Limits: ${this.config.limits.maxCycles} cycles, ${this.config.limits.maxTokens} tokens`);
+    if (bannerParts.length > 0) logger.info(`  ${bannerParts.join(" | ")}`);
+    logger.info(SEPARATOR);
 
     try {
       for (let cycle = 1; cycle <= this.config.limits.maxCycles; cycle++) {
@@ -302,15 +321,36 @@ export class Tepa {
       );
     } finally {
       const durationMs = Date.now() - pipelineStart;
-      logger.banner("end", {
-        status: resultStatus,
-        cycles: cyclesUsed,
-        tokensUsed: tokenTracker.getUsed(),
-        maxTokens: this.config.limits.maxTokens,
-        durationMs,
-        models: tokenTracker.getModels(),
-        tokensByModel: tokenTracker.getByModel(),
-      });
+
+      // End banner
+      logger.info(SEPARATOR);
+      const statusIcon = resultStatus === "pass" ? "[OK]" : "[FAIL]";
+      const endParts: string[] = [];
+      if (cyclesUsed > 0) endParts.push(`${cyclesUsed} cycle${cyclesUsed !== 1 ? "s" : ""}`);
+      const tokensUsed = tokenTracker.getUsed();
+      endParts.push(`${tokensUsed} tokens`);
+      endParts.push(formatDuration(durationMs));
+      logger.info(
+        `${statusIcon} Pipeline completed -- ${resultStatus}${endParts.length > 0 ? ` | ${endParts.join(" | ")}` : ""}`,
+      );
+
+      // Model info
+      const models = tokenTracker.getModels();
+      if (models.length > 0) {
+        const unique = [...new Set(models)];
+        logger.info(`  Models: ${unique.join(", ")}`);
+      }
+
+      // Verbose details at debug level
+      const tokensByModel = tokenTracker.getByModel();
+      if (tokensByModel.size > 0) {
+        const breakdown = [...tokensByModel.entries()]
+          .map(([model, tokens]) => `${model}: ${tokens}`)
+          .join(", ");
+        logger.debug(`  Token breakdown: ${breakdown}`);
+      }
+      const pct = ((tokensUsed / this.config.limits.maxTokens) * 100).toFixed(1);
+      logger.debug(`  Budget: ${tokensUsed}/${this.config.limits.maxTokens} (${pct}%)`);
     }
   }
 }
