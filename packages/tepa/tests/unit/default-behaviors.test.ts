@@ -270,6 +270,7 @@ describe("createDefaultBehaviors", () => {
         ],
         logs: [],
         tokensUsed: 1000,
+        tokensByModel: new Map([["test-executor", 1000]]),
       };
 
       behaviors.postExecutor!(output, baseCycle);
@@ -298,7 +299,7 @@ describe("createDefaultBehaviors", () => {
       expect(infoOutput).toContain("0.97");
     });
 
-    it("logs budget info at debug level", () => {
+    it("logs budget info at debug level without double-counting evaluation tokens", () => {
       const behaviors = createDefaultBehaviors(logger, collector, defaultConfig);
       behaviors.preEvaluator!(undefined, baseCycle);
 
@@ -308,11 +309,14 @@ describe("createDefaultBehaviors", () => {
         tokensUsed: 1200,
       };
 
+      // In the real pipeline, cycle.tokensUsed already includes evaluation tokens
+      // (set from tokenTracker.getUsed() after evaluator tokens are added)
       const cycle: CycleMetadata = { cycleNumber: 1, totalCyclesUsed: 0, tokensUsed: 4000 };
       behaviors.postEvaluator!(evaluation, cycle);
 
       expect(logger.calls.debug.some((m) => m.includes("Budget:"))).toBe(true);
-      expect(logger.calls.debug.some((m) => m.includes("5200/64000"))).toBe(true);
+      // Budget should use cycle.tokensUsed directly (4000), not cycle.tokensUsed + evaluation.tokensUsed
+      expect(logger.calls.debug.some((m) => m.includes("4000/64000"))).toBe(true);
     });
   });
 
@@ -378,7 +382,10 @@ describe("createDefaultBehaviors", () => {
         },
         baseCycle,
       );
-      behaviors.postExecutor!({ results: [], logs: [], tokensUsed: 0 }, baseCycle);
+      behaviors.postExecutor!(
+        { results: [], logs: [], tokensUsed: 0, tokensByModel: new Map() },
+        baseCycle,
+      );
       behaviors.preEvaluator!(undefined, baseCycle);
       behaviors.postEvaluator!({ verdict: "pass", confidence: 0.9, tokensUsed: 0 }, baseCycle);
 

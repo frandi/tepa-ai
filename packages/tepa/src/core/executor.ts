@@ -29,6 +29,8 @@ export interface ExecutorOutput {
   results: ExecutionResult[];
   logs: LogEntry[];
   tokensUsed: number;
+  /** Token usage broken down by the actual model used per step. */
+  tokensByModel: Map<string, number>;
 }
 
 /**
@@ -217,6 +219,7 @@ export class Executor {
     const results: ExecutionResult[] = [];
     const logs: LogEntry[] = [];
     let totalTokens = 0;
+    const tokensByModel = new Map<string, number>();
     const stepOutputs = new Map<string, unknown>();
 
     const sortedSteps = topoSort(plan.steps);
@@ -261,6 +264,12 @@ export class Executor {
       result.durationMs = durationMs;
       totalTokens += result.tokensUsed;
 
+      // Track tokens by the actual model used for this step
+      if (result.tokensUsed > 0) {
+        const stepModel = step.model ?? this.model;
+        tokensByModel.set(stepModel, (tokensByModel.get(stepModel) ?? 0) + result.tokensUsed);
+      }
+
       // Store output in full map (unscoped)
       stepOutputs.set(step.id, result.output);
       results.push(result);
@@ -285,7 +294,7 @@ export class Executor {
       });
     }
 
-    return { results, logs, tokensUsed: totalTokens };
+    return { results, logs, tokensUsed: totalTokens, tokensByModel };
   }
 
   /**

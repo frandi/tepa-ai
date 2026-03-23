@@ -242,6 +242,118 @@ describe("Executor", () => {
     });
   });
 
+  describe("execute — per-model token tracking", () => {
+    it("tracks tokens by model when steps use different models", async () => {
+      const plan: Plan = {
+        reasoning: "Two steps with different models",
+        estimatedTokens: 500,
+        steps: [
+          {
+            id: "step_1",
+            description: "Reasoning with a capable model",
+            tools: [],
+            expectedOutcome: "Analysis produced",
+            dependencies: [],
+            model: "model-a",
+          },
+          {
+            id: "step_2",
+            description: "Write file with default model",
+            tools: ["file_write"],
+            expectedOutcome: "File created",
+            dependencies: ["step_1"],
+          },
+        ],
+      };
+
+      const provider = createMockProvider([
+        makeResponse("analysis result", 40, 60), // step_1: 100 tokens via model-a
+        makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }, 15, 25), // step_2: 40 tokens via default
+      ]);
+
+      const defaultModel = "model-b";
+      const executor = new Executor(registry, provider, defaultModel);
+      const output = await executor.execute(plan, makeContext());
+
+      expect(output.tokensUsed).toBe(140); // 100 + 40
+      expect(output.tokensByModel.get("model-a")).toBe(100);
+      expect(output.tokensByModel.get("model-b")).toBe(40);
+      expect(output.tokensByModel.size).toBe(2);
+    });
+
+    it("attributes all tokens to default model when no step overrides", async () => {
+      const plan: Plan = {
+        reasoning: "Single model",
+        estimatedTokens: 200,
+        steps: [
+          {
+            id: "step_1",
+            description: "Write file",
+            tools: ["file_write"],
+            expectedOutcome: "File created",
+            dependencies: [],
+          },
+        ],
+      };
+
+      const provider = createMockProvider([
+        makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }),
+      ]);
+
+      const executor = new Executor(registry, provider, "default-model");
+      const output = await executor.execute(plan, makeContext());
+
+      expect(output.tokensUsed).toBe(50);
+      expect(output.tokensByModel.get("default-model")).toBe(50);
+      expect(output.tokensByModel.size).toBe(1);
+    });
+
+    it("does not track zero-token steps in tokensByModel", async () => {
+      const plan: Plan = {
+        reasoning: "Step with failed dep",
+        estimatedTokens: 200,
+        steps: [
+          {
+            id: "step_1",
+            description: "Write file",
+            tools: ["file_write"],
+            expectedOutcome: "File created",
+            dependencies: [],
+          },
+          {
+            id: "step_2",
+            description: "Read file",
+            tools: ["file_read"],
+            expectedOutcome: "File read",
+            dependencies: ["step_1"],
+          },
+        ],
+      };
+
+      // step_1 fails (tool not found scenario — use a missing tool response)
+      const provider = createMockProvider([
+        makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }),
+        // step_2 is skipped due to failed dependency — no LLM call needed
+      ]);
+
+      // Make step_1 fail by having the tool throw
+      fileWriteTool.execute = vi.fn(async () => {
+        throw new Error("disk full");
+      });
+
+      const executor = new Executor(registry, provider, "default-model");
+      const output = await executor.execute(plan, makeContext());
+
+      // step_1 failed, step_2 skipped with 0 tokens
+      expect(output.results[0]!.status).toBe("failure");
+      expect(output.results[1]!.status).toBe("failure");
+      expect(output.results[1]!.tokensUsed).toBe(0);
+      // Only step_1's LLM call tokens should appear (tool failed after LLM call)
+      expect(output.tokensByModel.get("default-model")).toBe(50);
+      expect(output.tokensByModel.size).toBe(1);
+    });
+  });
+
   describe("execute — error handling", () => {
     it("captures tool failure as step result, does not throw", async () => {
       const failingTool: ToolDefinition = {
