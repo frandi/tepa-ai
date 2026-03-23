@@ -21,8 +21,14 @@ import {
   logObserveTool,
 } from "@tepa/tools";
 import { GeminiProvider, GeminiModels } from "@tepa/provider-gemini";
+import { createSessionLogger, type SessionLogger } from "./logger.js";
+
+let logger: SessionLogger | undefined;
+let provider: GeminiProvider | undefined;
 
 async function main() {
+  logger = createSessionLogger();
+
   // Load prompt from YAML file
   const promptPath = path.join(demoRoot, "prompts", "task.yaml");
   const prompt = await parsePromptFile(promptPath);
@@ -31,12 +37,15 @@ async function main() {
   const classDir = path.resolve(demoRoot, prompt.context.classDir as string);
   prompt.context.classDir = classDir;
 
-  console.log("=== Tepa Demo: Student Progress Insights ===\n");
-  console.log(`Goal: ${prompt.goal}`);
-  console.log(`Data: ${classDir}\n`);
+  logger.info("=== Tepa Demo: Student Progress Insights ===\n");
+  logger.info(`Goal: ${prompt.goal}`);
+  logger.info(`Data: ${classDir}\n`);
 
   // Shared state for step visualization
   const depthMap = new Map<string, number>();
+
+  // Create the LLM provider (logs all calls to a JSONL file)
+  provider = new GeminiProvider();
 
   // Create the Tepa pipeline
   const tepa = new Tepa({
@@ -49,7 +58,7 @@ async function main() {
       scratchpadTool,
       logObserveTool,
     ],
-    provider: new GeminiProvider(),
+    provider,
     config: {
       model: {
         planner: GeminiModels.Gemini_2_5_Pro,
@@ -74,11 +83,11 @@ async function main() {
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
           const model = step.model ? ` [${step.model}]` : "";
-          console.log(
+          logger!.info(
             `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
           );
           if (result.error) {
-            console.log(`${indent}  Error: ${result.error}`);
+            logger!.info(`${indent}  Error: ${result.error}`);
           }
         },
       ],
@@ -113,26 +122,26 @@ async function main() {
             }
           }
 
-          console.log(`\n--- Plan (${plan.steps.length} steps) ---`);
+          logger!.info(`\n--- Plan (${plan.steps.length} steps) ---`);
           for (const step of plan.steps) {
             const depth = depthMap.get(step.id) ?? 0;
             const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
             const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
             const model = step.model ? ` [${step.model}]` : "";
-            console.log(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
+            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
           }
-          console.log();
+          logger!.info("");
         },
       ],
       postEvaluator: [
         (data: unknown) => {
           const result = data as EvaluationResult;
           const icon = result.verdict === "pass" ? "PASS" : "FAIL";
-          console.log(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
-          if (result.feedback) console.log(`  Feedback: ${result.feedback}`);
-          if (result.summary) console.log(`  Summary: ${result.summary}`);
-          console.log();
+          logger!.info(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
+          if (result.feedback) logger!.info(`  Feedback: ${result.feedback}`);
+          if (result.summary) logger!.info(`  Summary: ${result.summary}`);
+          logger!.info("");
         },
       ],
     },
@@ -142,25 +151,32 @@ async function main() {
   const result = await tepa.run(prompt);
 
   // Print final result
-  console.log("\n=== Result ===");
-  console.log(`Status: ${result.status}`);
-  console.log(`Cycles: ${result.cycles}`);
-  console.log(`Tokens used: ${result.tokensUsed}`);
-  console.log(`Feedback: ${result.feedback}`);
+  logger.info("\n=== Result ===");
+  logger.info(`Status: ${result.status}`);
+  logger.info(`Cycles: ${result.cycles}`);
+  logger.info(`Tokens used: ${result.tokensUsed}`);
+  logger.info(`Feedback: ${result.feedback}`);
 
   if (result.logs.length > 0) {
-    console.log(`\nExecution log: ${result.logs.length} entries`);
+    logger.info(`\n--- Pipeline Log (${result.logs.length} entries) ---`);
+    for (const entry of result.logs) {
+      const stepInfo = entry.step ? ` [${entry.step}]` : "";
+      const toolInfo = entry.tool ? ` (${entry.tool})` : "";
+      logger.info(`  [cycle ${entry.cycle}]${stepInfo}${toolInfo} ${entry.message}`);
+    }
   }
 
+  logger.finalize({ llmLogPath: provider.getLogFilePath() });
   process.exit(result.status === "pass" ? 0 : 1);
 }
 
 main().catch((error) => {
+  const log = logger ?? createSessionLogger();
   const message = error instanceof Error ? error.message : String(error);
-  console.error("\nDemo failed:", message);
+  log.error(`\nDemo failed: ${message}`);
 
   if (/api key/i.test(message) || /authentication failed/i.test(message)) {
-    console.error(
+    log.error(
       "\nTo fix this, set up your Gemini API key:\n" +
         "  1. Get your key at https://aistudio.google.com/apikey\n" +
         "  2. Create a .env file in this demo directory with:\n" +
@@ -168,5 +184,6 @@ main().catch((error) => {
     );
   }
 
+  log.finalize({ llmLogPath: provider?.getLogFilePath() });
   process.exit(1);
 });
