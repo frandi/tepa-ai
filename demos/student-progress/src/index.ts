@@ -37,9 +37,11 @@ async function main() {
   const classDir = path.resolve(demoRoot, prompt.context.classDir as string);
   prompt.context.classDir = classDir;
 
-  logger.info("=== Tepa Demo: Student Progress Insights ===\n");
+  logger.info("=== Tepa Demo: Student Progress Insights ===", { decorative: true });
+  logger.info("", { decorative: true });
   logger.info(`Goal: ${prompt.goal}`);
-  logger.info(`Data: ${classDir}\n`);
+  logger.info(`Data: ${classDir}`);
+  logger.info("", { decorative: true });
 
   // Shared state for step visualization
   const depthMap = new Map<string, number>();
@@ -123,7 +125,8 @@ async function main() {
             }
           }
 
-          logger!.info(`\n--- Plan (${plan.steps.length} steps) ---`);
+          logger!.info("", { decorative: true });
+          logger!.info(`--- Plan (${plan.steps.length} steps) ---`, { decorative: true });
           for (const step of plan.steps) {
             const depth = depthMap.get(step.id) ?? 0;
             const indent = "  " + "  ".repeat(depth);
@@ -132,17 +135,20 @@ async function main() {
             const model = step.model ? ` [${step.model}]` : "";
             logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
           }
-          logger!.info("");
+          logger!.info("", { decorative: true });
         },
       ],
       postEvaluator: [
         (data: unknown) => {
           const result = data as EvaluationResult;
           const icon = result.verdict === "pass" ? "PASS" : "FAIL";
-          logger!.info(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
+          logger!.info("", { decorative: true });
+          logger!.info(`--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`, {
+            decorative: true,
+          });
           if (result.feedback) logger!.info(`  Feedback: ${result.feedback}`);
           if (result.summary) logger!.info(`  Summary: ${result.summary}`);
-          logger!.info("");
+          logger!.info("", { decorative: true });
         },
       ],
     },
@@ -152,14 +158,16 @@ async function main() {
   const result = await tepa.run(prompt);
 
   // Print final result
-  logger.info("\n=== Result ===");
+  logger.info("", { decorative: true });
+  logger.info("=== Result ===", { decorative: true });
   logger.info(`Status: ${result.status}`);
   logger.info(`Cycles: ${result.cycles}`);
   logger.info(`Tokens used: ${result.tokensUsed}`);
   logger.info(`Feedback: ${result.feedback}`);
 
   if (result.logs.length > 0) {
-    logger.info(`\n--- Pipeline Log (${result.logs.length} entries) ---`);
+    logger.info("", { decorative: true });
+    logger.info(`--- Pipeline Log (${result.logs.length} entries) ---`, { decorative: true });
     for (const entry of result.logs) {
       const stepInfo = entry.step ? ` [${entry.step}]` : "";
       const toolInfo = entry.tool ? ` (${entry.tool})` : "";

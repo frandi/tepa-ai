@@ -119,14 +119,13 @@ describe("createConsoleLogger", () => {
   });
 
   describe("meta parameter", () => {
-    it("passes meta alongside message when provided", () => {
+    it("passes non-internal meta alongside message", () => {
       const spy = vi.spyOn(console, "log").mockImplementation(() => {});
       const logger = createConsoleLogger("debug");
-      const meta = { key: "value" };
 
-      logger.info("msg", meta);
+      logger.info("msg", { key: "value" });
 
-      expect(spy).toHaveBeenCalledWith("msg", meta);
+      expect(spy).toHaveBeenCalledWith("msg", { key: "value" });
       spy.mockRestore();
     });
 
@@ -137,6 +136,38 @@ describe("createConsoleLogger", () => {
       logger.info("msg");
 
       expect(spy).toHaveBeenCalledWith("msg");
+      spy.mockRestore();
+    });
+
+    it("strips decorative flag from meta passed to console", () => {
+      const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const logger = createConsoleLogger("debug");
+
+      logger.info("separator", { decorative: true });
+
+      // decorative is stripped — no meta object passed
+      expect(spy).toHaveBeenCalledWith("separator");
+      spy.mockRestore();
+    });
+
+    it("still logs the message when decorative is true", () => {
+      const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const logger = createConsoleLogger("debug");
+
+      logger.info("---", { decorative: true });
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith("---");
+      spy.mockRestore();
+    });
+
+    it("preserves non-internal keys when decorative is also present", () => {
+      const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const logger = createConsoleLogger("debug");
+
+      logger.info("msg", { decorative: true, extra: 42 });
+
+      expect(spy).toHaveBeenCalledWith("msg", { extra: 42 });
       spy.mockRestore();
     });
   });

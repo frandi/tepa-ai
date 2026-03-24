@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import pino from "pino";
 import pretty from "pino-pretty";
-import type { TepaLogger } from "@tepa/types";
+import type { TepaLogger, TepaLogMeta } from "@tepa/types";
 
 const DEFAULT_LOG_DIR = ".tepa/logs";
 
@@ -35,38 +35,42 @@ export function createDemoLogger(opts?: { logDir?: string }): DemoLogger {
     hideObject: true,
   });
 
-  const pinoLogger = pino(
-    { level: "debug" },
-    pino.multistream([
-      { stream: consoleStream, level: "debug" },
-      { stream: fileStream, level: "debug" },
-    ]),
-  );
+  // Separate loggers so we can conditionally skip the file stream
+  // for decorative messages (separators, blank lines, section headers).
+  const consoleLogger = pino({ level: "debug" }, consoleStream);
+  const fileLogger = pino({ level: "debug" }, fileStream);
+
+  function log(level: "debug" | "info" | "warn" | "error", msg: string, meta?: TepaLogMeta): void {
+    consoleLogger[level](msg);
+    if (!meta?.decorative) {
+      fileLogger[level](msg);
+    }
+  }
 
   return {
     sessionLogPath,
 
-    debug(msg: string) {
-      pinoLogger.debug(msg);
+    debug(msg: string, meta?: TepaLogMeta) {
+      log("debug", msg, meta);
     },
 
-    info(msg: string) {
-      pinoLogger.info(msg);
+    info(msg: string, meta?: TepaLogMeta) {
+      log("info", msg, meta);
     },
 
-    warn(msg: string) {
-      pinoLogger.warn(msg);
+    warn(msg: string, meta?: TepaLogMeta) {
+      log("warn", msg, meta);
     },
 
-    error(msg: string) {
-      pinoLogger.error(msg);
+    error(msg: string, meta?: TepaLogMeta) {
+      log("error", msg, meta);
     },
 
     finalize(finalOpts?: { llmLogPath?: string }) {
       if (finalOpts?.llmLogPath) {
-        pinoLogger.info(`LLM call log: ${finalOpts.llmLogPath}`);
+        log("info", `LLM call log: ${finalOpts.llmLogPath}`);
       }
-      pinoLogger.info(`Session log: ${sessionLogPath}`);
+      log("info", `Session log: ${sessionLogPath}`);
     },
   };
 }

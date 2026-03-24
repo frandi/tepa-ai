@@ -177,7 +177,7 @@ export class Tepa {
       `Limits: ${this.config.limits.maxCycles} cycles, ${this.config.limits.maxTokens} tokens`,
     );
     if (bannerParts.length > 0) logger.info(`  ${bannerParts.join(" | ")}`);
-    logger.info(SEPARATOR);
+    logger.info(SEPARATOR, { decorative: true });
 
     try {
       for (let cycle = 1; cycle <= this.config.limits.maxCycles; cycle++) {
@@ -327,7 +327,7 @@ export class Tepa {
       const durationMs = Date.now() - pipelineStart;
 
       // End banner
-      logger.info(SEPARATOR);
+      logger.info(SEPARATOR, { decorative: true });
       const statusIcon = resultStatus === "pass" ? "[OK]" : "[FAIL]";
       const endParts: string[] = [];
       if (cyclesUsed > 0) endParts.push(`${cyclesUsed} cycle${cyclesUsed !== 1 ? "s" : ""}`);

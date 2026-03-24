@@ -30,7 +30,8 @@ let provider: OpenAIProvider | undefined;
 async function main() {
   logger = createDemoLogger();
 
-  logger.info("=== Tepa Demo: Study Plan (Human-in-the-Loop) ===\n");
+  logger.info("=== Tepa Demo: Study Plan (Human-in-the-Loop) ===", { decorative: true });
+  logger.info("", { decorative: true });
 
   // Get user input
   const userInput = await rl.question("What would you like to study?\n> ");
@@ -48,9 +49,11 @@ async function main() {
   // Inject user input into the prompt
   prompt.context.userInput = userInput;
 
-  logger.info(`\nGoal: ${prompt.goal}`);
+  logger.info("", { decorative: true });
+  logger.info(`Goal: ${prompt.goal}`);
   logger.info(`User input: ${userInput}`);
-  logger.info(`Output: ${outputFile}\n`);
+  logger.info(`Output: ${outputFile}`);
+  logger.info("", { decorative: true });
 
   // Shared state for step visualization
   const depthMap = new Map<string, number>();
@@ -124,7 +127,8 @@ async function main() {
             }
           }
 
-          logger!.info(`\n--- Plan (${plan.steps.length} steps) ---`);
+          logger!.info("", { decorative: true });
+          logger!.info(`--- Plan (${plan.steps.length} steps) ---`, { decorative: true });
           for (const step of plan.steps) {
             const depth = depthMap.get(step.id) ?? 0;
             const indent = "  " + "  ".repeat(depth);
@@ -133,7 +137,7 @@ async function main() {
             const model = step.model ? ` [${step.model}]` : "";
             logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
           }
-          logger!.info("");
+          logger!.info("", { decorative: true });
 
           // Human-in-the-loop: ask for plan approval
           const answer = await ask("\nDo you approve this plan? (yes/no): ");
@@ -149,10 +153,13 @@ async function main() {
         async (data: unknown) => {
           const result = data as EvaluationResult;
           const icon = result.verdict === "pass" ? "PASS" : "FAIL";
-          logger!.info(`\n--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`);
+          logger!.info("", { decorative: true });
+          logger!.info(`--- Evaluation: ${icon} (confidence: ${result.confidence}) ---`, {
+            decorative: true,
+          });
           if (result.feedback) logger!.info(`  Feedback: ${result.feedback}`);
           if (result.summary) logger!.info(`  Summary: ${result.summary}`);
-          logger!.info("");
+          logger!.info("", { decorative: true });
 
           // Human-in-the-loop: ask whether to continue on failure
           if (result.verdict === "fail") {
@@ -172,14 +179,16 @@ async function main() {
   const result = await tepa.run(prompt);
 
   // Print final result
-  logger.info("\n=== Result ===");
+  logger.info("", { decorative: true });
+  logger.info("=== Result ===", { decorative: true });
   logger.info(`Status: ${result.status}`);
   logger.info(`Cycles: ${result.cycles}`);
   logger.info(`Tokens used: ${result.tokensUsed}`);
   logger.info(`Feedback: ${result.feedback}`);
 
   if (result.logs.length > 0) {
-    logger.info(`\n--- Pipeline Log (${result.logs.length} entries) ---`);
+    logger.info("", { decorative: true });
+    logger.info(`--- Pipeline Log (${result.logs.length} entries) ---`, { decorative: true });
     for (const entry of result.logs) {
       const stepInfo = entry.step ? ` [${entry.step}]` : "";
       const toolInfo = entry.tool ? ` (${entry.tool})` : "";

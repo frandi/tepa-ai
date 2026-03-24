@@ -5,6 +5,7 @@ export type {
   LoggingConfig,
   LogLevel,
   TepaLogger,
+  TepaLogMeta,
   DeepPartial,
 } from "./config.js";
 
