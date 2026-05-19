@@ -6,6 +6,8 @@
 
 Tepa is a TypeScript framework for building agents that don't just execute tasks — they verify their own output, and keep refining until it passes.
 
+_Tepa is a **runtime harness for AI agents** — an implementation of the Planner → Executor → Evaluator loop that harness engineering converged on as the heart of accountable agent design._
+
 ---
 
 ## The Problem
@@ -21,6 +23,8 @@ Tepa structures every task as a **Plan → Execute → Evaluate** loop:
 - The **Evaluator** checks results against your stated expected output and sends feedback back to the Planner if it fails
 
 The loop runs until the agent passes, hits a cycle limit, or exhausts its token budget. You define what "done" looks like. Tepa is accountable to that definition.
+
+This is the **runtime harness pattern**: separating generation from evaluation, and replacing probabilistic prompt compliance ("please follow the spec") with a deterministic constraint ("you are not done until the verifier passes").
 
 ---
 

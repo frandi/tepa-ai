@@ -53,9 +53,24 @@ console.log(result.feedback); // Summary of what happened, or why it failed
 
 ## What Makes Tepa Different
 
+### A Harness, Not Just an Agent Framework
+
+Most agent frameworks give you the ability to _run_ — they wire an LLM to tools and call it a day. The hard part, which they leave to you, is knowing whether the run actually produced what you asked for.
+
+Tepa is built around the opposite priority. It's a **runtime harness**: a structure that holds an agent accountable to a definition of "done" you state upfront. The community calls this pattern _harness engineering_, and its core insight is that agents consistently rate their own work too generously — so the only honest feedback loop is one where generation and evaluation are separate roles, and the evaluator can block completion.
+
+The distinction matters in practice:
+
+- **Probabilistic compliance** — telling an agent "follow our standards" in a prompt, and hoping. This is how most frameworks operate.
+- **Deterministic constraint** — wiring a verifier that refuses to mark the task complete until concrete criteria are met. This is what Tepa does.
+
+The Planner, Executor, and Evaluator aren't just convenient abstractions. They're the three roles a harness needs: a Planner that turns intent into a concrete spec, an Executor that does the work, and an Evaluator that checks the work against the spec and feeds failure back as actionable correction. Tepa makes all three first-class so the loop is honest by construction, not by prompt discipline.
+
+This is also why Tepa is intentionally scoped to runtime evaluation. Harness engineering as a discipline covers more — repository hygiene, agent-readable context files, lint and policy hooks, cross-session state. Tepa handles the runtime layer well and stays out of the rest, so it composes cleanly with whatever else you use.
+
 ### An Evaluator Is a First-Class Citizen
 
-Most frameworks leave the question of _"did it work?"_ to you. Tepa treats evaluation as a required step in every cycle, not an afterthought. You define success criteria upfront as `expectedOutput`; the framework measures every run against it. This makes pass/fail auditable, consistent, and independent of which LLM you're using.
+Most frameworks leave the question of _"did it work?"_ to you. Tepa treats evaluation as a required step in every cycle, not an afterthought. You define success criteria upfront as `expectedOutput`; the framework measures every run against it. This makes pass/fail auditable, consistent, and independent of which LLM you're using. It's also the runtime-harness principle in practice: moving "did it work?" from probabilistic prompt compliance to a deterministic gate.
 
 ### Self-Correction With Revised Planning
 

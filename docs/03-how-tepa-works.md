@@ -2,6 +2,8 @@
 
 This section builds a mental model of Tepa's core loop — what each component does, why the cycle is structured the way it is, and how state flows from a goal to a verified result. It's the right read after Getting Started, before you start building something non-trivial.
 
+The loop below is what harness engineering calls the _evaluator-in-the-loop_ pattern: generation and verification are separate roles, and the evaluator's feedback — not the executor's own self-assessment — is what closes the cycle.
+
 If you're looking for the complete technical reference — full interfaces, event data contracts, prompt structure, termination rules, edge cases — that's in [Pipeline in Detail](./04-pipeline-in-detail.md).
 
 ---
