@@ -16,18 +16,24 @@ interface TepaConfig {
 
 ### `ModelConfig`
 
-Assigns a model to each pipeline stage and optionally constrains which models the Planner can assign to individual steps.
+Assigns a model to each pipeline phase. The Planner and Evaluator each use a single model. The Executor uses a **two-tier** setup — the Planner picks `"low"` or `"high"` per step based on whether it's trivial or reasoning-heavy.
 
 ```typescript
+interface ExecutorTiers {
+  /** Model for trivial steps — tool-param construction and mechanical work. */
+  low: string;
+  /** Model for reasoning steps — synthesis, analysis, summarization, judgment. */
+  high: string;
+}
+
 interface ModelConfig {
   planner: string;
-  executor: string;
   evaluator: string;
-  allowedModels?: string[];
+  executor: ExecutorTiers;
 }
 ```
 
-The `allowedModels` field is an optional whitelist of model IDs the Planner may assign to plan steps. When omitted, the Planner can choose from all models in the provider's catalog. When set, only those models (plus the executor, which is always auto-included) are available. See [Model Catalog and Allowed Models](#model-catalog-and-allowed-models) below.
+The two-tier executor replaces a freeform per-step model override. The rationale is that planning and evaluation need a sharper model (their judgment shapes the whole run), while execution can split between cheap-and-fast for mechanical work and capable-and-slower for reasoning steps. See [Per-Step Tier Selection](#per-step-tier-selection) below.
 
 ### `LimitsConfig`
 
@@ -62,17 +68,18 @@ interface LoggingConfig {
 | Setting                | Default               | Description                                                         |
 | ---------------------- | --------------------- | ------------------------------------------------------------------- |
 | `model.planner`        | `"claude-sonnet-4-6"` | Model used to generate and revise plans.                            |
-| `model.executor`       | `"claude-haiku-4-5"`  | Model used to execute each plan step.                               |
 | `model.evaluator`      | `"claude-sonnet-4-6"` | Model used to judge execution results.                              |
+| `model.executor.low`   | `"claude-haiku-4-5"`  | Executor model for trivial / mechanical steps.                      |
+| `model.executor.high`  | `"claude-sonnet-4-6"` | Executor model for reasoning / synthesis steps.                     |
 | `limits.maxCycles`     | `5`                   | Maximum Plan-Execute-Evaluate iterations before the pipeline stops. |
 | `limits.maxTokens`     | `64_000`              | Total token budget across all LLM calls in all cycles.              |
 | `limits.toolTimeout`   | `30_000`              | Timeout for tool execution in milliseconds.                         |
 | `limits.retryAttempts` | `1`                   | Retry attempts for recoverable step failures.                       |
 | `logging.level`        | `"info"`              | Log level filter (`"debug"`, `"info"`, `"warn"`, `"error"`).        |
 
-The defaults follow a cost-efficiency pattern: a more capable model for planning and evaluation (where reasoning quality matters most), and a faster, cheaper model for execution (where the task is often just constructing tool call parameters). You only need to override what you want to change.
+The defaults follow a cost-efficiency pattern: the planner and evaluator share a capable model (where reasoning quality matters most), and the executor splits work between a cheap tier for tool-param construction and a capable tier for reasoning. Users who want sharper planning and evaluation can bump `planner` and `evaluator` to a top-tier model (e.g. `claude-opus-4-7`) with a one-line override.
 
-> **Tip:** Each provider exports type-safe model constants so you don't need to memorize string IDs. See [Model Catalog and Allowed Models](#model-catalog-and-allowed-models) below.
+> **Tip:** Each provider exports type-safe model constants so you don't need to memorize string IDs. See [Available Model Constants](#available-model-constants) below.
 
 These defaults are exported as `DEFAULT_CONFIG` from `@tepa/core` if you need to reference them programmatically.
 
@@ -115,15 +122,21 @@ const config = defineConfig({
 // Everything else → defaults
 ```
 
-The deep merge works at any nesting level — you can override a single model while keeping the others:
+The deep merge works at any nesting level — you can override a single field (including inside nested objects like `executor`) while keeping the others:
 
 ```typescript
 const config = defineConfig({
-  model: { planner: "claude-opus-4-6" },
+  model: { planner: "claude-opus-4-7" },
 });
-// model.planner  → "claude-opus-4-6"
-// model.executor → "claude-haiku-4-5" (default)
-// model.evaluator → "claude-sonnet-4-6" (default)
+// model.planner       → "claude-opus-4-7"
+// model.evaluator     → "claude-sonnet-4-6"   (default)
+// model.executor.low  → "claude-haiku-4-5"    (default)
+// model.executor.high → "claude-sonnet-4-6"   (default)
+
+const config = defineConfig({
+  model: { executor: { high: "claude-opus-4-7" } },
+});
+// Only the high executor tier changes — low keeps its default.
 ```
 
 ### From a File
@@ -142,7 +155,11 @@ Supported formats: `.json`, `.yaml`, `.yml`. The loaded data is passed through `
 ```yaml
 # tepa.config.yaml
 model:
-  planner: claude-opus-4-6
+  planner: claude-opus-4-7
+  evaluator: claude-opus-4-7
+  executor:
+    low: claude-haiku-4-5
+    high: claude-sonnet-4-6
 limits:
   maxCycles: 3
   maxTokens: 200000
@@ -156,7 +173,7 @@ Externalizing config is particularly useful when you're running Tepa pipelines a
 
 ## Model Configuration
 
-The three pipeline stages use their own model assignments, which you can tune independently for cost and quality.
+The three pipeline phases use their own model assignments, which you can tune independently for cost and quality.
 
 ```typescript
 const tepa = new Tepa({
@@ -164,15 +181,18 @@ const tepa = new Tepa({
   tools: [...],
   config: {
     model: {
-      planner: "claude-opus-4-6",    // Complex reasoning for plan generation
-      executor: "claude-sonnet-4-6", // Mid-tier for tool execution
-      evaluator: "claude-opus-4-6",  // Thorough judgment on results
+      planner: "claude-opus-4-7",     // Sharp reasoning for plan generation
+      evaluator: "claude-opus-4-7",   // Thorough judgment on results
+      executor: {
+        low: "claude-haiku-4-5",      // Fast tier for mechanical steps
+        high: "claude-sonnet-4-6",    // Capable tier for reasoning steps
+      },
     },
   },
 });
 ```
 
-Model strings must match what your LLM provider accepts. At pipeline startup, Tepa validates that `planner`, `executor`, and `evaluator` all exist in the provider's model catalog — a mismatch throws a `TepaConfigError` with a clear message listing the available models.
+Model strings must match what your LLM provider accepts. At pipeline startup, Tepa validates that all four model IDs (`planner`, `evaluator`, `executor.low`, `executor.high`) exist in the provider's model catalog — a mismatch throws a `TepaConfigError` with a clear message naming the field and listing the available models.
 
 Each provider exports type-safe constants to avoid typos:
 
@@ -185,8 +205,11 @@ const tepa = new Tepa({
   config: {
     model: {
       planner: AnthropicModels.Claude_Sonnet_4_6,
-      executor: AnthropicModels.Claude_Haiku_4_5,
       evaluator: AnthropicModels.Claude_Sonnet_4_6,
+      executor: {
+        low: AnthropicModels.Claude_Haiku_4_5,
+        high: AnthropicModels.Claude_Sonnet_4_6,
+      },
     },
   },
 });
@@ -194,9 +217,9 @@ const tepa = new Tepa({
 
 String literals still work — the constants are just regular strings with autocomplete support.
 
-### Per-Step Model Overrides
+### Per-Step Tier Selection
 
-Beyond the three stage-level models, individual plan steps can override the executor model. The Planner is given the available models in its system prompt and can assign a `model` field to any step it generates:
+The Planner sees the two executor tiers in its system prompt and assigns a `tier` field — `"low"` or `"high"` — to each step it generates:
 
 ```typescript
 // A plan the Planner might generate:
@@ -208,7 +231,7 @@ Beyond the three stage-level models, individual plan steps can override the exec
       tools: ["file_read"],
       expectedOutcome: "Raw CSV content loaded",
       dependencies: [],
-      // No model field — uses config.model.executor
+      tier: "low", // Trivial tool-param construction
     },
     {
       id: "step_2",
@@ -216,70 +239,15 @@ Beyond the three stage-level models, individual plan steps can override the exec
       tools: [],
       expectedOutcome: "A well-structured analysis report",
       dependencies: ["step_1"],
-      model: "claude-sonnet-4-6", // Override: more capable model for reasoning
+      tier: "high", // Reasoning / synthesis
     },
   ],
 }
 ```
 
-During execution, a step's `model` field takes precedence over `config.model.executor`. Steps without a `model` field use the executor default. This gives the Planner fine-grained control — using the cheaper model for straightforward tool calls and the more capable model for complex reasoning steps.
+When a step's `tier` is omitted, the executor defaults to `"low"`. During execution, `tier` resolves to the configured `executor.low` or `executor.high` model ID. Tier assignments are generated automatically by the Planner based on step complexity — you configure the two models, and the Planner decides which one runs each step.
 
-Per-step overrides are generated automatically by the Planner based on step complexity. You don't set them manually — you configure which models are available, and the Planner decides how to use them.
-
-### Model Catalog and Allowed Models
-
-Each provider declares a **model catalog** — the set of models it supports, with metadata (tier, description, capabilities) that helps the Planner make intelligent choices. The Planner's system prompt includes this catalog so it can assign the most appropriate model to each step.
-
-By default, the Planner has access to **all** models in the provider's catalog. Use `allowedModels` to restrict this to a subset:
-
-```typescript
-import { AnthropicProvider, AnthropicModels } from "@tepa/provider-anthropic";
-
-// Cost-conscious: only allow haiku and sonnet for step assignment
-const tepa = new Tepa({
-  provider: new AnthropicProvider(),
-  tools: [...],
-  config: {
-    model: {
-      planner: AnthropicModels.Claude_Sonnet_4_6,
-      executor: AnthropicModels.Claude_Haiku_4_5,
-      evaluator: AnthropicModels.Claude_Sonnet_4_6,
-      allowedModels: [
-        AnthropicModels.Claude_Haiku_4_5,
-        AnthropicModels.Claude_Sonnet_4_6,
-      ],
-    },
-  },
-});
-```
-
-```typescript
-// Full access: allow the Planner to use Opus for complex reasoning steps
-const tepa = new Tepa({
-  provider: new AnthropicProvider(),
-  tools: [...],
-  config: {
-    model: {
-      planner: AnthropicModels.Claude_Sonnet_4_6,
-      executor: AnthropicModels.Claude_Haiku_4_5,
-      evaluator: AnthropicModels.Claude_Sonnet_4_6,
-      allowedModels: [
-        AnthropicModels.Claude_Haiku_4_5,
-        AnthropicModels.Claude_Sonnet_4_6,
-        AnthropicModels.Claude_Opus_4_6,
-      ],
-    },
-  },
-});
-```
-
-**Key behaviors:**
-
-- **Omit `allowedModels`** — the Planner sees the full provider catalog (default, zero-config).
-- **Set `allowedModels`** — only those models appear in the Planner's prompt. The `executor` model is always auto-included even if you forget to list it.
-- **Validation** — every entry in `allowedModels` is validated against the provider catalog at startup. Typos throw a `TepaConfigError`.
-
-**Available model constants by provider:**
+### Available Model Constants
 
 | Provider  | Import                                            | Constants                                                  |
 | --------- | ------------------------------------------------- | ---------------------------------------------------------- |
@@ -451,15 +419,14 @@ defineConfig({
 
 Validation rules by field:
 
-| Field                                                | Rule                                            |
-| ---------------------------------------------------- | ----------------------------------------------- |
-| `model.planner`, `model.executor`, `model.evaluator` | Non-empty string                                |
-| `model.allowedModels`                                | Optional array of non-empty strings             |
-| `limits.maxCycles`                                   | Positive integer (> 0)                          |
-| `limits.maxTokens`                                   | Positive integer (> 0)                          |
-| `limits.toolTimeout`                                 | Positive integer (> 0)                          |
-| `limits.retryAttempts`                               | Non-negative integer (>= 0)                     |
-| `logging.level`                                      | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
+| Field                                                                       | Rule                                            |
+| --------------------------------------------------------------------------- | ----------------------------------------------- |
+| `model.planner`, `model.evaluator`, `model.executor.low`, `model.executor.high` | Non-empty string                            |
+| `limits.maxCycles`                                                          | Positive integer (> 0)                          |
+| `limits.maxTokens`                                                          | Positive integer (> 0)                          |
+| `limits.toolTimeout`                                                        | Positive integer (> 0)                          |
+| `limits.retryAttempts`                                                      | Non-negative integer (>= 0)                     |
+| `logging.level`                                                             | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
 
 `TepaConfigError` is a subclass of `TepaError`, so you can catch it specifically:
 

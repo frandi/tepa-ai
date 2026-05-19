@@ -83,8 +83,11 @@ import { DEFAULT_CONFIG } from "@tepa/core";
 const DEFAULT_CONFIG: TepaConfig = {
   model: {
     planner: "claude-sonnet-4-6",
-    executor: "claude-haiku-4-5",
     evaluator: "claude-sonnet-4-6",
+    executor: {
+      low: "claude-haiku-4-5",
+      high: "claude-sonnet-4-6",
+    },
   },
   limits: {
     maxCycles: 5,
@@ -113,15 +116,15 @@ Reads a `.yaml`, `.yml`, or `.json` file, parses it, and passes it through `defi
 
 ---
 
-### `resolveModelCatalog()`
+### `validateModelConfig()`
 
 ```typescript
-import { resolveModelCatalog } from "@tepa/core";
+import { validateModelConfig } from "@tepa/core";
 
-function resolveModelCatalog(providerModels: ModelInfo[], modelConfig: ModelConfig): ModelInfo[];
+function validateModelConfig(providerModels: ModelInfo[], modelConfig: ModelConfig): void;
 ```
 
-Filters the provider's model catalog based on `modelConfig.allowedModels`. Validates that `planner`, `executor`, and `evaluator` model IDs exist in the catalog. Auto-includes the `executor` model. Throws [`TepaConfigError`](#tepaconfigerror) on invalid model references. Called internally by `Tepa.run()` but exported for programmatic use.
+Validates that every model ID referenced by `modelConfig` — `planner`, `evaluator`, `executor.low`, and `executor.high` — exists in the provider's catalog. Throws [`TepaConfigError`](#tepaconfigerror) on invalid model references, naming the offending field. Called internally by `Tepa.run()` but exported for programmatic use.
 
 ---
 
@@ -526,15 +529,19 @@ interface TepaConfig {
 #### `ModelConfig`
 
 ```typescript
+interface ExecutorTiers {
+  low: string;
+  high: string;
+}
+
 interface ModelConfig {
   planner: string;
-  executor: string;
   evaluator: string;
-  allowedModels?: string[];
+  executor: ExecutorTiers;
 }
 ```
 
-Assigns a model identifier to each pipeline component. Values are provider-specific model strings (e.g., `"claude-sonnet-4-6"`, `"gpt-5-mini"`). The optional `allowedModels` whitelist constrains which models the Planner can assign to individual steps — see [Configuration — Model Catalog and Allowed Models](./05-configuration.md#model-catalog-and-allowed-models).
+Assigns a model identifier to each pipeline phase. Values are provider-specific model strings (e.g., `"claude-sonnet-4-6"`, `"gpt-5-mini"`). The `executor` is a two-tier object — the Planner picks `"low"` or `"high"` per step. See [Configuration — Per-Step Tier Selection](./05-configuration.md#per-step-tier-selection).
 
 #### `ModelInfo`
 
@@ -651,7 +658,7 @@ interface PlanStep {
   tools: string[];
   expectedOutcome: string;
   dependencies: string[];
-  model?: string;
+  tier?: "low" | "high";
 }
 ```
 
@@ -662,7 +669,7 @@ interface PlanStep {
 | `tools`           | Tool names to invoke. Empty array = reasoning step (pure LLM text)           |
 | `expectedOutcome` | What success looks like for this step                                        |
 | `dependencies`    | IDs of steps that must complete first                                        |
-| `model`           | Optional model override for this step. Falls back to `config.model.executor` |
+| `tier`            | Optional executor tier (`"low"` or `"high"`). Defaults to `"low"` if omitted |
 
 ---
 
