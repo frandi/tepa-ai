@@ -62,15 +62,12 @@ async function main() {
     provider,
     config: {
       model: {
-        planner: AnthropicModels.Claude_Sonnet_4_6,
-        executor: AnthropicModels.Claude_Haiku_4_5,
-        evaluator: AnthropicModels.Claude_Sonnet_4_6,
-        // Allow the planner to assign Opus for complex reasoning steps
-        allowedModels: [
-          AnthropicModels.Claude_Haiku_4_5,
-          AnthropicModels.Claude_Sonnet_4_6,
-          AnthropicModels.Claude_Opus_4_6,
-        ],
+        planner: AnthropicModels.Claude_Opus_4_7,
+        evaluator: AnthropicModels.Claude_Opus_4_7,
+        executor: {
+          low: AnthropicModels.Claude_Haiku_4_5,
+          high: AnthropicModels.Claude_Sonnet_4_6,
+        },
       },
       limits: {
         maxCycles: 5,
@@ -87,9 +84,9 @@ async function main() {
           const icon = result.status === "success" ? "OK" : "FAIL";
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
-          const model = step.model ? ` [${step.model}]` : "";
+          const tier = step.tier ? ` [${step.tier}]` : "";
           logger!.info(
-            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
+            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${tier}`,
           );
           if (result.error) {
             logger!.info(`${indent}  Error: ${result.error}`);
@@ -134,8 +131,8 @@ async function main() {
             const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
             const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
-            const model = step.model ? ` [${step.model}]` : "";
-            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
+            const tier = step.tier ? ` [${step.tier}]` : "";
+            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${tier}`);
           }
           logger!.info("", { decorative: true });
         },

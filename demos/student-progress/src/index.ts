@@ -65,10 +65,11 @@ async function main() {
     config: {
       model: {
         planner: GeminiModels.Gemini_2_5_Pro,
-        executor: GeminiModels.Gemini_2_5_Flash,
         evaluator: GeminiModels.Gemini_2_5_Pro,
-        // Cost-conscious: stable 2.5 models for data analysis tasks
-        allowedModels: [GeminiModels.Gemini_2_5_Flash, GeminiModels.Gemini_2_5_Pro],
+        executor: {
+          low: GeminiModels.Gemini_2_5_Flash,
+          high: GeminiModels.Gemini_2_5_Pro,
+        },
       },
       limits: {
         maxCycles: 3,
@@ -85,9 +86,9 @@ async function main() {
           const icon = result.status === "success" ? "OK" : "FAIL";
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
-          const model = step.model ? ` [${step.model}]` : "";
+          const tier = step.tier ? ` [${step.tier}]` : "";
           logger!.info(
-            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
+            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${tier}`,
           );
           if (result.error) {
             logger!.info(`${indent}  Error: ${result.error}`);
@@ -132,8 +133,8 @@ async function main() {
             const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
             const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
-            const model = step.model ? ` [${step.model}]` : "";
-            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
+            const tier = step.tier ? ` [${step.tier}]` : "";
+            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${tier}`);
           }
           logger!.info("", { decorative: true });
         },

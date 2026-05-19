@@ -1,9 +1,15 @@
+export interface ExecutorTiers {
+  /** Model for trivial steps — tool-param construction and mechanical work. */
+  low: string;
+  /** Model for reasoning steps — synthesis, analysis, summarization, judgment. */
+  high: string;
+}
+
 export interface ModelConfig {
   planner: string;
-  executor: string;
   evaluator: string;
-  /** Optional whitelist of model IDs the planner may assign to steps. If omitted, all provider models are available. */
-  allowedModels?: string[];
+  /** Two-tier executor: the planner picks a tier per step. */
+  executor: ExecutorTiers;
 }
 
 export interface LimitsConfig {

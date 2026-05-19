@@ -7,6 +7,7 @@ import type {
   ToolRegistry,
   ToolDefinition,
   ToolSchema,
+  ExecutorTiers,
   Plan,
   TepaPrompt,
   ModelInfo,
@@ -25,6 +26,11 @@ import { TepaCycleError } from "../../src/utils/errors.js";
 const defaultModelCatalog: ModelInfo[] = [
   { id: "test-model", tier: "fast", description: "Test model." },
 ];
+
+const defaultTiers: ExecutorTiers = {
+  low: "claude-haiku-4-5",
+  high: "claude-sonnet-4-20250514",
+};
 
 // --- Helpers ---
 
@@ -199,7 +205,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_read", { path: "/tmp/hello.ts" }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results, logs, tokensUsed } = await executor.execute(plan, makeContext());
 
       expect(results).toHaveLength(2);
@@ -232,7 +238,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_write", { path: "/tmp/hello.ts", content: 'console.log("hi")' }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext());
 
       expect(fileWriteTool.execute).toHaveBeenCalledWith({
@@ -242,23 +248,23 @@ describe("Executor", () => {
     });
   });
 
-  describe("execute — per-model token tracking", () => {
-    it("tracks tokens by model when steps use different models", async () => {
+  describe("execute — tier resolution and per-model token tracking", () => {
+    it("resolves tier: 'high' to the configured high model and tracks tokens under it", async () => {
       const plan: Plan = {
-        reasoning: "Two steps with different models",
+        reasoning: "Two steps with different tiers",
         estimatedTokens: 500,
         steps: [
           {
             id: "step_1",
-            description: "Reasoning with a capable model",
+            description: "Reasoning step",
             tools: [],
             expectedOutcome: "Analysis produced",
             dependencies: [],
-            model: "model-a",
+            tier: "high",
           },
           {
             id: "step_2",
-            description: "Write file with default model",
+            description: "Write file (defaults to low)",
             tools: ["file_write"],
             expectedOutcome: "File created",
             dependencies: ["step_1"],
@@ -267,23 +273,29 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([
-        makeResponse("analysis result", 40, 60), // step_1: 100 tokens via model-a
-        makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }, 15, 25), // step_2: 40 tokens via default
+        makeResponse("analysis result", 40, 60),
+        makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }, 15, 25),
       ]);
 
-      const defaultModel = "model-b";
-      const executor = new Executor(registry, provider, defaultModel);
+      const tiers: ExecutorTiers = { low: "low-model", high: "high-model" };
+      const executor = new Executor(registry, provider, tiers);
       const output = await executor.execute(plan, makeContext());
 
-      expect(output.tokensUsed).toBe(140); // 100 + 40
-      expect(output.tokensByModel.get("model-a")).toBe(100);
-      expect(output.tokensByModel.get("model-b")).toBe(40);
+      expect(output.tokensUsed).toBe(140);
+      expect(output.tokensByModel.get("high-model")).toBe(100);
+      expect(output.tokensByModel.get("low-model")).toBe(40);
       expect(output.tokensByModel.size).toBe(2);
+
+      // Confirm provider was called with the resolved model per step
+      const firstCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      expect((firstCall[1] as LLMRequestOptions).model).toBe("high-model");
+      const secondCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
+      expect((secondCall[1] as LLMRequestOptions).model).toBe("low-model");
     });
 
-    it("attributes all tokens to default model when no step overrides", async () => {
+    it("defaults a step with no tier to the low model", async () => {
       const plan: Plan = {
-        reasoning: "Single model",
+        reasoning: "Single step, no tier",
         estimatedTokens: 200,
         steps: [
           {
@@ -300,12 +312,16 @@ describe("Executor", () => {
         makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }),
       ]);
 
-      const executor = new Executor(registry, provider, "default-model");
+      const tiers: ExecutorTiers = { low: "low-default", high: "high-default" };
+      const executor = new Executor(registry, provider, tiers);
       const output = await executor.execute(plan, makeContext());
 
       expect(output.tokensUsed).toBe(50);
-      expect(output.tokensByModel.get("default-model")).toBe(50);
+      expect(output.tokensByModel.get("low-default")).toBe(50);
       expect(output.tokensByModel.size).toBe(1);
+
+      const call = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      expect((call[1] as LLMRequestOptions).model).toBe("low-default");
     });
 
     it("does not track zero-token steps in tokensByModel", async () => {
@@ -330,26 +346,22 @@ describe("Executor", () => {
         ],
       };
 
-      // step_1 fails (tool not found scenario — use a missing tool response)
       const provider = createMockProvider([
         makeToolUseResponse("file_write", { path: "/tmp/out.ts", content: "code" }),
-        // step_2 is skipped due to failed dependency — no LLM call needed
       ]);
 
-      // Make step_1 fail by having the tool throw
       fileWriteTool.execute = vi.fn(async () => {
         throw new Error("disk full");
       });
 
-      const executor = new Executor(registry, provider, "default-model");
+      const tiers: ExecutorTiers = { low: "low-model", high: "high-model" };
+      const executor = new Executor(registry, provider, tiers);
       const output = await executor.execute(plan, makeContext());
 
-      // step_1 failed, step_2 skipped with 0 tokens
       expect(output.results[0]!.status).toBe("failure");
       expect(output.results[1]!.status).toBe("failure");
       expect(output.results[1]!.tokensUsed).toBe(0);
-      // Only step_1's LLM call tokens should appear (tool failed after LLM call)
-      expect(output.tokensByModel.get("default-model")).toBe(50);
+      expect(output.tokensByModel.get("low-model")).toBe(50);
       expect(output.tokensByModel.size).toBe(1);
     });
   });
@@ -382,7 +394,7 @@ describe("Executor", () => {
 
       const provider = createMockProvider([makeToolUseResponse("failing_tool", {})]);
 
-      const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(failRegistry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results).toHaveLength(1);
@@ -408,7 +420,7 @@ describe("Executor", () => {
       // LLM returns a text response with no tool_use blocks
       const provider = createMockProvider([makeResponse("I cannot call the tool")]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results[0]!.status).toBe("failure");
@@ -431,7 +443,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([]);
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results[0]!.status).toBe("failure");
@@ -467,7 +479,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_write", { path: "/tmp/hello.ts", content: "hello" }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results).toHaveLength(2);
@@ -506,7 +518,7 @@ describe("Executor", () => {
         }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext());
 
       // The second LLM call (tool_use) should include step_1's output
@@ -540,7 +552,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_read", { path: "/tmp/important.ts" }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext({ scratchpad }));
 
       // The LLM should have received scratchpad context
@@ -589,7 +601,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_read", { path: "/tmp/file.ts" }),
       ]);
 
-      const executor = new Executor(scratchpadRegistry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(scratchpadRegistry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext({ scratchpad }));
 
       // Both steps succeed
@@ -735,7 +747,7 @@ describe("Executor", () => {
         makeResponse("output_from_step_3"),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext());
 
       // step_3's LLM call should contain step_2's output but NOT step_1's
@@ -770,7 +782,7 @@ describe("Executor", () => {
 
       const provider = createMockProvider([makeResponse("output1"), makeResponse("output2")]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext());
 
       const secondCall = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
@@ -813,7 +825,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([makeToolUseResponse("fail_tool", {})]);
-      const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(failRegistry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results).toHaveLength(2);
@@ -854,7 +866,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext(), eventBus, cycleMeta);
 
       expect(preStepHandler).toHaveBeenCalledTimes(1);
@@ -889,7 +901,7 @@ describe("Executor", () => {
       const provider = createMockProvider([
         makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
       ]);
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results).toHaveLength(1);
@@ -925,7 +937,7 @@ describe("Executor", () => {
         makeResponse("Analysis: everything looks good"),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { logs } = await executor.execute(plan, makeContext());
 
       expect(logs).toHaveLength(2);
@@ -973,7 +985,7 @@ describe("Executor", () => {
       };
 
       const provider = createMockProvider([makeToolUseResponse("fail_tool", {})]);
-      const executor = new Executor(failRegistry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(failRegistry, provider, defaultTiers);
       const { logs } = await executor.execute(plan, makeContext());
 
       expect(logs[0]!.message).toContain("failed");
@@ -1001,7 +1013,7 @@ describe("Executor", () => {
         makeToolUseResponse("file_write", { path: "/tmp/f.ts", content: "x" }),
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       await executor.execute(plan, makeContext());
 
       // Verify that tools were passed to the provider
@@ -1036,7 +1048,7 @@ describe("Executor", () => {
         },
       ]);
 
-      const executor = new Executor(registry, provider, "claude-sonnet-4-20250514");
+      const executor = new Executor(registry, provider, defaultTiers);
       const { results } = await executor.execute(plan, makeContext());
 
       expect(results[0]!.status).toBe("failure");

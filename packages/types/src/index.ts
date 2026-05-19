@@ -1,6 +1,7 @@
 export type {
   TepaConfig,
   ModelConfig,
+  ExecutorTiers,
   LimitsConfig,
   LoggingConfig,
   LogLevel,

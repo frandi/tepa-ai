@@ -16,7 +16,7 @@ import type {
   LogEntry,
 } from "@tepa/types";
 import { defineConfig } from "./config/define-config.js";
-import { resolveModelCatalog } from "./config/model-catalog.js";
+import { validateModelConfig } from "./config/model-catalog.js";
 import { validatePrompt } from "./prompt/validator.js";
 import { Planner } from "./core/planner.js";
 import { Executor, type ExecutorOutput } from "./core/executor.js";
@@ -143,13 +143,12 @@ export class Tepa {
     const eventBus = new EventBus(this.eventMap, defaults);
 
     const providerModels = this.provider.getModels();
-    const modelCatalog = resolveModelCatalog(providerModels, this.config.model);
+    validateModelConfig(providerModels, this.config.model);
 
     const planner = new Planner(
       this.provider,
       registry,
       this.config.model.planner,
-      modelCatalog,
       this.config.model.executor,
     );
     const executor = new Executor(registry, this.provider, this.config.model.executor);

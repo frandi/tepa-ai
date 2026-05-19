@@ -48,7 +48,7 @@ function makePlanJson(
     description: string;
     tools: string[];
     dependencies?: string[];
-    model?: string;
+    tier?: "low" | "high";
   }>,
 ): string {
   return JSON.stringify({
@@ -522,14 +522,14 @@ describe("Pipeline Integration", () => {
       expect(result.tokensUsed).toBe(120);
     });
 
-    it("attributes executor tokens to correct models when steps use per-step model overrides", async () => {
-      // Planner uses default model (claude-haiku-4-5): 10+10 = 20 tokens
-      // Step 1 (reasoning, model override "claude-sonnet-4-6"): 30+40 = 70 tokens
-      // Step 2 (tool, default executor model "claude-haiku-4-5"): 10+10 = 20 tokens
-      // Evaluator uses default model (claude-haiku-4-5): 10+10 = 20 tokens
-      // Total: 130 tokens
-      // By model: claude-haiku-4-5 = planner(20) + step_2(20) + evaluator(20) = 60
-      //           claude-sonnet-4-6 = step_1(70)
+    it("attributes executor tokens to correct models when steps use different tiers", async () => {
+      // Default config: planner/evaluator = claude-sonnet-4-6, executor.low = claude-haiku-4-5,
+      // executor.high = claude-sonnet-4-6.
+      // Planner: 10+10 = 20 (claude-sonnet-4-6)
+      // Step 1 (reasoning, tier="high" → claude-sonnet-4-6): 30+40 = 70
+      // Step 2 (tool, tier omitted → low → claude-haiku-4-5): 10+10 = 20
+      // Evaluator: 10+10 = 20 (claude-sonnet-4-6)
+      // Total: 130
       const provider = createMockProvider([
         // Planner
         makeResponse(
@@ -538,7 +538,7 @@ describe("Pipeline Integration", () => {
               id: "step_1",
               description: "Analyze data",
               tools: [],
-              model: "claude-sonnet-4-6",
+              tier: "high",
             },
             {
               id: "step_2",
@@ -548,9 +548,9 @@ describe("Pipeline Integration", () => {
             },
           ]),
         ),
-        // Step 1 (reasoning with model override) — 30 input, 40 output
+        // Step 1 (reasoning at tier="high") — 30 input, 40 output
         makeResponse("detailed analysis", 30, 40),
-        // Step 2 (tool with default model) — 10 input, 10 output
+        // Step 2 (tool, defaults to tier="low") — 10 input, 10 output
         makeToolUseResponse("tool_a", { input: "report" }),
         // Evaluator
         makeResponse(makeEvalJson("pass")),
@@ -568,12 +568,12 @@ describe("Pipeline Integration", () => {
 
       expect(result.tokensUsed).toBe(130);
 
-      // Verify the provider was called with the correct model for each step
       const completeCalls = (provider.complete as ReturnType<typeof vi.fn>).mock.calls;
-      // Call 0: planner (default model)
-      // Call 1: step_1 (model override "claude-sonnet-4-6")
+      // Call 0: planner — claude-sonnet-4-6
+      // Call 1: step_1 — tier "high" → claude-sonnet-4-6
+      // Call 2: step_2 — tier (default) "low" → claude-haiku-4-5
+      // Call 3: evaluator — claude-sonnet-4-6
       expect(completeCalls[1]![1].model).toBe("claude-sonnet-4-6");
-      // Call 2: step_2 (default executor model "claude-haiku-4-5")
       expect(completeCalls[2]![1].model).toBe("claude-haiku-4-5");
     });
   });

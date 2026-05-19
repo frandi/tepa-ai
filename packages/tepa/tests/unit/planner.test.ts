@@ -8,21 +8,17 @@ import type {
   ToolSchema,
   ToolDefinition,
   TepaPrompt,
+  ExecutorTiers,
   Plan,
 } from "@tepa/types";
-import type { ModelInfo } from "@tepa/types";
 import { Planner, _extractJson, _validatePlanStructure } from "../../src/core/planner.js";
 import { Scratchpad } from "../../src/core/scratchpad.js";
 import { TepaCycleError } from "../../src/utils/errors.js";
 
-const defaultModelCatalog: ModelInfo[] = [
-  { id: "claude-haiku-4-5", tier: "fast", description: "Fast model for simple tasks." },
-  {
-    id: "claude-sonnet-4-20250514",
-    tier: "balanced",
-    description: "Balanced model for planning and analysis.",
-  },
-];
+const defaultTiers: ExecutorTiers = {
+  low: "claude-haiku-4-5",
+  high: "claude-sonnet-4-20250514",
+};
 
 // --- Helpers ---
 
@@ -37,7 +33,7 @@ function createMockProvider(responses: LLMResponse[]): LLMProvider {
       callIndex++;
       return response;
     }),
-    getModels: vi.fn(() => defaultModelCatalog),
+    getModels: vi.fn(() => []),
   };
 }
 
@@ -120,6 +116,10 @@ function makeValidPlanJson(overrides?: Partial<Plan>): string {
     ...overrides,
   };
   return JSON.stringify(plan);
+}
+
+function makePlanner(provider: LLMProvider, registry: ToolRegistry, model = "claude-sonnet-4-20250514") {
+  return new Planner(provider, registry, model, defaultTiers);
 }
 
 // --- Tests ---
@@ -228,8 +228,7 @@ describe("validatePlanStructure", () => {
     expect(() => _validatePlanStructure(data)).toThrow('unknown dependency "step_99"');
   });
 
-  it("accepts step model that is in the allowed set", () => {
-    const allowed = new Set(["model-a", "model-b"]);
+  it("accepts step with tier: low", () => {
     const data = {
       reasoning: "ok",
       estimatedTokens: 100,
@@ -240,15 +239,15 @@ describe("validatePlanStructure", () => {
           tools: [],
           expectedOutcome: "e",
           dependencies: [],
-          model: "model-a",
+          tier: "low",
         },
       ],
     };
-    expect(() => _validatePlanStructure(data, allowed)).not.toThrow();
+    const plan = _validatePlanStructure(data);
+    expect(plan.steps[0]!.tier).toBe("low");
   });
 
-  it("rejects step model not in the allowed set", () => {
-    const allowed = new Set(["model-a", "model-b"]);
+  it("accepts step with tier: high", () => {
     const data = {
       reasoning: "ok",
       estimatedTokens: 100,
@@ -259,14 +258,27 @@ describe("validatePlanStructure", () => {
           tools: [],
           expectedOutcome: "e",
           dependencies: [],
-          model: "model-z",
+          tier: "high",
         },
       ],
     };
-    expect(() => _validatePlanStructure(data, allowed)).toThrow("not in the allowed model catalog");
+    const plan = _validatePlanStructure(data);
+    expect(plan.steps[0]!.tier).toBe("high");
   });
 
-  it("skips model validation when allowedModelIds is not provided", () => {
+  it("accepts step with no tier field (omitted)", () => {
+    const data = {
+      reasoning: "ok",
+      estimatedTokens: 100,
+      steps: [
+        { id: "step_1", description: "d", tools: [], expectedOutcome: "e", dependencies: [] },
+      ],
+    };
+    const plan = _validatePlanStructure(data);
+    expect(plan.steps[0]!.tier).toBeUndefined();
+  });
+
+  it("rejects tier values other than low/high", () => {
     const data = {
       reasoning: "ok",
       estimatedTokens: 100,
@@ -277,11 +289,11 @@ describe("validatePlanStructure", () => {
           tools: [],
           expectedOutcome: "e",
           dependencies: [],
-          model: "any-model",
+          tier: "medium",
         },
       ],
     };
-    expect(() => _validatePlanStructure(data)).not.toThrow();
+    expect(() => _validatePlanStructure(data)).toThrow('tier must be "low" or "high"');
   });
 });
 
@@ -295,13 +307,7 @@ describe("Planner", () => {
   describe("plan — initial planning (no feedback)", () => {
     it("produces a valid plan from well-formed LLM response", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
 
@@ -316,13 +322,7 @@ describe("Planner", () => {
 
     it("sends tool schemas in the system prompt", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt);
 
@@ -335,13 +335,7 @@ describe("Planner", () => {
 
     it("sends goal, context, and expectedOutput in the user message", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt);
 
@@ -352,15 +346,9 @@ describe("Planner", () => {
       expect(messages[0]!.content).toContain("Hello World");
     });
 
-    it("uses the specified model", async () => {
+    it("uses the specified planner model", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-haiku-3",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry, "claude-haiku-3");
 
       await planner.plan(samplePrompt);
 
@@ -378,15 +366,8 @@ describe("Planner", () => {
           { description: "Summary data", criteria: ["Has at least 3 sections"] },
         ],
       };
-      const planJson = makeValidPlanJson();
-      const provider = createMockProvider([makeResponse(planJson)]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(promptWithArray);
 
@@ -419,13 +400,7 @@ describe("Planner", () => {
         ],
       });
       const provider = createMockProvider([makeResponse(revisedPlan)]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(
         samplePrompt,
@@ -438,13 +413,7 @@ describe("Planner", () => {
 
     it("includes feedback in the user message", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt, "Missing test execution step");
 
@@ -456,13 +425,7 @@ describe("Planner", () => {
 
     it("includes scratchpad state in revised plan user message", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
       const scratchpad = new Scratchpad();
       scratchpad.write("_execution_summary", [
         { stepId: "step_1", status: "success", output: "file written" },
@@ -484,13 +447,7 @@ describe("Planner", () => {
 
     it("works with undefined scratchpad (backward compat)", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(samplePrompt, "Some feedback");
 
@@ -499,13 +456,7 @@ describe("Planner", () => {
 
     it("uses revised system prompt when feedback is provided", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt, "Some feedback");
 
@@ -522,13 +473,7 @@ describe("Planner", () => {
         makeResponse("This is not JSON at all"),
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan, tokensUsed } = await planner.plan(samplePrompt);
 
@@ -543,19 +488,12 @@ describe("Planner", () => {
         makeResponse(badResponse),
         makeResponse(makeValidPlanJson()),
       ]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt);
 
       const retryCallArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[1]!;
       const retryMessages = retryCallArgs[0] as LLMMessage[];
-      // Should have: original user message, bad assistant response, retry user message
       expect(retryMessages).toHaveLength(3);
       expect(retryMessages[0]!.role).toBe("user");
       expect(retryMessages[1]!.role).toBe("assistant");
@@ -569,13 +507,7 @@ describe("Planner", () => {
         makeResponse("not json"),
         makeResponse("still not json"),
       ]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await expect(planner.plan(samplePrompt)).rejects.toSatisfy((err: unknown) => {
         return (
@@ -587,30 +519,18 @@ describe("Planner", () => {
     it("handles JSON wrapped in markdown code fences", async () => {
       const wrappedJson = "```json\n" + makeValidPlanJson() + "\n```";
       const provider = createMockProvider([makeResponse(wrappedJson)]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(samplePrompt);
 
       expect(plan.steps).toHaveLength(2);
-      expect(provider.complete).toHaveBeenCalledTimes(1); // No retry needed
+      expect(provider.complete).toHaveBeenCalledTimes(1);
     });
 
     it("handles JSON with surrounding text", async () => {
       const textWithJson = "Here is my plan:\n" + makeValidPlanJson() + "\nI hope this helps!";
       const provider = createMockProvider([makeResponse(textWithJson)]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(samplePrompt);
 
@@ -621,13 +541,7 @@ describe("Planner", () => {
   describe("plan — tool reference validation", () => {
     it("succeeds when all tools exist in registry", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(samplePrompt);
       expect(plan.steps[0]!.tools).toEqual(["file_write"]);
@@ -645,18 +559,11 @@ describe("Planner", () => {
           },
         ],
       });
-      // Provide two bad responses so both attempts fail with tool validation
       const provider = createMockProvider([
         makeResponse(planWithBadTool),
         makeResponse(planWithBadTool),
       ]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await expect(planner.plan(samplePrompt)).rejects.toThrow(TepaCycleError);
     });
@@ -681,13 +588,7 @@ describe("Planner", () => {
         ],
       });
       const provider = createMockProvider([makeResponse(planWithReasoningStep)]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       const { plan } = await planner.plan(samplePrompt);
 
@@ -696,45 +597,31 @@ describe("Planner", () => {
     });
   });
 
-  describe("plan — model catalog in system prompt", () => {
-    it("includes all catalog model descriptions in the system prompt", async () => {
+  describe("plan — tier rubric in system prompt", () => {
+    it("teaches the planner the two tiers and their resolved model IDs", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
       await planner.plan(samplePrompt);
 
       const callArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
       const options = callArgs[1] as LLMRequestOptions;
-      expect(options.systemPrompt).toContain("claude-haiku-4-5");
-      expect(options.systemPrompt).toContain("claude-sonnet-4-20250514");
-      expect(options.systemPrompt).toContain("[fast]");
-      expect(options.systemPrompt).toContain("[balanced]");
-      expect(options.systemPrompt).toContain("(DEFAULT)");
+      expect(options.systemPrompt).toContain('"low"');
+      expect(options.systemPrompt).toContain('"high"');
+      expect(options.systemPrompt).toContain(defaultTiers.low);
+      expect(options.systemPrompt).toContain(defaultTiers.high);
     });
 
-    it("marks the default model with (DEFAULT)", async () => {
+    it("teaches the tier rubric in revised plan prompt too", async () => {
       const provider = createMockProvider([makeResponse(makeValidPlanJson())]);
-      const planner = new Planner(
-        provider,
-        registry,
-        "claude-sonnet-4-20250514",
-        defaultModelCatalog,
-        "claude-haiku-4-5",
-      );
+      const planner = makePlanner(provider, registry);
 
-      await planner.plan(samplePrompt);
+      await planner.plan(samplePrompt, "Try again");
 
       const callArgs = (provider.complete as ReturnType<typeof vi.fn>).mock.calls[0]!;
       const options = callArgs[1] as LLMRequestOptions;
-      // DEFAULT should be next to the default model, not the other one
-      expect(options.systemPrompt).toMatch(/claude-haiku-4-5.*\(DEFAULT\)/);
-      expect(options.systemPrompt).not.toMatch(/claude-sonnet-4-20250514.*\(DEFAULT\)/);
+      expect(options.systemPrompt).toContain('"low"');
+      expect(options.systemPrompt).toContain('"high"');
     });
   });
 });

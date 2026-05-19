@@ -17,7 +17,11 @@ const baseCycle: CycleMetadata = {
 };
 
 const defaultConfig = {
-  model: { planner: "test-planner", executor: "test-executor", evaluator: "test-evaluator" },
+  model: {
+    planner: "test-planner",
+    evaluator: "test-evaluator",
+    executor: { low: "test-low", high: "test-high" },
+  },
   limits: { maxCycles: 5, maxTokens: 64000, toolTimeout: 30000, retryAttempts: 1 },
   tools: [] as string[],
   logging: { level: "info" as const },

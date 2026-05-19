@@ -3,6 +3,7 @@ import type {
   LLMMessage,
   ToolRegistry,
   ToolSchema,
+  ExecutorTiers,
   Plan,
   PlanStep,
   ExecutionResult,
@@ -199,12 +200,17 @@ function filterOutputsByDependencies(
 export class Executor {
   private readonly registry: ToolRegistry;
   private readonly provider: LLMProvider;
-  private readonly model: string;
+  private readonly tiers: ExecutorTiers;
 
-  constructor(registry: ToolRegistry, provider: LLMProvider, model: string) {
+  constructor(registry: ToolRegistry, provider: LLMProvider, tiers: ExecutorTiers) {
     this.registry = registry;
     this.provider = provider;
-    this.model = model;
+    this.tiers = tiers;
+  }
+
+  /** Resolve the actual model ID to use for a step based on its tier. */
+  private resolveModel(step: PlanStep): string {
+    return this.tiers[step.tier ?? "low"];
   }
 
   /**
@@ -266,7 +272,7 @@ export class Executor {
 
       // Track tokens by the actual model used for this step
       if (result.tokensUsed > 0) {
-        const stepModel = step.model ?? this.model;
+        const stepModel = this.resolveModel(step);
         tokensByModel.set(stepModel, (tokensByModel.get(stepModel) ?? 0) + result.tokensUsed);
       }
 
@@ -314,7 +320,7 @@ export class Executor {
       ];
 
       const response = await this.provider.complete(messages, {
-        model: step.model ?? this.model,
+        model: this.resolveModel(step),
         systemPrompt: buildReasoningSystemPrompt(),
       });
 
@@ -382,7 +388,7 @@ export class Executor {
         ];
 
         const response = await this.provider.complete(messages, {
-          model: step.model ?? this.model,
+          model: this.resolveModel(step),
           systemPrompt: buildToolUseSystemPrompt(),
           tools: [toolSchema],
           toolChoice: { name: toolName },

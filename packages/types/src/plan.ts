@@ -4,8 +4,8 @@ export interface PlanStep {
   tools: string[];
   expectedOutcome: string;
   dependencies: string[];
-  /** Optional model override for this step's LLM call. Falls back to executor default. */
-  model?: string;
+  /** Which executor tier should handle this step. Defaults to "low" if omitted. */
+  tier?: "low" | "high";
 }
 
 export interface Plan {

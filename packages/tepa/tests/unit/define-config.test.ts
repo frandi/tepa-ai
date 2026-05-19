@@ -37,7 +37,15 @@ describe("defineConfig", () => {
       model: { planner: "claude-opus-4-20250514" },
     });
     expect(config.model.planner).toBe("claude-opus-4-20250514");
-    expect(config.model.executor).toBe(DEFAULT_CONFIG.model.executor);
+    expect(config.model.executor).toEqual(DEFAULT_CONFIG.model.executor);
+  });
+
+  it("deep-merges executor tier overrides", () => {
+    const config = defineConfig({
+      model: { executor: { high: "claude-opus-4-7" } },
+    });
+    expect(config.model.executor.high).toBe("claude-opus-4-7");
+    expect(config.model.executor.low).toBe(DEFAULT_CONFIG.model.executor.low);
   });
 
   it("overrides logging level", () => {
@@ -65,21 +73,11 @@ describe("defineConfig", () => {
     expect(() => defineConfig({ model: { planner: "" } })).toThrow(TepaConfigError);
   });
 
-  it("accepts allowedModels as an array of strings", () => {
-    const config = defineConfig({
-      model: { allowedModels: ["claude-haiku-4-5", "claude-sonnet-4-6"] },
-    });
-    expect(config.model.allowedModels).toEqual(["claude-haiku-4-5", "claude-sonnet-4-6"]);
+  it("throws TepaConfigError for empty executor.low", () => {
+    expect(() => defineConfig({ model: { executor: { low: "" } } })).toThrow(TepaConfigError);
   });
 
-  it("allows omitting allowedModels (undefined by default)", () => {
-    const config = defineConfig();
-    expect(config.model.allowedModels).toBeUndefined();
-  });
-
-  it("throws TepaConfigError for empty-string entries in allowedModels", () => {
-    expect(() => defineConfig({ model: { allowedModels: ["valid", ""] } })).toThrow(
-      TepaConfigError,
-    );
+  it("throws TepaConfigError for empty executor.high", () => {
+    expect(() => defineConfig({ model: { executor: { high: "" } } })).toThrow(TepaConfigError);
   });
 });

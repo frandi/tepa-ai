@@ -5,9 +5,11 @@ import { TepaConfigError } from "../utils/errors.js";
 
 const modelConfigSchema = z.object({
   planner: z.string().min(1),
-  executor: z.string().min(1),
   evaluator: z.string().min(1),
-  allowedModels: z.array(z.string().min(1)).optional(),
+  executor: z.object({
+    low: z.string().min(1),
+    high: z.string().min(1),
+  }),
 });
 
 const limitsConfigSchema = z.object({
