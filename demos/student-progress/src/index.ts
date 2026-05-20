@@ -64,11 +64,11 @@ async function main() {
     provider,
     config: {
       model: {
-        planner: GeminiModels.Gemini_2_5_Pro,
-        evaluator: GeminiModels.Gemini_2_5_Pro,
+        planner: { id: GeminiModels.Gemini_3_5_Flash, reasoning: "high" },
+        evaluator: { id: GeminiModels.Gemini_3_5_Flash, reasoning: "high" },
         executor: {
-          low: GeminiModels.Gemini_2_5_Flash,
-          high: GeminiModels.Gemini_2_5_Pro,
+          low: { id: GeminiModels.Gemini_3_5_Flash, reasoning: "minimal" },
+          high: { id: GeminiModels.Gemini_3_5_Flash, reasoning: "medium" },
         },
       },
       limits: {

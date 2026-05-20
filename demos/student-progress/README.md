@@ -52,12 +52,25 @@ The CSV files contain realistic data designed to produce meaningful analysis:
 - `scratchpad` — Carry computed metrics across steps
 - `log_observe` — Record analytical observations
 
+## Model Configuration
+
+All four roles run on **`gemini-3.5-flash`** with tunable reasoning effort:
+
+| Role            | Reasoning | Rationale                                                              |
+| --------------- | --------- | ---------------------------------------------------------------------- |
+| `planner`       | `high`    | Multi-step plan over CSV analysis, synthesis, and file writes.         |
+| `evaluator`     | `high`    | Must catch both structural and semantic errors in the output.          |
+| `executor.high` | `medium`  | LLM reasoning steps that synthesize metrics into narrative + CSV rows. |
+| `executor.low`  | `minimal` | Tool-param construction for `file_read`, `file_write`, `shell_execute`, etc. |
+
+`low` reasoning on `executor.high` was insufficient — the synthesis step fabricated student names instead of using the parsed metrics. `medium` is the working floor for this demo.
+
 ## Running
 
-Requires an `ANTHROPIC_API_KEY` environment variable. Create a `.env` file in this directory:
+Requires a `GEMINI_API_KEY` environment variable. Create a `.env.local` file in this directory:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=...
 ```
 
 Then use the run script, which cleans previously generated output before starting:
@@ -87,4 +100,4 @@ The pipeline produces two files in `class-5b/`:
 
 ## Expected Behavior
 
-This scenario typically completes in a **single cycle** — demonstrating that the pipeline loop isn't always multi-cycle. The evaluator performs both structural checks (files exist, correct format) and qualitative checks (recommendations are specific, systemic issues identified).
+The evaluator performs both structural checks (files exist, correct format) and qualitative checks (recommendations are specific, systemic issues identified). The scenario typically completes in **1–2 cycles**: a clean run lands in one, but a second cycle is sometimes needed when the planner-written Python script imports a library that isn't available in the sandbox (e.g. `pandas`) — the evaluator catches it and the next plan switches to standard-library code.
