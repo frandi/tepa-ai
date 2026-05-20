@@ -9,9 +9,17 @@ context:
   planFormat: |
     Structure as Markdown with:
     - Title and overview
-    - Weekly breakdowns (topics, resources, exercises, time estimates)
+    - A breakdown segmented by the time period the user implied in their
+      input (e.g. days, weeks, or months). Each segment lists topics,
+      resources, exercises, and time estimates.
     - Tips for staying on track
   notes:
+    - Detect the study duration from the user's input. Accept any phrasing
+      (e.g. "3 days", "2 weeks", "next month") and choose the segment unit
+      that fits — days for sub-week plans, weeks for multi-week plans,
+      months for plans longer than ~8 weeks.
+    - If the user did not mention a duration, default to a 1-week plan
+      segmented by day.
     - Use well-known, reputable resources
     - Mix of reading, video, and hands-on practice
     - Realistic time estimates for part-time study
@@ -20,9 +28,10 @@ expectedOutput:
   - path: ./study-plan.md
     description: A comprehensive personalized study plan
     criteria:
-      - Clear title reflecting the user's goal
-      - Weekly breakdowns with specific topics
+      - Clear title reflecting the user's goal and chosen duration
+      - Breakdown segmented by the duration the user implied, or a 1-week
+        day-by-day plan when no duration was given
       - Concrete learning resources (books, courses, websites)
-      - Practice exercises or projects per week
+      - Practice exercises or projects per segment
       - Estimated time commitments
       - Well-formatted Markdown

@@ -68,9 +68,12 @@ async function main() {
     provider,
     config: {
       model: {
-        planner: OpenAIModels.GPT_5,
-        executor: OpenAIModels.GPT_5_Mini,
-        evaluator: OpenAIModels.GPT_5,
+        planner: { id: OpenAIModels.GPT_5_4_Mini, reasoning: "high" },
+        evaluator: { id: OpenAIModels.GPT_5_4_Mini, reasoning: "high" },
+        executor: {
+          low: { id: OpenAIModels.GPT_5_4_Mini, reasoning: "low" },
+          high: { id: OpenAIModels.GPT_5_4_Mini, reasoning: "medium" },
+        },
       },
       limits: {
         maxCycles: 3,
@@ -87,9 +90,9 @@ async function main() {
           const icon = result.status === "success" ? "OK" : "FAIL";
           const depth = depthMap.get(step.id) ?? 0;
           const indent = "  " + "  ".repeat(depth);
-          const model = step.model ? ` [${step.model}]` : "";
+          const tier = step.tier ? ` [${step.tier}]` : "";
           logger!.info(
-            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${model}`,
+            `${indent}${step.id}: ${icon} — ${step.description} (${result.tokensUsed} tok, ${result.durationMs}ms)${tier}`,
           );
           if (result.error) {
             logger!.info(`${indent}  Error: ${result.error}`);
@@ -134,8 +137,8 @@ async function main() {
             const indent = "  " + "  ".repeat(depth);
             const tools = step.tools.length > 0 ? step.tools.join(", ") : "LLM reasoning";
             const deps = step.dependencies.length > 0 ? ` <- ${step.dependencies.join(", ")}` : "";
-            const model = step.model ? ` [${step.model}]` : "";
-            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${model}`);
+            const tier = step.tier ? ` [${step.tier}]` : "";
+            logger!.info(`${indent}${step.id}: ${step.description} (${tools})${deps}${tier}`);
           }
           logger!.info("", { decorative: true });
 
