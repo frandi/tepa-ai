@@ -1,13 +1,24 @@
+import type { ReasoningEffort } from "./llm.js";
+
+/**
+ * Model assignment for a single pipeline role.
+ *
+ * - Plain string: just the model ID (provider defaults apply for reasoning).
+ * - Object form: model ID plus an optional reasoning-effort hint that
+ *   providers like OpenAI map to their native reasoning controls.
+ */
+export type RoleModel = string | { id: string; reasoning?: ReasoningEffort };
+
 export interface ExecutorTiers {
   /** Model for trivial steps — tool-param construction and mechanical work. */
-  low: string;
+  low: RoleModel;
   /** Model for reasoning steps — synthesis, analysis, summarization, judgment. */
-  high: string;
+  high: RoleModel;
 }
 
 export interface ModelConfig {
-  planner: string;
-  evaluator: string;
+  planner: RoleModel;
+  evaluator: RoleModel;
   /** Two-tier executor: the planner picks a tier per step. */
   executor: ExecutorTiers;
 }

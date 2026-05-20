@@ -1,11 +1,15 @@
 import type {
   LLMProvider,
   LLMMessage,
+  LLMRequestOptions,
+  ReasoningEffort,
+  RoleModel,
   TepaPrompt,
   ExecutionResult,
   EvaluationResult,
 } from "@tepa/types";
 import type { Scratchpad } from "./scratchpad.js";
+import { resolveRoleModel } from "../utils/role-model.js";
 
 /**
  * Build the system prompt for evaluation.
@@ -163,10 +167,13 @@ The JSON must have this structure:
 export class Evaluator {
   private readonly provider: LLMProvider;
   private readonly model: string;
+  private readonly reasoning?: ReasoningEffort;
 
-  constructor(provider: LLMProvider, model: string) {
+  constructor(provider: LLMProvider, model: RoleModel) {
     this.provider = provider;
-    this.model = model;
+    const resolved = resolveRoleModel(model);
+    this.model = resolved.id;
+    this.reasoning = resolved.reasoning;
   }
 
   /**
@@ -195,7 +202,11 @@ export class Evaluator {
   ): Promise<EvaluationResult> {
     const userContent = buildEvalUserMessage(prompt, executionResults, scratchpad);
     const systemPrompt = buildEvalSystemPrompt();
-    const options = { model: this.model, systemPrompt };
+    const options: LLMRequestOptions = {
+      model: this.model,
+      systemPrompt,
+      ...(this.reasoning !== undefined && { reasoning: this.reasoning }),
+    };
 
     const messages: LLMMessage[] = [{ role: "user", content: userContent }];
 

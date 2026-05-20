@@ -17,6 +17,7 @@ import type {
 } from "@tepa/types";
 import { defineConfig } from "./config/define-config.js";
 import { validateModelConfig } from "./config/model-catalog.js";
+import { resolveRoleModel } from "./utils/role-model.js";
 import { validatePrompt } from "./prompt/validator.js";
 import { Planner } from "./core/planner.js";
 import { Executor, type ExecutorOutput } from "./core/executor.js";
@@ -197,7 +198,7 @@ export class Tepa {
           plannerInput.feedback,
           scratchpad,
         );
-        tokenTracker.add(planResult.tokensUsed, this.config.model.planner);
+        tokenTracker.add(planResult.tokensUsed, resolveRoleModel(this.config.model.planner).id);
 
         const plan = await eventBus.run("postPlanner", planResult.plan, cycleMeta);
 
@@ -254,7 +255,7 @@ export class Tepa {
           evaluatorInput.results,
           evaluatorInput.scratchpad,
         );
-        tokenTracker.add(evaluation.tokensUsed, this.config.model.evaluator);
+        tokenTracker.add(evaluation.tokensUsed, resolveRoleModel(this.config.model.evaluator).id);
 
         // Update cycle metadata with latest token count for postEvaluator
         const updatedCycleMeta: CycleMetadata = {

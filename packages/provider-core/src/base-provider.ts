@@ -215,6 +215,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
 
     if (options.maxTokens !== undefined) info.maxTokens = options.maxTokens;
     if (options.temperature !== undefined) info.temperature = options.temperature;
+    if (options.reasoning !== undefined) info.reasoning = options.reasoning;
     if (options.tools && options.tools.length > 0) info.hasTools = true;
 
     if (this.includeContent) {

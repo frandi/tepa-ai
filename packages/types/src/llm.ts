@@ -22,6 +22,14 @@ export interface ModelInfo {
  */
 export type ToolChoice = "auto" | "any" | "none" | { name: string };
 
+/**
+ * Reasoning effort hint for models that support a tunable reasoning budget
+ * (e.g. OpenAI GPT-5 family via the Responses API).
+ *
+ * Providers that do not support per-call reasoning control should ignore this.
+ */
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high";
+
 export interface LLMRequestOptions {
   model: string;
   maxTokens?: number;
@@ -36,6 +44,12 @@ export interface LLMRequestOptions {
    * providers need to map this to their respective tool_choice parameters.
    */
   toolChoice?: ToolChoice;
+  /**
+   * Reasoning effort hint. Providers map this to their native reasoning
+   * controls (e.g. OpenAI `reasoning.effort`). Providers without reasoning
+   * controls ignore this field.
+   */
+  reasoning?: ReasoningEffort;
 }
 
 /** A tool result sent back to the LLM after tool execution. */
@@ -103,6 +117,7 @@ export interface LLMLogEntry {
     promptPreview: string;
     maxTokens?: number;
     temperature?: number;
+    reasoning?: ReasoningEffort;
     hasSystemPrompt: boolean;
     hasTools?: boolean;
     messages?: LLMMessage[];

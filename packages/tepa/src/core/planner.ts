@@ -1,6 +1,9 @@
 import type {
   LLMProvider,
   LLMMessage,
+  LLMRequestOptions,
+  ReasoningEffort,
+  RoleModel,
   ToolRegistry,
   ToolSchema,
   TepaPrompt,
@@ -10,6 +13,7 @@ import type {
 } from "@tepa/types";
 import type { Scratchpad } from "./scratchpad.js";
 import { TepaCycleError } from "../utils/errors.js";
+import { resolveRoleModel } from "../utils/role-model.js";
 
 const VALID_TIERS = ["low", "high"] as const;
 type Tier = (typeof VALID_TIERS)[number];
@@ -20,10 +24,12 @@ type Tier = (typeof VALID_TIERS)[number];
  * roughly what kind of model it is delegating to.
  */
 function renderTierRubric(tiers: ExecutorTiers): string {
+  const lowId = resolveRoleModel(tiers.low).id;
+  const highId = resolveRoleModel(tiers.high).id;
   return [
-    `- "low"  (${tiers.low}): fast and cheap. Use for trivial tool-param construction`,
+    `- "low"  (${lowId}): fast and cheap. Use for trivial tool-param construction`,
     `         and mechanical steps where the answer follows directly from the inputs.`,
-    `- "high" (${tiers.high}): more capable, slower. Use for steps that require reasoning,`,
+    `- "high" (${highId}): more capable, slower. Use for steps that require reasoning,`,
     `         synthesis, analysis, summarization, or judgment.`,
   ].join("\n");
 }
@@ -355,17 +361,20 @@ export class Planner {
   private readonly provider: LLMProvider;
   private readonly registry: ToolRegistry;
   private readonly model: string;
+  private readonly reasoning?: ReasoningEffort;
   private readonly executorTiers: ExecutorTiers;
 
   constructor(
     provider: LLMProvider,
     registry: ToolRegistry,
-    model: string,
+    model: RoleModel,
     executorTiers: ExecutorTiers,
   ) {
     this.provider = provider;
     this.registry = registry;
-    this.model = model;
+    const resolved = resolveRoleModel(model);
+    this.model = resolved.id;
+    this.reasoning = resolved.reasoning;
     this.executorTiers = executorTiers;
   }
 
@@ -391,9 +400,10 @@ export class Planner {
       : buildPlanUserMessage(prompt);
 
     const messages: LLMMessage[] = [{ role: "user", content: userMessage }];
-    const options = {
+    const options: LLMRequestOptions = {
       model: this.model,
       systemPrompt,
+      ...(this.reasoning !== undefined && { reasoning: this.reasoning }),
     };
 
     // First attempt

@@ -1,6 +1,8 @@
 import type {
   LLMProvider,
   LLMMessage,
+  LLMRequestOptions,
+  ReasoningEffort,
   ToolRegistry,
   ToolSchema,
   ExecutorTiers,
@@ -13,6 +15,7 @@ import type {
 } from "@tepa/types";
 import { Scratchpad } from "./scratchpad.js";
 import { TepaCycleError } from "../utils/errors.js";
+import { resolveRoleModel } from "../utils/role-model.js";
 import type { EventBus } from "../events/event-bus.js";
 
 export interface ExecutionContext {
@@ -200,16 +203,19 @@ function filterOutputsByDependencies(
 export class Executor {
   private readonly registry: ToolRegistry;
   private readonly provider: LLMProvider;
-  private readonly tiers: ExecutorTiers;
+  private readonly tiers: { low: { id: string; reasoning?: ReasoningEffort }; high: { id: string; reasoning?: ReasoningEffort } };
 
   constructor(registry: ToolRegistry, provider: LLMProvider, tiers: ExecutorTiers) {
     this.registry = registry;
     this.provider = provider;
-    this.tiers = tiers;
+    this.tiers = {
+      low: resolveRoleModel(tiers.low),
+      high: resolveRoleModel(tiers.high),
+    };
   }
 
-  /** Resolve the actual model ID to use for a step based on its tier. */
-  private resolveModel(step: PlanStep): string {
+  /** Resolve the model ID and reasoning hint to use for a step based on its tier. */
+  private resolveStepModel(step: PlanStep): { id: string; reasoning?: ReasoningEffort } {
     return this.tiers[step.tier ?? "low"];
   }
 
@@ -272,7 +278,7 @@ export class Executor {
 
       // Track tokens by the actual model used for this step
       if (result.tokensUsed > 0) {
-        const stepModel = this.resolveModel(step);
+        const stepModel = this.resolveStepModel(step).id;
         tokensByModel.set(stepModel, (tokensByModel.get(stepModel) ?? 0) + result.tokensUsed);
       }
 
@@ -319,10 +325,14 @@ export class Executor {
         },
       ];
 
-      const response = await this.provider.complete(messages, {
-        model: this.resolveModel(step),
+      const { id: modelId, reasoning } = this.resolveStepModel(step);
+      const reasoningOptions: LLMRequestOptions = {
+        model: modelId,
         systemPrompt: buildReasoningSystemPrompt(),
-      });
+        ...(reasoning !== undefined && { reasoning }),
+      };
+
+      const response = await this.provider.complete(messages, reasoningOptions);
 
       const tokensUsed = response.tokensUsed.input + response.tokensUsed.output;
 
@@ -387,12 +397,16 @@ export class Executor {
           },
         ];
 
-        const response = await this.provider.complete(messages, {
-          model: this.resolveModel(step),
+        const { id: modelId, reasoning } = this.resolveStepModel(step);
+        const toolOptions: LLMRequestOptions = {
+          model: modelId,
           systemPrompt: buildToolUseSystemPrompt(),
           tools: [toolSchema],
           toolChoice: { name: toolName },
-        });
+          ...(reasoning !== undefined && { reasoning }),
+        };
+
+        const response = await this.provider.complete(messages, toolOptions);
 
         totalTokens += response.tokensUsed.input + response.tokensUsed.output;
 

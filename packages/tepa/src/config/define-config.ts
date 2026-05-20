@@ -3,12 +3,22 @@ import { z } from "zod";
 import { DEFAULT_CONFIG } from "./defaults.js";
 import { TepaConfigError } from "../utils/errors.js";
 
+const reasoningEffortSchema = z.enum(["minimal", "low", "medium", "high"]);
+
+const roleModelSchema = z.union([
+  z.string().min(1),
+  z.object({
+    id: z.string().min(1),
+    reasoning: reasoningEffortSchema.optional(),
+  }),
+]);
+
 const modelConfigSchema = z.object({
-  planner: z.string().min(1),
-  evaluator: z.string().min(1),
+  planner: roleModelSchema,
+  evaluator: roleModelSchema,
   executor: z.object({
-    low: z.string().min(1),
-    high: z.string().min(1),
+    low: roleModelSchema,
+    high: roleModelSchema,
   }),
 });
 
