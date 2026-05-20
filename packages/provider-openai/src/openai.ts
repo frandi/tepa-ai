@@ -56,6 +56,10 @@ export class OpenAIProvider extends BaseLLMProvider {
       params.temperature = options.temperature;
     }
 
+    if (options.reasoning !== undefined) {
+      params.reasoning = { effort: options.reasoning };
+    }
+
     if (options.tools && options.tools.length > 0) {
       params.tools = toOpenAITools(options.tools);
     }
