@@ -128,6 +128,29 @@ describe("GeminiProvider", () => {
       expect(callArgs.config.temperature).toBeUndefined();
     });
 
+    it("maps reasoning effort to thinkingConfig.thinkingLevel", async () => {
+      mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
+
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3.5-flash",
+        reasoning: "high",
+      });
+
+      const callArgs = mockGenerateContent.mock.calls[0]![0];
+      expect(callArgs.config.thinkingConfig).toEqual({ thinkingLevel: "HIGH" });
+    });
+
+    it("omits thinkingConfig when reasoning is not provided", async () => {
+      mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
+
+      await provider.complete([{ role: "user", content: "Hi" }], {
+        model: "gemini-3.5-flash",
+      });
+
+      const callArgs = mockGenerateContent.mock.calls[0]![0];
+      expect(callArgs.config.thinkingConfig).toBeUndefined();
+    });
+
     it("omits systemInstruction when systemPrompt is not provided", async () => {
       mockGenerateContent.mockResolvedValueOnce(makeSuccessResponse("Hello"));
 

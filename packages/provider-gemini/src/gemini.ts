@@ -48,6 +48,10 @@ export class GeminiProvider extends BaseLLMProvider {
       config.systemInstruction = options.systemPrompt;
     }
 
+    if (options.reasoning !== undefined) {
+      config.thinkingConfig = { thinkingLevel: options.reasoning.toUpperCase() };
+    }
+
     if (options.tools && options.tools.length > 0) {
       config.tools = toGeminiTools(options.tools);
       const toolConfig = toGeminiToolConfig(options.toolChoice);

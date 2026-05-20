@@ -10,6 +10,7 @@ export const GeminiModels = {
   Gemini_2_5_Pro: "gemini-2.5-pro",
   Gemini_2_5_Flash: "gemini-2.5-flash",
   Gemini_2_5_Flash_Lite: "gemini-2.5-flash-lite",
+  Gemini_3_5_Flash: "gemini-3.5-flash",
 } as const;
 
 /** Full model catalog for the Gemini provider. */
@@ -50,6 +51,12 @@ export const GEMINI_MODEL_CATALOG: ModelInfo[] = [
     id: GeminiModels.Gemini_2_5_Flash_Lite,
     tier: "fast",
     description: "Fastest and most budget-friendly stable multimodal model.",
+    capabilities: ["tool_use"],
+  },
+  {
+    id: GeminiModels.Gemini_3_5_Flash,
+    tier: "fast",
+    description: "Balanced flash model with tunable reasoning effort.",
     capabilities: ["tool_use"],
   },
 ];
