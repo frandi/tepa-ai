@@ -38,6 +38,17 @@ This demo uses two event hooks to insert human checkpoints:
 - `directory_list` — Explore the output directory
 - `scratchpad` — Carry state across execution steps
 
+## Model Configuration
+
+All four roles run on **`gpt-5.4-mini`** with tunable reasoning effort:
+
+| Role            | Reasoning | Rationale                                                            |
+| --------------- | --------- | -------------------------------------------------------------------- |
+| `planner`       | `high`    | Builds a structured weekly plan that must satisfy evaluator criteria.|
+| `evaluator`     | `high`    | Checks structural and qualitative criteria on the generated plan.    |
+| `executor.high` | `medium`  | LLM reasoning steps that draft the study-plan content.               |
+| `executor.low`  | `low`     | Cheap tool-param construction for `file_read`, `file_write`, etc.    |
+
 ## Running
 
 Requires an `OPENAI_API_KEY` environment variable. Create a `.env` file in this directory:
