@@ -9,6 +9,7 @@
     "packages/provider-anthropic",
     "packages/provider-openai",
     "packages/provider-gemini",
+    "packages/observability-llmvantage",
     "demos/*"
   ],
   "scripts": {

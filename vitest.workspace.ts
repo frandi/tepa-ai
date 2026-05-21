@@ -7,4 +7,5 @@ export default defineWorkspace([
   "packages/provider-anthropic",
   "packages/provider-openai",
   "packages/provider-gemini",
+  "packages/observability-llmvantage",
 ]);
