@@ -4,4 +4,7 @@ class-5b/progress-report.md
 class-5b/flagged_students.csv
 class-5b/flagged-students.csv
 class-5b/analyze.py
+class-5b/analyze_standard.py
+class-5b/generate_reports.py
 class-5b/metrics.json
+class-5b/output.json

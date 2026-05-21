@@ -21,6 +21,7 @@ import {
   logObserveTool,
 } from "@tepa/tools";
 import { GeminiProvider, GeminiModels } from "@tepa/provider-gemini";
+import { createLlmvantageBridge } from "@tepa/observability-llmvantage";
 import { createDemoLogger, type DemoLogger } from "./logger.js";
 
 let logger: DemoLogger | undefined;
@@ -48,6 +49,21 @@ async function main() {
 
   // Create the LLM provider (logs all calls to a JSONL file)
   provider = new GeminiProvider({ logger });
+
+  // Per-call cost rollup via @tepa/observability-llmvantage.
+  // Pricing values are illustrative — verify against current Gemini pricing.
+  const costBridge = createLlmvantageBridge({
+    pricing: {
+      gemini: {
+        [GeminiModels.Gemini_3_5_Flash]: {
+          inputPer1M: 0.3,
+          outputPer1M: 2.5,
+          cacheReadPer1M: 0.075,
+        },
+      },
+    },
+  });
+  provider.onLog(costBridge.callback);
 
   // Create the Tepa pipeline
   const tepa = new Tepa({
@@ -174,6 +190,26 @@ async function main() {
       const toolInfo = entry.tool ? ` (${entry.tool})` : "";
       logger.info(`  [cycle ${entry.cycle}]${stepInfo}${toolInfo} ${entry.message}`);
     }
+  }
+
+  const costSummary = costBridge.summary();
+  const fmt = (n: number) => `$${n.toFixed(6)}`;
+  logger.info("", { decorative: true });
+  logger.info(`--- Cost Summary (${costSummary.cost.currency}) ---`, { decorative: true });
+  logger.info(
+    `  Calls: ${costSummary.calls} success / ${costSummary.retries} retry / ${costSummary.errors} error`,
+  );
+  logger.info(
+    `  Tokens: input=${costSummary.tokens.input}, output=${costSummary.tokens.output}, cacheRead=${costSummary.tokens.cacheRead}, cacheWrite=${costSummary.tokens.cacheWrite}`,
+  );
+  logger.info(`  Total cost: ${fmt(costSummary.cost.total)}`);
+  for (const [key, m] of Object.entries(costSummary.byModel)) {
+    logger.info(
+      `    ${key}: ${m.calls} calls, ${m.tokens.input}+${m.tokens.output} tok → ${fmt(m.cost)}`,
+    );
+  }
+  if (costSummary.pricingMissing.length > 0) {
+    logger.info(`  Missing pricing for: ${costSummary.pricingMissing.join(", ")}`);
   }
 
   logger.finalize({ llmLogPath: provider.getLogFilePath() });
