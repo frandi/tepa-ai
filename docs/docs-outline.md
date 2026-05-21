@@ -173,6 +173,8 @@
 - Built-in log callbacks (`consoleLogCallback`, `createFileLogWriter`)
 - Accessing log history (`getLogEntries()`, `getLogFilePath()`)
 - Privacy controls (`includeContent`)
+- Token usage and `ModelPricing` on `ModelInfo`
+- Pairing with llmvantage; the optional `@tepa/observability-llmvantage` adapter (`createLlmvantageBridge`, `tagCost`)
 
 ### 8.5 Base Provider
 

@@ -181,6 +181,10 @@ Tepa is a monorepo where each package has a single responsibility and a clean de
     │
     ├── @tepa/tools       ← built-in tool implementations
     │
+    ├── @tepa/observability-llmvantage   ← optional adapter: bridges
+    │                                      provider logs with llmvantage
+    │                                      for cost tracking
+    │
     └── @tepa/provider-core   ← BaseLLMProvider with retry, backoff,
             ↑                   rate limit handling, and logging
             ├── @tepa/provider-anthropic

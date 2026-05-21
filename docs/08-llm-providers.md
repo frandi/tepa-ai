@@ -431,6 +431,139 @@ const provider = new AnthropicProvider({
 
 When `includeContent` is `true`, the `request` object includes the full `messages` array and `systemPrompt` string. When `false` (the default), these fields are omitted.
 
+### Token Usage & Cost
+
+Every provider extracts the token counts the underlying SDK reports, including prompt-cache fields when present:
+
+```typescript
+interface LLMTokensUsed {
+  input: number;
+  output: number;
+  cacheRead?: number;   // Anthropic cache hits, OpenAI cached prompt tokens, Gemini cached content tokens
+  cacheWrite?: number;  // Anthropic only (cache_creation_input_tokens)
+}
+```
+
+`cacheRead` / `cacheWrite` appear on both `LLMResponse.tokensUsed` and `LLMLogEntry.response.tokensUsed`, so they flow into custom `onLog` handlers automatically.
+
+`ModelInfo` now carries an optional `cost: ModelPricing` field — provider packages may ship best-effort pricing for their built-in models, and you can attach pricing to any custom model when you register it:
+
+```typescript
+interface ModelPricing {
+  inputPer1M: number;
+  outputPer1M: number;
+  cacheReadPer1M?: number;
+  cacheWritePer1M?: number;
+  currency?: string; // defaults to "USD"
+}
+```
+
+Pricing data goes stale; treat shipped values as a starting point and override per-instance for production billing (see the bridge `pricing` option below).
+
+### Pairing with `llmvantage` for Cost & Cross-SDK Observability
+
+Tepa's provider logs are pipeline-aware — they capture concepts like retry status, attempt number, normalized finish reasons, and tool-use counts that only exist *above* the HTTP layer. They are not, however, the right place for raw token-cost accounting across every LLM call your process makes (including any non-Tepa calls in the same app).
+
+For that, [`llmvantage`](https://github.com/frandi/llmvantage) is a good fit. It patches global `fetch` and captures the underlying request/response for Anthropic, OpenAI, and Gemini SDKs — which is exactly what Tepa's providers call under the hood. The two layers compose without any glue code:
+
+```typescript
+// 1. Foundation: cost & raw-HTTP observability for any LLM traffic in the process.
+import "llmvantage";
+import { observer } from "llmvantage";
+import { consoleSink } from "llmvantage/sinks/console";
+
+observer.pipe(consoleSink);
+
+// 2. Tepa layer: pipeline-aware structured logs (retries, attempts, tool use).
+import { AnthropicProvider } from "@tepa/provider-anthropic";
+
+const provider = new AnthropicProvider({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+  defaultLog: false, // avoid double-writing to disk if llmvantage already has a file sink
+});
+
+provider.onLog((entry) => {
+  if (entry.status === "retry") {
+    console.warn(`retry #${entry.attempt}: ${entry.error?.message}`);
+  }
+});
+```
+
+**Which layer captures what:**
+
+| Concern                                          | Use llmvantage | Use Tepa `onLog` |
+| ------------------------------------------------ | -------------- | ---------------- |
+| Token totals & cost rollups across all LLM calls | ✓              |                  |
+| Raw request/response bodies for replay           | ✓              |                  |
+| PII redaction at the HTTP boundary               | ✓              |                  |
+| Retry status, attempt number                     |                | ✓                |
+| Normalized finish reasons across providers       |                | ✓                |
+| Tool-use counts per call                         |                | ✓                |
+| Per-provider model catalog correlation           |                | ✓                |
+
+One HTTP attempt corresponds to one llmvantage event; one Tepa `complete()` may emit multiple log entries (one per retry plus a terminal success/error). The mapping is intentionally not 1-to-1 — each layer reflects what's true at its layer. If both layers write to disk, set `defaultLog: false` on the provider (or skip the llmvantage file sink) to avoid duplicate JSONL output.
+
+#### `@tepa/observability-llmvantage`
+
+For tighter integration without coupling the core packages, install the optional adapter:
+
+```bash
+npm install @tepa/observability-llmvantage llmvantage
+```
+
+It exposes two pieces:
+
+**1. `createLlmvantageBridge` — cost rollups from Tepa's `onLog`.** Wire it into any provider and call `summary()` after the run for per-provider, per-model totals:
+
+```typescript
+import { createLlmvantageBridge, defaultPricing } from "@tepa/observability-llmvantage";
+import { AnthropicProvider } from "@tepa/provider-anthropic";
+
+const bridge = createLlmvantageBridge({
+  pricing: {
+    ...defaultPricing,
+    anthropic: {
+      ...defaultPricing.anthropic,
+      // Override stale defaults, or add a model the provider package doesn't ship yet
+      "claude-sonnet-4-6": {
+        inputPer1M: 3, outputPer1M: 15,
+        cacheReadPer1M: 0.3, cacheWritePer1M: 3.75,
+      },
+    },
+  },
+});
+
+const provider = new AnthropicProvider({ apiKey: process.env.ANTHROPIC_API_KEY! });
+provider.onLog(bridge.callback);
+
+await tepa.run(prompt);
+
+const summary = bridge.summary();
+// {
+//   calls, retries, errors,
+//   tokens: { input, output, cacheRead, cacheWrite },
+//   cost: { total: 0.0234, currency: "USD" },
+//   byModel: { "anthropic:claude-sonnet-4-6": { calls, tokens, cost } },
+//   byProvider: { anthropic: { calls, tokens, cost } },
+//   pricingMissing: []  // provider:model pairs with no pricing entry
+// }
+```
+
+Pricing resolution order (highest to lowest): `BridgeOptions.pricing` → `defaultPricing` shipped by the adapter. `ModelInfo.cost` on each provider's model catalog is reserved for v2; for now, supply overrides explicitly via `pricing`. Use `ignoreDefaultPricing: true` to bypass the shipped snapshot entirely.
+
+**2. `tagCost` — llmvantage plugin that enriches raw fetch events.** Useful if you want sinks (file, HTTP shipper, console) to receive `cost` and normalized `tokens` per HTTP call:
+
+```typescript
+import "llmvantage";
+import { observer } from "llmvantage";
+import { consoleSink } from "llmvantage/sinks/console";
+import { tagCost } from "@tepa/observability-llmvantage";
+
+observer.use(tagCost({ pricing: { /* same overrides */ } })).pipe(consoleSink);
+```
+
+The plugin parses Anthropic / OpenAI / Gemini response bodies to extract tokens (including cache fields) and attaches `{ cost: { value, currency, pricingKnown }, tokens }` to each event before downstream sinks see it. Use the bridge for tepa-aware aggregation; use the plugin when you want cost visible inside the llmvantage pipeline itself.
+
 ---
 
 ## Creating a Custom Provider

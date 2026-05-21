@@ -82,7 +82,8 @@ Tepa's core is lean on purpose. It ships the tools and providers most users need
     ├── @tepa/tools       ← built-in tools (file I/O, shell, HTTP, web search…)
     ├── @tepa/provider-anthropic  ← Claude
     ├── @tepa/provider-gemini     ← Gemini
-    └── @tepa/provider-openai     ← OpenAI
+    ├── @tepa/provider-openai     ← OpenAI
+    └── @tepa/observability-llmvantage  ← optional: cost tracking via llmvantage
 ```
 
 Any npm package that implements `ToolDefinition` or extends `BaseLLMProvider` works with Tepa out of the box — no core changes needed. Build your own tools and providers, publish them as independent packages, and they're first-class citizens alongside the built-ins.

@@ -3,7 +3,7 @@
 Complete reference for every public type, class, function, and constant exported by the Tepa framework. Organized by package, then alphabetically within each section.
 
 **Packages covered:**
-[`@tepa/core`](#tepacore) | [`@tepa/types`](#tepatypes) | [`@tepa/tools`](#tepatools) | [`@tepa/provider-core`](#tepaprovider-core) | [`@tepa/provider-anthropic`](#tepaprovider-anthropic) | [`@tepa/provider-openai`](#tepaprovider-openai) | [`@tepa/provider-gemini`](#tepaprovider-gemini)
+[`@tepa/core`](#tepacore) | [`@tepa/types`](#tepatypes) | [`@tepa/tools`](#tepatools) | [`@tepa/provider-core`](#tepaprovider-core) | [`@tepa/provider-anthropic`](#tepaprovider-anthropic) | [`@tepa/provider-openai`](#tepaprovider-openai) | [`@tepa/provider-gemini`](#tepaprovider-gemini) | [`@tepa/observability-llmvantage`](#tepaobservability-llmvantage)
 
 ---
 
@@ -551,10 +551,11 @@ interface ModelInfo {
   description: string;
   tier: "fast" | "balanced" | "advanced";
   capabilities?: string[];
+  cost?: ModelPricing;
 }
 ```
 
-Metadata describing a model available from a provider. Returned by `LLMProvider.getModels()` and rendered in the Planner's system prompt to guide per-step model selection.
+Metadata describing a model available from a provider. Returned by `LLMProvider.getModels()` and rendered in the Planner's system prompt to guide per-step model selection. The optional `cost` field carries per-1M-token pricing — provider packages may ship best-effort defaults; verify against the current provider pricing page for production billing.
 
 #### `LimitsConfig`
 
@@ -801,10 +802,7 @@ interface LLMRequestOptions {
 ```typescript
 interface LLMResponse {
   text: string;
-  tokensUsed: {
-    input: number;
-    output: number;
-  };
+  tokensUsed: LLMTokensUsed;
   finishReason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use";
   toolUse?: LLMToolUseBlock[];
 }
@@ -813,9 +811,41 @@ interface LLMResponse {
 | Field          | Description                                                      |
 | -------------- | ---------------------------------------------------------------- |
 | `text`         | The text content of the model's response                         |
-| `tokensUsed`   | Input and output token counts                                    |
+| `tokensUsed`   | Token counts (see `LLMTokensUsed`)                               |
 | `finishReason` | Why the model stopped generating                                 |
 | `toolUse`      | Tool call requests (present when `finishReason` is `"tool_use"`) |
+
+#### `LLMTokensUsed`
+
+```typescript
+interface LLMTokensUsed {
+  input: number;
+  output: number;
+  cacheRead?: number;
+  cacheWrite?: number;
+}
+```
+
+| Field        | Description                                                                                                                |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `input`      | Total input tokens billed by the provider                                                                                  |
+| `output`     | Total output tokens billed by the provider                                                                                 |
+| `cacheRead`  | Cached input tokens reused from a prompt cache (Anthropic, OpenAI, Gemini all report this when prompt caching is active)   |
+| `cacheWrite` | Tokens written to a prompt cache. Anthropic only (`cache_creation_input_tokens`)                                           |
+
+#### `ModelPricing`
+
+```typescript
+interface ModelPricing {
+  inputPer1M: number;
+  outputPer1M: number;
+  cacheReadPer1M?: number;
+  cacheWritePer1M?: number;
+  currency?: string;
+}
+```
+
+Per-1M-tokens pricing attached to a `ModelInfo` (via the optional `cost` field) or supplied to `@tepa/observability-llmvantage`. `currency` defaults to `"USD"` when omitted.
 
 #### `LLMToolUseBlock`
 
@@ -856,7 +886,7 @@ interface LLMLogEntry {
   };
   response?: {
     text: string;
-    tokensUsed: { input: number; output: number };
+    tokensUsed: LLMTokensUsed;
     finishReason: string;
     toolUseCount?: number;
   };
@@ -1514,3 +1544,114 @@ import { GeminiModels } from "@tepa/provider-gemini";
 ### `GEMINI_MODEL_CATALOG`
 
 The full `ModelInfo[]` catalog array. Exported for inspection or testing.
+
+---
+
+## `@tepa/observability-llmvantage`
+
+Optional adapter that turns Tepa's `onLog` stream into cost rollups and provides an llmvantage plugin that tags raw fetch events with cost. Install alongside `llmvantage`:
+
+```bash
+npm install @tepa/observability-llmvantage llmvantage
+```
+
+`llmvantage` is declared as an optional peer dependency; the bridge works without it, the `tagCost` plugin requires it at runtime.
+
+### `createLlmvantageBridge()`
+
+```typescript
+import { createLlmvantageBridge } from "@tepa/observability-llmvantage";
+
+const bridge = createLlmvantageBridge(opts?: BridgeOptions): Bridge;
+```
+
+`BridgeOptions`:
+
+| Field                  | Type            | Default          | Description                                                                                          |
+| ---------------------- | --------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `pricing`              | `PricingTable`  | `undefined`      | Provider → model → `ModelPricing`. Merged on top of `defaultPricing` (per-provider object replaces). |
+| `currency`             | `string`        | `"USD"`          | Label used in `RunSummary.cost.currency`. Does not convert values.                                   |
+| `ignoreDefaultPricing` | `boolean`       | `false`          | Skip merging with `defaultPricing` and use `pricing` alone.                                          |
+
+`Bridge`:
+
+| Member          | Signature                            | Description                                                          |
+| --------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| `callback`      | `(entry: LLMLogEntry) => void`       | Wire with `provider.onLog(bridge.callback)`.                         |
+| `summary()`     | `() => RunSummary`                   | Snapshot of cost and token totals across entries seen so far.        |
+| `costFor(e)`    | `(entry: LLMLogEntry) => number`     | Per-call cost using the bridge's pricing resolution.                 |
+| `reset()`       | `() => void`                         | Discard accumulated entries.                                         |
+
+`RunSummary`:
+
+```typescript
+interface RunSummary {
+  calls: number;
+  retries: number;
+  errors: number;
+  tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  cost: { total: number; currency: string };
+  byModel: Record<string, ModelSummary>;    // keyed by `${provider}:${model}`
+  byProvider: Record<string, ModelSummary>; // keyed by provider id
+  pricingMissing: string[];                 // provider:model pairs with no pricing entry
+}
+```
+
+---
+
+### `tagCost()`
+
+```typescript
+import { tagCost } from "@tepa/observability-llmvantage";
+
+observer.use(tagCost(opts?: CostTagOptions)).pipe(sink);
+```
+
+llmvantage plugin that parses Anthropic / OpenAI / Gemini response bodies, extracts token counts (including cache fields), looks up pricing, and appends `{ tokens, cost: { value, currency, pricingKnown } }` to each event before sinks see it.
+
+`CostTagOptions`: same `pricing`, `currency`, and `ignoreDefaultPricing` as `BridgeOptions`.
+
+---
+
+### `costFor()` / `costForTokens()`
+
+Pure helpers — usable standalone without the bridge.
+
+```typescript
+import { costFor, costForTokens } from "@tepa/observability-llmvantage";
+
+costFor(entry: LLMLogEntry, pricing?: ModelPricing): number;
+costForTokens(tokens: LLMTokensUsed, pricing?: ModelPricing): number;
+```
+
+Returns `0` when `pricing` is undefined. `cacheRead` falls back to `inputPer1M` when `cacheReadPer1M` is not set; `cacheWrite` falls back similarly. This is a conservative default so unknown cache pricing never under-counts cost.
+
+---
+
+### `lookupPricing()`
+
+```typescript
+lookupPricing(table: PricingTable | undefined, provider: string, model: string): ModelPricing | undefined;
+```
+
+Safe nested lookup. Returns `undefined` for any missing level.
+
+---
+
+### `defaultPricing`
+
+```typescript
+import { defaultPricing } from "@tepa/observability-llmvantage";
+```
+
+Best-effort USD/1M-tokens snapshot covering the models in `ANTHROPIC_MODEL_CATALOG`, `OPENAI_MODEL_CATALOG`, and `GEMINI_MODEL_CATALOG`. Pricing changes; verify against each provider's pricing page before relying on these for billing. Last reviewed: 2026-05.
+
+---
+
+### `PricingTable`
+
+```typescript
+type PricingTable = Record<string, Record<string, ModelPricing>>;
+```
+
+Keyed `provider id → model id → ModelPricing`. `ModelPricing` is re-exported from `@tepa/types`.

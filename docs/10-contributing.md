@@ -499,7 +499,8 @@ tepa-ai/
 │   ├── provider-core/          # @tepa/provider-core — base provider + logging
 │   ├── provider-anthropic/     # @tepa/provider-anthropic
 │   ├── provider-openai/        # @tepa/provider-openai
-│   └── provider-gemini/        # @tepa/provider-gemini
+│   ├── provider-gemini/        # @tepa/provider-gemini
+│   └── observability-llmvantage/  # @tepa/observability-llmvantage — optional cost adapter
 ├── demos/
 │   ├── api-client-gen/         # Autonomous code generation demo
 │   ├── student-progress/       # Data analysis demo
