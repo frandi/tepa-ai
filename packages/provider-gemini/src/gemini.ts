@@ -95,11 +95,14 @@ export class GeminiProvider extends BaseLLMProvider {
       .map((p) => p.text as string)
       .join("");
 
+    const cacheRead = usage.cachedContentTokenCount;
+
     return {
       text,
       tokensUsed: {
         input: usage.promptTokenCount ?? 0,
         output: usage.candidatesTokenCount ?? 0,
+        ...(typeof cacheRead === "number" && cacheRead > 0 && { cacheRead }),
       },
       finishReason: hasToolUse ? "tool_use" : toFinishReason(finishReason),
       ...(hasToolUse && { toolUse }),

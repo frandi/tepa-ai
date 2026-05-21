@@ -23,8 +23,10 @@ export type { ToolDefinition, ParameterDef, ToolRegistry, ToolSchema } from "./t
 
 export type {
   ModelInfo,
+  ModelPricing,
   LLMProvider,
   LLMResponse,
+  LLMTokensUsed,
   LLMToolUseBlock,
   LLMToolResultBlock,
   LLMMessage,

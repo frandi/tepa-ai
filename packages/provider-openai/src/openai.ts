@@ -68,7 +68,11 @@ export class OpenAIProvider extends BaseLLMProvider {
       this.client.responses as unknown as {
         create: (params: Record<string, unknown>) => Promise<{
           output: ResponseOutput[];
-          usage: { input_tokens: number; output_tokens: number };
+          usage: {
+            input_tokens: number;
+            output_tokens: number;
+            input_tokens_details?: { cached_tokens?: number };
+          };
           status: string;
         }>;
       }
@@ -76,12 +80,14 @@ export class OpenAIProvider extends BaseLLMProvider {
 
     const toolUse = extractToolUse(response.output);
     const hasToolUse = toolUse.length > 0;
+    const cacheRead = response.usage.input_tokens_details?.cached_tokens;
 
     return {
       text: extractText(response.output),
       tokensUsed: {
         input: response.usage.input_tokens,
         output: response.usage.output_tokens,
+        ...(cacheRead != null && cacheRead > 0 && { cacheRead }),
       },
       finishReason: hasToolUse ? "tool_use" : toFinishReason(response.status),
       ...(hasToolUse && { toolUse }),

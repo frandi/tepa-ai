@@ -1,5 +1,25 @@
 import type { ToolSchema } from "./tool.js";
 
+/**
+ * Per-token pricing for a model, expressed as cost per 1,000,000 tokens.
+ *
+ * Pricing data shipped by provider packages is best-effort and may go stale;
+ * callers can override via observability tooling (e.g.
+ * `@tepa/observability-llmvantage`).
+ */
+export interface ModelPricing {
+  /** Cost per 1M input tokens. */
+  inputPer1M: number;
+  /** Cost per 1M output tokens. */
+  outputPer1M: number;
+  /** Cost per 1M cached input tokens (prompt cache reads). */
+  cacheReadPer1M?: number;
+  /** Cost per 1M cache-creation tokens (e.g. Anthropic prompt cache writes). */
+  cacheWritePer1M?: number;
+  /** ISO 4217 currency code. Defaults to "USD" when omitted. */
+  currency?: string;
+}
+
 /** Metadata describing a model available from a provider. */
 export interface ModelInfo {
   /** Model identifier as passed to provider API (e.g. "claude-sonnet-4-6"). */
@@ -10,6 +30,12 @@ export interface ModelInfo {
   tier: "fast" | "balanced" | "advanced";
   /** Optional list of capabilities (e.g. "tool_use", "vision", "long_context"). */
   capabilities?: string[];
+  /**
+   * Optional per-token pricing. Provider packages ship best-effort defaults;
+   * verify against the provider's current pricing page for production cost
+   * accounting.
+   */
+  cost?: ModelPricing;
 }
 
 /**
@@ -85,12 +111,26 @@ export interface LLMToolUseBlock {
   input: Record<string, unknown>;
 }
 
+/**
+ * Token counts reported by the provider for a single call.
+ *
+ * `input` and `output` are total prompt/completion tokens as billed by the
+ * provider. `cacheRead` and `cacheWrite` are present when the provider reports
+ * prompt-caching usage; not all providers expose both (OpenAI and Gemini only
+ * report cached reads).
+ */
+export interface LLMTokensUsed {
+  input: number;
+  output: number;
+  /** Cached input tokens reused from a prompt cache (priced lower than `input`). */
+  cacheRead?: number;
+  /** Tokens written to a prompt cache (Anthropic only). */
+  cacheWrite?: number;
+}
+
 export interface LLMResponse {
   text: string;
-  tokensUsed: {
-    input: number;
-    output: number;
-  };
+  tokensUsed: LLMTokensUsed;
   finishReason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use";
   /** Tool calls requested by the LLM (present when finishReason is "tool_use"). */
   toolUse?: LLMToolUseBlock[];
@@ -125,7 +165,7 @@ export interface LLMLogEntry {
   };
   response?: {
     text: string;
-    tokensUsed: { input: number; output: number };
+    tokensUsed: LLMTokensUsed;
     finishReason: string;
     toolUseCount?: number;
   };

@@ -58,11 +58,16 @@ export class AnthropicProvider extends BaseLLMProvider {
 
     const toolUse = extractToolUse(response.content);
 
+    const cacheRead = response.usage.cache_read_input_tokens ?? undefined;
+    const cacheWrite = response.usage.cache_creation_input_tokens ?? undefined;
+
     return {
       text: extractText(response.content),
       tokensUsed: {
         input: response.usage.input_tokens,
         output: response.usage.output_tokens,
+        ...(cacheRead != null && { cacheRead }),
+        ...(cacheWrite != null && { cacheWrite }),
       },
       finishReason: toFinishReason(response.stop_reason),
       ...(toolUse.length > 0 && { toolUse }),
