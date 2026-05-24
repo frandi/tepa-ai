@@ -79,7 +79,7 @@ All published at `0.2.0`:
 - `@tepa/provider-anthropic`
 - `@tepa/provider-openai`
 - `@tepa/provider-gemini`
-- `@tepa/observability-llmvantage` *(first publish)*
+- `@tepa/observability-llmvantage` _(first publish)_
 
 ## [0.1.1] - 2026-03-17
 
