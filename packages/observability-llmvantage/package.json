@@ -1,6 +1,6 @@
 {
   "name": "@tepa/observability-llmvantage",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Optional adapter that bridges Tepa provider logs with llmvantage for cost tracking and cross-SDK observability",
   "license": "MIT",
   "author": "Frandi <frandi.tech@gmail.com>",
@@ -55,7 +55,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tepa/types": "^0.1.1"
+    "@tepa/types": "^0.2.0"
   },
   "peerDependencies": {
     "llmvantage": ">=0.1.0"
