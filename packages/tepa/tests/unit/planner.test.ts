@@ -118,7 +118,11 @@ function makeValidPlanJson(overrides?: Partial<Plan>): string {
   return JSON.stringify(plan);
 }
 
-function makePlanner(provider: LLMProvider, registry: ToolRegistry, model = "claude-sonnet-4-20250514") {
+function makePlanner(
+  provider: LLMProvider,
+  registry: ToolRegistry,
+  model = "claude-sonnet-4-20250514",
+) {
   return new Planner(provider, registry, model, defaultTiers);
 }
 

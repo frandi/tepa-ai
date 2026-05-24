@@ -826,12 +826,12 @@ interface LLMTokensUsed {
 }
 ```
 
-| Field        | Description                                                                                                                |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `input`      | Total input tokens billed by the provider                                                                                  |
-| `output`     | Total output tokens billed by the provider                                                                                 |
-| `cacheRead`  | Cached input tokens reused from a prompt cache (Anthropic, OpenAI, Gemini all report this when prompt caching is active)   |
-| `cacheWrite` | Tokens written to a prompt cache. Anthropic only (`cache_creation_input_tokens`)                                           |
+| Field        | Description                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `input`      | Total input tokens billed by the provider                                                                                |
+| `output`     | Total output tokens billed by the provider                                                                               |
+| `cacheRead`  | Cached input tokens reused from a prompt cache (Anthropic, OpenAI, Gemini all report this when prompt caching is active) |
+| `cacheWrite` | Tokens written to a prompt cache. Anthropic only (`cache_creation_input_tokens`)                                         |
 
 #### `ModelPricing`
 
@@ -1567,20 +1567,20 @@ const bridge = createLlmvantageBridge(opts?: BridgeOptions): Bridge;
 
 `BridgeOptions`:
 
-| Field                  | Type            | Default          | Description                                                                                          |
-| ---------------------- | --------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| `pricing`              | `PricingTable`  | `undefined`      | Provider → model → `ModelPricing`. Merged on top of `defaultPricing` (per-provider object replaces). |
-| `currency`             | `string`        | `"USD"`          | Label used in `RunSummary.cost.currency`. Does not convert values.                                   |
-| `ignoreDefaultPricing` | `boolean`       | `false`          | Skip merging with `defaultPricing` and use `pricing` alone.                                          |
+| Field                  | Type           | Default     | Description                                                                                          |
+| ---------------------- | -------------- | ----------- | ---------------------------------------------------------------------------------------------------- |
+| `pricing`              | `PricingTable` | `undefined` | Provider → model → `ModelPricing`. Merged on top of `defaultPricing` (per-provider object replaces). |
+| `currency`             | `string`       | `"USD"`     | Label used in `RunSummary.cost.currency`. Does not convert values.                                   |
+| `ignoreDefaultPricing` | `boolean`      | `false`     | Skip merging with `defaultPricing` and use `pricing` alone.                                          |
 
 `Bridge`:
 
-| Member          | Signature                            | Description                                                          |
-| --------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| `callback`      | `(entry: LLMLogEntry) => void`       | Wire with `provider.onLog(bridge.callback)`.                         |
-| `summary()`     | `() => RunSummary`                   | Snapshot of cost and token totals across entries seen so far.        |
-| `costFor(e)`    | `(entry: LLMLogEntry) => number`     | Per-call cost using the bridge's pricing resolution.                 |
-| `reset()`       | `() => void`                         | Discard accumulated entries.                                         |
+| Member       | Signature                        | Description                                                   |
+| ------------ | -------------------------------- | ------------------------------------------------------------- |
+| `callback`   | `(entry: LLMLogEntry) => void`   | Wire with `provider.onLog(bridge.callback)`.                  |
+| `summary()`  | `() => RunSummary`               | Snapshot of cost and token totals across entries seen so far. |
+| `costFor(e)` | `(entry: LLMLogEntry) => number` | Per-call cost using the bridge's pricing resolution.          |
+| `reset()`    | `() => void`                     | Discard accumulated entries.                                  |
 
 `RunSummary`:
 
@@ -1591,9 +1591,9 @@ interface RunSummary {
   errors: number;
   tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
   cost: { total: number; currency: string };
-  byModel: Record<string, ModelSummary>;    // keyed by `${provider}:${model}`
+  byModel: Record<string, ModelSummary>; // keyed by `${provider}:${model}`
   byProvider: Record<string, ModelSummary>; // keyed by provider id
-  pricingMissing: string[];                 // provider:model pairs with no pricing entry
+  pricingMissing: string[]; // provider:model pairs with no pricing entry
 }
 ```
 

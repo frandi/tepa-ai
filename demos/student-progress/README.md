@@ -56,11 +56,11 @@ The CSV files contain realistic data designed to produce meaningful analysis:
 
 All four roles run on **`gemini-3.5-flash`** with tunable reasoning effort:
 
-| Role            | Reasoning | Rationale                                                              |
-| --------------- | --------- | ---------------------------------------------------------------------- |
-| `planner`       | `high`    | Multi-step plan over CSV analysis, synthesis, and file writes.         |
-| `evaluator`     | `high`    | Must catch both structural and semantic errors in the output.          |
-| `executor.high` | `medium`  | LLM reasoning steps that synthesize metrics into narrative + CSV rows. |
+| Role            | Reasoning | Rationale                                                                    |
+| --------------- | --------- | ---------------------------------------------------------------------------- |
+| `planner`       | `high`    | Multi-step plan over CSV analysis, synthesis, and file writes.               |
+| `evaluator`     | `high`    | Must catch both structural and semantic errors in the output.                |
+| `executor.high` | `medium`  | LLM reasoning steps that synthesize metrics into narrative + CSV rows.       |
 | `executor.low`  | `minimal` | Tool-param construction for `file_read`, `file_write`, `shell_execute`, etc. |
 
 `low` reasoning on `executor.high` was insufficient — the synthesis step fabricated student names instead of using the parsed metrics. `medium` is the working floor for this demo.

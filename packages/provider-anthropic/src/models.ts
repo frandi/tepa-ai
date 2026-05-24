@@ -34,8 +34,7 @@ export const ANTHROPIC_MODEL_CATALOG: ModelInfo[] = [
   {
     id: AnthropicModels.Claude_Opus_4_7,
     tier: "advanced",
-    description:
-      "Most capable. Use for the sharpest reasoning, planning, and evaluation.",
+    description: "Most capable. Use for the sharpest reasoning, planning, and evaluation.",
     capabilities: ["tool_use", "vision"],
   },
 ];

@@ -42,12 +42,12 @@ This demo uses two event hooks to insert human checkpoints:
 
 All four roles run on **`gpt-5.4-mini`** with tunable reasoning effort:
 
-| Role            | Reasoning | Rationale                                                            |
-| --------------- | --------- | -------------------------------------------------------------------- |
-| `planner`       | `high`    | Builds a structured weekly plan that must satisfy evaluator criteria.|
-| `evaluator`     | `high`    | Checks structural and qualitative criteria on the generated plan.    |
-| `executor.high` | `medium`  | LLM reasoning steps that draft the study-plan content.               |
-| `executor.low`  | `low`     | Cheap tool-param construction for `file_read`, `file_write`, etc.    |
+| Role            | Reasoning | Rationale                                                             |
+| --------------- | --------- | --------------------------------------------------------------------- |
+| `planner`       | `high`    | Builds a structured weekly plan that must satisfy evaluator criteria. |
+| `evaluator`     | `high`    | Checks structural and qualitative criteria on the generated plan.     |
+| `executor.high` | `medium`  | LLM reasoning steps that draft the study-plan content.                |
+| `executor.low`  | `low`     | Cheap tool-param construction for `file_read`, `file_write`, etc.     |
 
 ## Running
 

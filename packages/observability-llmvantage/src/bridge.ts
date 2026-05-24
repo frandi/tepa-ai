@@ -54,7 +54,10 @@ function emptyTokens(): RunTokens {
   return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 }
 
-function addTokens(target: RunTokens, source: { input: number; output: number; cacheRead?: number; cacheWrite?: number }): void {
+function addTokens(
+  target: RunTokens,
+  source: { input: number; output: number; cacheRead?: number; cacheWrite?: number },
+): void {
   target.input += source.input;
   target.output += source.output;
   target.cacheRead += source.cacheRead ?? 0;
@@ -131,8 +134,11 @@ export function createLlmvantageBridge(opts: BridgeOptions = {}): Bridge {
         modelEntry.calls++;
         addTokens(modelEntry.tokens, tokens);
 
-        const providerEntry =
-          byProvider[entry.provider] ?? { calls: 0, tokens: emptyTokens(), cost: 0 };
+        const providerEntry = byProvider[entry.provider] ?? {
+          calls: 0,
+          tokens: emptyTokens(),
+          cost: 0,
+        };
         providerEntry.calls++;
         addTokens(providerEntry.tokens, tokens);
 

@@ -64,7 +64,8 @@ function extractUsage(event: LlmvantageEvent): ProviderUsage | null {
       input: usage.promptTokenCount ?? 0,
       output: usage.candidatesTokenCount ?? 0,
       cacheRead: usage.cachedContentTokenCount,
-      model: (response.modelVersion as string | undefined) ?? (response.model as string | undefined),
+      model:
+        (response.modelVersion as string | undefined) ?? (response.model as string | undefined),
     };
   }
 
@@ -82,9 +83,7 @@ function extractUsage(event: LlmvantageEvent): ProviderUsage | null {
  */
 export function tagCost(opts: CostTagOptions = {}): (event: LlmvantageEvent) => LlmvantageEvent {
   const useDefaults = !opts.ignoreDefaultPricing;
-  const pricing: PricingTable = useDefaults
-    ? mergePricing(opts.pricing)
-    : (opts.pricing ?? {});
+  const pricing: PricingTable = useDefaults ? mergePricing(opts.pricing) : (opts.pricing ?? {});
   const currency = opts.currency ?? "USD";
 
   return (event) => {

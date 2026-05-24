@@ -439,8 +439,8 @@ Every provider extracts the token counts the underlying SDK reports, including p
 interface LLMTokensUsed {
   input: number;
   output: number;
-  cacheRead?: number;   // Anthropic cache hits, OpenAI cached prompt tokens, Gemini cached content tokens
-  cacheWrite?: number;  // Anthropic only (cache_creation_input_tokens)
+  cacheRead?: number; // Anthropic cache hits, OpenAI cached prompt tokens, Gemini cached content tokens
+  cacheWrite?: number; // Anthropic only (cache_creation_input_tokens)
 }
 ```
 
@@ -462,7 +462,7 @@ Pricing data goes stale; treat shipped values as a starting point and override p
 
 ### Pairing with `llmvantage` for Cost & Cross-SDK Observability
 
-Tepa's provider logs are pipeline-aware — they capture concepts like retry status, attempt number, normalized finish reasons, and tool-use counts that only exist *above* the HTTP layer. They are not, however, the right place for raw token-cost accounting across every LLM call your process makes (including any non-Tepa calls in the same app).
+Tepa's provider logs are pipeline-aware — they capture concepts like retry status, attempt number, normalized finish reasons, and tool-use counts that only exist _above_ the HTTP layer. They are not, however, the right place for raw token-cost accounting across every LLM call your process makes (including any non-Tepa calls in the same app).
 
 For that, [`llmvantage`](https://github.com/frandi/llmvantage) is a good fit. It patches global `fetch` and captures the underlying request/response for Anthropic, OpenAI, and Gemini SDKs — which is exactly what Tepa's providers call under the hood. The two layers compose without any glue code:
 
@@ -526,8 +526,10 @@ const bridge = createLlmvantageBridge({
       ...defaultPricing.anthropic,
       // Override stale defaults, or add a model the provider package doesn't ship yet
       "claude-sonnet-4-6": {
-        inputPer1M: 3, outputPer1M: 15,
-        cacheReadPer1M: 0.3, cacheWritePer1M: 3.75,
+        inputPer1M: 3,
+        outputPer1M: 15,
+        cacheReadPer1M: 0.3,
+        cacheWritePer1M: 3.75,
       },
     },
   },
@@ -559,7 +561,15 @@ import { observer } from "llmvantage";
 import { consoleSink } from "llmvantage/sinks/console";
 import { tagCost } from "@tepa/observability-llmvantage";
 
-observer.use(tagCost({ pricing: { /* same overrides */ } })).pipe(consoleSink);
+observer
+  .use(
+    tagCost({
+      pricing: {
+        /* same overrides */
+      },
+    }),
+  )
+  .pipe(consoleSink);
 ```
 
 The plugin parses Anthropic / OpenAI / Gemini response bodies to extract tokens (including cache fields) and attaches `{ cost: { value, currency, pricingKnown }, tokens }` to each event before downstream sinks see it. Use the bridge for tepa-aware aggregation; use the plugin when you want cost visible inside the llmvantage pipeline itself.

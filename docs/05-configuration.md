@@ -419,14 +419,14 @@ defineConfig({
 
 Validation rules by field:
 
-| Field                                                                       | Rule                                            |
-| --------------------------------------------------------------------------- | ----------------------------------------------- |
-| `model.planner`, `model.evaluator`, `model.executor.low`, `model.executor.high` | Non-empty string                            |
-| `limits.maxCycles`                                                          | Positive integer (> 0)                          |
-| `limits.maxTokens`                                                          | Positive integer (> 0)                          |
-| `limits.toolTimeout`                                                        | Positive integer (> 0)                          |
-| `limits.retryAttempts`                                                      | Non-negative integer (>= 0)                     |
-| `logging.level`                                                             | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
+| Field                                                                           | Rule                                            |
+| ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `model.planner`, `model.evaluator`, `model.executor.low`, `model.executor.high` | Non-empty string                                |
+| `limits.maxCycles`                                                              | Positive integer (> 0)                          |
+| `limits.maxTokens`                                                              | Positive integer (> 0)                          |
+| `limits.toolTimeout`                                                            | Positive integer (> 0)                          |
+| `limits.retryAttempts`                                                          | Non-negative integer (>= 0)                     |
+| `logging.level`                                                                 | One of `"debug"`, `"info"`, `"warn"`, `"error"` |
 
 `TepaConfigError` is a subclass of `TepaError`, so you can catch it specifically:
 

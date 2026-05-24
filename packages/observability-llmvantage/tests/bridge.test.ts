@@ -33,7 +33,10 @@ describe("costForTokens", () => {
 
   it("computes input + output per 1M tokens", () => {
     // 1000 in * $3/M + 500 out * $15/M = 0.003 + 0.0075 = 0.0105
-    const cost = costForTokens({ input: 1000, output: 500 }, defaultPricing.anthropic["claude-sonnet-4-6"]);
+    const cost = costForTokens(
+      { input: 1000, output: 500 },
+      defaultPricing.anthropic["claude-sonnet-4-6"],
+    );
     expect(cost).toBeCloseTo(0.0105, 10);
   });
 
@@ -51,9 +54,21 @@ describe("createLlmvantageBridge", () => {
   it("aggregates calls, retries, errors, and tokens", () => {
     const bridge = createLlmvantageBridge();
     bridge.callback(makeEntry());
-    bridge.callback(makeEntry({ status: "retry", response: undefined, error: { message: "x", retryable: true } }));
-    bridge.callback(makeEntry({ status: "error", response: undefined, error: { message: "x", retryable: false } }));
-    bridge.callback(makeEntry({ response: { text: "ok", tokensUsed: { input: 200, output: 100 }, finishReason: "end_turn" } }));
+    bridge.callback(
+      makeEntry({ status: "retry", response: undefined, error: { message: "x", retryable: true } }),
+    );
+    bridge.callback(
+      makeEntry({
+        status: "error",
+        response: undefined,
+        error: { message: "x", retryable: false },
+      }),
+    );
+    bridge.callback(
+      makeEntry({
+        response: { text: "ok", tokensUsed: { input: 200, output: 100 }, finishReason: "end_turn" },
+      }),
+    );
 
     const summary = bridge.summary();
     expect(summary.calls).toBe(2);
@@ -91,7 +106,9 @@ describe("createLlmvantageBridge", () => {
   it("groups by provider and model", () => {
     const bridge = createLlmvantageBridge();
     bridge.callback(makeEntry());
-    bridge.callback(makeEntry({ provider: "openai", request: { ...makeEntry().request, model: "gpt-5-mini" } }));
+    bridge.callback(
+      makeEntry({ provider: "openai", request: { ...makeEntry().request, model: "gpt-5-mini" } }),
+    );
     const s = bridge.summary();
     expect(s.byProvider.anthropic.calls).toBe(1);
     expect(s.byProvider.openai.calls).toBe(1);

@@ -203,7 +203,10 @@ function filterOutputsByDependencies(
 export class Executor {
   private readonly registry: ToolRegistry;
   private readonly provider: LLMProvider;
-  private readonly tiers: { low: { id: string; reasoning?: ReasoningEffort }; high: { id: string; reasoning?: ReasoningEffort } };
+  private readonly tiers: {
+    low: { id: string; reasoning?: ReasoningEffort };
+    high: { id: string; reasoning?: ReasoningEffort };
+  };
 
   constructor(registry: ToolRegistry, provider: LLMProvider, tiers: ExecutorTiers) {
     this.registry = registry;

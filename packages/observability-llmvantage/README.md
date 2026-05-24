@@ -16,10 +16,10 @@ npm install @tepa/observability-llmvantage llmvantage
 
 Tepa's `provider.onLog` and llmvantage capture LLM activity at different layers:
 
-| Layer                | Captures                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| **llmvantage**       | Raw HTTP requests/responses via global `fetch` patch. One event per HTTP attempt.      |
-| **Tepa `onLog`**     | Pipeline-aware entries with attempt #, retry status, normalized finish reasons, tool-use counts. One entry per attempt plus terminals. |
+| Layer            | Captures                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **llmvantage**   | Raw HTTP requests/responses via global `fetch` patch. One event per HTTP attempt.                                                      |
+| **Tepa `onLog`** | Pipeline-aware entries with attempt #, retry status, normalized finish reasons, tool-use counts. One entry per attempt plus terminals. |
 
 This adapter does **not** forward Tepa entries into llmvantage's pipeline — llmvantage's fetch patch already captures every Tepa LLM call. Instead, it gives you:
 
@@ -40,8 +40,10 @@ const bridge = createLlmvantageBridge({
       ...defaultPricing.anthropic,
       // Override stale defaults, or add a model the provider package doesn't ship yet
       "claude-sonnet-4-6": {
-        inputPer1M: 3, outputPer1M: 15,
-        cacheReadPer1M: 0.3, cacheWritePer1M: 3.75,
+        inputPer1M: 3,
+        outputPer1M: 15,
+        cacheReadPer1M: 0.3,
+        cacheWritePer1M: 3.75,
       },
     },
   },
@@ -50,7 +52,7 @@ const bridge = createLlmvantageBridge({
 const provider = new AnthropicProvider({ apiKey: process.env.ANTHROPIC_API_KEY! });
 provider.onLog(bridge.callback);
 
-const tepa = new Tepa({ provider, /* ... */ });
+const tepa = new Tepa({ provider /* ... */ });
 await tepa.run(prompt);
 
 console.log(bridge.summary());
@@ -73,7 +75,11 @@ import { consoleSink } from "llmvantage/sinks/console";
 import { tagCost } from "@tepa/observability-llmvantage";
 
 observer
-  .use(tagCost({ /* same pricing options as the bridge */ }))
+  .use(
+    tagCost({
+      /* same pricing options as the bridge */
+    }),
+  )
   .pipe(consoleSink);
 ```
 
@@ -94,11 +100,11 @@ Pricing data goes stale. Treat `defaultPricing` as a starting point — verify a
 
 When the underlying SDK reports prompt-cache usage, the providers now populate `LLMResponse.tokensUsed.cacheRead` / `cacheWrite`. The bridge bills these at `cacheReadPer1M` / `cacheWritePer1M` when set on the model's `ModelPricing`, falling back to `inputPer1M` if the rates are missing (conservative default — better to over-count than under-count).
 
-| Provider     | `cacheRead` source                              | `cacheWrite` source                       |
-| ------------ | ----------------------------------------------- | ----------------------------------------- |
-| Anthropic    | `usage.cache_read_input_tokens`                 | `usage.cache_creation_input_tokens`       |
-| OpenAI       | `usage.input_tokens_details.cached_tokens`      | — (not reported)                          |
-| Gemini       | `usageMetadata.cachedContentTokenCount`         | — (not reported)                          |
+| Provider  | `cacheRead` source                         | `cacheWrite` source                 |
+| --------- | ------------------------------------------ | ----------------------------------- |
+| Anthropic | `usage.cache_read_input_tokens`            | `usage.cache_creation_input_tokens` |
+| OpenAI    | `usage.input_tokens_details.cached_tokens` | — (not reported)                    |
+| Gemini    | `usageMetadata.cachedContentTokenCount`    | — (not reported)                    |
 
 ## API
 
