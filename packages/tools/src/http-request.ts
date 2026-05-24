@@ -31,7 +31,7 @@ export const httpRequestTool = defineTool({
     method: { type: "string", description: "HTTP method (default: GET)", default: "GET" },
     headers: { type: "object", description: "Request headers" },
     queryParams: { type: "object", description: "Query parameters to append to the URL" },
-    body: { type: "string", description: "Request body" },
+    body: { type: "string", description: "Request body (ignored for GET/HEAD)" },
     timeout: {
       type: "number",
       description: "Timeout in milliseconds (default: 30000)",
@@ -42,7 +42,9 @@ export const httpRequestTool = defineTool({
     const method = (params.method as string) ?? "GET";
     const headers = params.headers as Record<string, string> | undefined;
     const queryParams = params.queryParams as Record<string, string> | undefined;
-    const body = params.body as string | undefined;
+    const methodUpper = method.toUpperCase();
+    const bodyAllowed = methodUpper !== "GET" && methodUpper !== "HEAD";
+    const body = bodyAllowed ? (params.body as string | undefined) : undefined;
     const timeout = (params.timeout as number) ?? DEFAULT_TIMEOUT;
 
     const urlObj = new URL(params.url as string);

@@ -9,7 +9,7 @@ This demo simulates **Scenario A** from the requirements document. Tepa autonomo
 3. **Generates** a typed API client class (`src/api/jsonplaceholder.ts`) following the project's patterns
 4. **Generates** a test file (`src/api/__tests__/jsonplaceholder.test.ts`) using vitest
 5. **Runs** the test suite and evaluates results
-6. **Self-corrects** if tests fail (e.g., fixing axios initialization to match the project pattern)
+6. **Self-corrects** if tests fail
 
 ## Project Structure
 

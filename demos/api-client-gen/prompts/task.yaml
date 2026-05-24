@@ -35,15 +35,15 @@ context:
   notes:
     - Follow existing code style in src/utils/http.ts for the HTTP utility pattern
     - All paths in expectedOutput are relative to projectRoot
-    - Do NOT read or search for test files — there are none yet
+    - On the first cycle there are no test files yet; on later cycles you MAY read files written in earlier cycles
 
 expectedOutput:
   - path: src/api/jsonplaceholder.ts
     description: A typed API client class with methods for posts, users, and comments
     criteria:
-      - Uses axios.create() with baseURL following existing project patterns
-      - Methods are fully typed with return types
-      - Exports a default client instance
+      - "Uses the existing HttpClient from ../utils/http (which wraps axios.create()) with baseURL 'https://jsonplaceholder.typicode.com' — do NOT call axios.create() directly here"
+      - "Exports a class JsonPlaceholderClient with these six fully-typed async methods — getPosts(): Promise<Post[]>, getPost(id: number): Promise<Post>, getUsers(): Promise<User[]>, getUser(id: number): Promise<User>, getComments(): Promise<Comment[]>, getCommentsByPost(postId: number): Promise<Comment[]>"
+      - "Exports a default instance of JsonPlaceholderClient (the test file consumes this default instance — the client module and the test file must agree on this exact API surface)"
   - path: src/api/types.ts
     description: TypeScript type definitions for API response shapes
     criteria:
@@ -52,5 +52,7 @@ expectedOutput:
   - path: src/api/__tests__/jsonplaceholder.test.ts
     description: Test file using vitest
     criteria:
-      - Tests for each client method
-      - All tests passing when run with npx vitest run
+      - "Imports the default JsonPlaceholderClient instance from '../jsonplaceholder' and calls methods on it (e.g. client.getPost(1)) — do NOT import named functions from that module"
+      - "One test per client method (six in total) — makes a real HTTP call to JSONPlaceholder and asserts shape and ids"
+      - "Uses a per-test or file-level timeout of at least 15000ms to tolerate network latency"
+      - "All tests passing when run with npx vitest run"

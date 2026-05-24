@@ -95,6 +95,44 @@ describe("http_request tool", () => {
     expect(fetch).toHaveBeenCalledTimes(4);
   });
 
+  it("should drop body on GET requests even if one is passed", async () => {
+    const mockResponse = {
+      status: 200,
+      statusText: "OK",
+      headers: new Headers(),
+      text: vi.fn().mockResolvedValue("ok"),
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as unknown as Response);
+
+    await httpRequestTool.execute({
+      url: "https://example.com",
+      method: "GET",
+      body: '{"shouldBeIgnored":true}',
+    });
+
+    const init = vi.mocked(fetch).mock.calls[0]![1] as RequestInit;
+    expect(init.body).toBeUndefined();
+  });
+
+  it("should drop body on HEAD requests even if one is passed", async () => {
+    const mockResponse = {
+      status: 200,
+      statusText: "OK",
+      headers: new Headers(),
+      text: vi.fn().mockResolvedValue(""),
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as unknown as Response);
+
+    await httpRequestTool.execute({
+      url: "https://example.com",
+      method: "head",
+      body: "ignored",
+    });
+
+    const init = vi.mocked(fetch).mock.calls[0]![1] as RequestInit;
+    expect(init.body).toBeUndefined();
+  });
+
   it("should append query params to URL", async () => {
     const mockResponse = {
       status: 200,
